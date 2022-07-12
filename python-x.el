@@ -522,6 +522,9 @@
   (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
       (funcall fn checker property)))
 
+(defvar flycheck-flake8rc)
+(defvar flycheck-python-mypy-config)
+
 ;;;###autoload
 (defun python-x-flycheck-setup ()
   (with-eval-after-load 'flycheck
