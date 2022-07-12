@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "28.1"))
 ;; Homepage: https://github.com/wyuenho/emacs-python-x/
 ;; Keywords: python
 
@@ -28,8 +28,8 @@
 
 ;; TODO:
 ;; support setuptools
-;; clean up python-version cache
 ;; update variables when config change
+;; output progress when initing virtualenv
 
 ;;; Code:
 
@@ -61,7 +61,7 @@
                  (const :tag "dasel" "dasel")
                  (string :tag "Executable")))
 
-(defcustom python-x-auto-install-virtual-environment t
+(defcustom python-x-auto-install-virtual-environment nil
   ""
   :group 'python-x
   :type 'boolean)
@@ -100,8 +100,8 @@
                        ((or 'deleted 'renamed)
                         (file-notify-rm-watch (assoc-default file python-x-watched-config-files))
                         (setf (symbol-value cache-var)
-                              (assoc-delete-all file (symbol-value cache-var))
-                              python-x-watched-config-files
+                              (assoc-delete-all file (symbol-value cache-var)))
+                        (setf python-x-watched-config-files
                               (assoc-delete-all file python-x-watched-config-files)))
                        ('changed
                         (setf (assoc-default file (symbol-value cache-var))
@@ -202,7 +202,7 @@
                                (file-name-directory
                                 (expand-file-name file-path anchor-dir))
                                (file-name-nondirectory file-path)))
-                          (python-parse-requirement-spec req)))))))
+                          (python-x-parse-requirement-spec req)))))))
 
 ;; https://pip.pypa.io/en/stable/cli/pip_install/#requirements-file-format
 (defun python-x-parse-requirement-spec (req)
@@ -342,7 +342,7 @@
       (with-temp-buffer
         (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
         (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
-    (error (error-message-string err) nil)))
+    (error (minibuffer-message (error-message-string err)) nil)))
 
 (defvar python-x-pre-commit-database-cache nil)
 
@@ -477,6 +477,71 @@
                (call-process "pyenv" nil t nil "prefix")))
         (file-truename (string-trim (buffer-string))))
     (error (minibuffer-message "%s" (error-message-string err)))))
+
+(defun python-x-flycheck-python-pylint-find-pylintrc ()
+  (or (when-let ((pylintrc (seq-find
+                            (lambda (file) (file-exists-p (concat default-directory file)))
+                            '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg"))))
+        (expand-file-name (concat default-directory pylintrc)))
+      (and (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
+           (when-let ((pylintrc (seq-find
+                                 (apply-partially 'locate-dominating-file default-directory)
+                                 '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg"))))
+             (expand-file-name (concat (locate-dominating-file default-directory pylintrc) pylintrc))))
+      (and (getenv "PYLINTRC")
+           (expand-file-name (getenv "PYLINTRC")))
+      (when-let ((config-dir
+                  (or (and (getenv "XDG_CONFIG_HOME")
+                           (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
+                      "~/.config/")))
+        (expand-file-name (concat config-dir "pylintrc")))
+      (let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
+        (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc))
+      (and (file-exists-p "/etc/pylintrc")
+           "/etc/pylintrc")))
+
+(defvar python-x-flycheck-checker-props
+  '(python-mypy . ((command . ((eval flycheck-python-mypy-executable)
+                               "--show-column-numbers"
+                               (config-file "--config-file" flycheck-python-mypy-config)
+                               (option "--cache-dir" flycheck-python-mypy-cache-dir)
+                               source-original))
+                   (enabled . (lambda () (not (null (flycheck-python-mypy-executable)))))
+                   (verify  . (lambda (_)
+                                (let ((mypy-config (flycheck-locate-config-file
+                                                    flycheck-python-mypy-config
+                                                    'python-mypy)))
+                                  (list (flycheck-verification-result-new
+                                         :label "Mypy config"
+                                         :message (if mypy-config
+                                                      (format "Found at %S" mypy-config)
+                                                    "Not found")
+                                         :face (if mypy-config 'success '(bold error))))))))))
+
+(defun python-x-flycheck-checker-get-advice (fn checker property)
+  (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
+      (funcall fn checker property)))
+
+;;;###autoload
+(defun python-x-flycheck-setup ()
+  (with-eval-after-load 'flycheck
+    (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
+
+    (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
+                                        ,(concat (expand-file-name
+                                                  (or (and (getenv "XDG_CONFIG_HOME")
+                                                           (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
+                                                      "~/.config/"))
+                                                 "mypy/config")))
+
+    (add-hook 'flycheck-mode-hook
+              (lambda ()
+                (when (derived-mode-p 'python-mode)
+                  (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
+                              flycheck-python-flake8-executable (python-x-executable-find "flake8")
+                              flycheck-python-pylint-executable (python-x-executable-find "pylint")
+                              flycheck-python-mypy-executable (python-x-executable-find "mypy"))
+                  (advice-add 'flycheck-checker-get :around 'python-x-flycheck-checker-get-advice))))))
 
 (provide 'python-x)
 
