@@ -1,0 +1,17 @@
+# Created by https://www.toptal.com/developers/gitignore/api/elisp
+# Edit at https://www.toptal.com/developers/gitignore?templates=elisp
+
+### Elisp ###
+# Compiled
+*.elc
+
+# Packaging
+.cask
+
+# Backup files
+*~
+
+# Undo-tree save-files
+*.~undo-tree
+
+# End of https://www.toptal.com/developers/gitignore/api/elisp
