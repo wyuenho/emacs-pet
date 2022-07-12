@@ -162,13 +162,14 @@
        (goto-char (point-min))
        (re-search-forward "^\\[tool.poetry\\]$" nil t nil))
      (executable-find "poetry")
-     (when python-x-auto-install-virtual-environment
-       (condition-case err
-           (with-temp-buffer
-             (or (zerop (call-process "poetry" nil t nil "env" "info" "-p"))
-                 (zerop (call-process "poetry" nil t nil "install"))))
-         (error (minibuffer-message "%s" (error-message-string err))
-                nil))))))
+     (if python-x-auto-install-virtual-environment
+         (condition-case err
+             (with-temp-buffer
+               (or (zerop (call-process "poetry" nil t nil "env" "info" "-p"))
+                   (zerop (call-process "poetry" nil t nil "install"))))
+           (error (minibuffer-message "%s" (error-message-string err))
+                  nil))
+       t))))
 
 (defun python-x-use-pyenv-p ()
   (and (python-x-python-version-file-path)
