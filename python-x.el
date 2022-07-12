@@ -464,8 +464,7 @@
                  (call-process "pyenv" nil t nil "which" executable)
                  (string-trim (buffer-substring-no-properties (point-min) (point-max))))
              (error (minibuffer-message "%s" (error-message-string err)))))
-          ((executable-find executable)
-           executable))))
+          (t (executable-find executable)))))
 
 ;;;###autoload
 (defun python-x-virtualenv-root ()
