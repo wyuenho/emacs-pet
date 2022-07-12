@@ -475,7 +475,7 @@
                (call-process "poetry" nil t nil "env" "info" "--path"))
               ((python-x-use-pyenv-p)
                (call-process "pyenv" nil t nil "prefix")))
-        (string-trim (buffer-substring-no-properties (point-min) (point-max))))
+        (file-truename (string-trim (buffer-string))))
     (error (minibuffer-message "%s" (error-message-string err)))))
 
 (provide 'python-x)
