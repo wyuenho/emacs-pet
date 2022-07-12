@@ -1,11 +1,11 @@
-;;; python-x.el --- summary -*- lexical-binding: t -*-
+;;; python-x.el --- python mode extensions -*- lexical-binding: t -*-
 
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
-;; Version: version
-;; Package-Requires: (dependencies)
-;; Homepage: homepage
-;; Keywords: keywords
+;; Version: 0.1
+;; Package-Requires: ((emacs "27.1"))
+;; Homepage: https://github.com/wyuenho/emacs-python-x/
+;; Keywords: python
 
 
 ;; This file is not part of GNU Emacs
@@ -27,10 +27,9 @@
 ;;; Commentary:
 
 ;; TODO:
-;; 1. support pyenv
-;; 2. support system pip
-;; 3. support pipenv
-;; 4. support setuptools
+;; support setuptools
+;; clean up python-version cache
+;; update variables when config change
 
 ;;; Code:
 
@@ -62,6 +61,11 @@
                  (const :tag "dasel" "dasel")
                  (string :tag "Executable")))
 
+(defcustom python-x-auto-install-virtual-environment t
+  ""
+  :group 'python-x
+  :type 'boolean)
+
 (defun python-x-find-file-from-project-root (file-name)
   (when-let ((dir (locate-dominating-file
                    (or (and (functionp 'projectile-project-root)
@@ -73,9 +77,14 @@
 (defun python-x-parse-config-file (file-path)
   (condition-case err
       (with-temp-buffer
-        (funcall 'call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
+        (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
         (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
     (error (minibuffer-message "%s" (error-message-string err)) nil)))
+
+(defun python-x-parse-python-version (file-path)
+  (with-temp-buffer
+    (insert-file-contents file-path)
+    (string-trim (buffer-substring-no-properties (point-min) (point-max)))))
 
 (defvar python-x-watched-config-files nil)
 (defun python-x-watch-config-file (config-file cache-var parser)
@@ -105,8 +114,8 @@
 (defun python-x-pyproject-file-path ()
   (python-x-find-file-from-project-root "pyproject.toml"))
 
-(defvar python-x-pre-commit-config-cache nil)
-(defvar python-x-pyproject-cache nil)
+(defun python-x-python-version-file-path ()
+  (python-x-find-file-from-project-root ".python-version"))
 
 (cl-defmacro python-x-config-file-content (name &key file-path cache-var parser)
   `(defun ,name ()
@@ -122,15 +131,28 @@
              (push (cons config-file content) ,cache-var)
              content))))))
 
+(defvar python-x-pre-commit-config-cache nil)
 (python-x-config-file-content python-x-pre-commit-config
                               :file-path (python-x-pre-commit-config-file-path)
                               :cache-var python-x-pre-commit-config-cache
                               :parser python-x-parse-config-file)
 
+(defvar python-x-pyproject-cache nil)
 (python-x-config-file-content python-x-pyproject
                               :file-path (python-x-pyproject-file-path)
                               :cache-var python-x-pyproject-cache
                               :parser python-x-parse-config-file)
+
+(defvar python-x-python-version-cache nil)
+(python-x-config-file-content python-x-python-version
+                              :file-path (python-x-python-version-file-path)
+                              :cache-var python-x-python-version-cache
+                              :parser python-x-parse-python-version)
+
+(defun python-x-pre-commit-p (requirements)
+  (and (python-x-pre-commit-config-file-path)
+       (or (executable-find "pre-commit")
+           (member "pre-commit" requirements))))
 
 (defun python-x-use-poetry-p ()
   (when-let ((pyproject-path (python-x-pyproject-file-path)))
@@ -140,17 +162,17 @@
        (goto-char (point-min))
        (re-search-forward "^\\[tool.poetry\\]$" nil t nil))
      (executable-find "poetry")
-     (condition-case err
-         (with-temp-buffer
-           (or (zerop (call-process "poetry" nil t nil "env" "info" "-p"))
-               (zerop (call-process "poetry" nil t nil "install"))))
-       (error (minibuffer-message (error-message-string err))
-              nil)))))
+     (when python-x-auto-install-virtual-environment
+       (condition-case err
+           (with-temp-buffer
+             (or (zerop (call-process "poetry" nil t nil "env" "info" "-p"))
+                 (zerop (call-process "poetry" nil t nil "install"))))
+         (error (minibuffer-message "%s" (error-message-string err))
+                nil))))))
 
-(defun python-x-pre-commit-p (requirements)
-  (and (python-x-pre-commit-config-file-path)
-       (or (executable-find "pre-commit")
-           (member "pre-commit" requirements))))
+(defun python-x-use-pyenv-p ()
+  (and (python-x-python-version-file-path)
+       (executable-find "pyenv")))
 
 (defun python-x-requirements-from-file (anchor-dir file-path)
   (let ((requirements-file
@@ -280,29 +302,32 @@
          (requirements
           (assoc-default file-path python-x-project-requirements-cache)))
     (unless requirements
-      (setf requirements
-            (mapcar 'python-x-parse-requirement-spec
-                    (or (and (python-x-use-poetry-p)
-                             (condition-case err
-                                 (process-lines "poetry" "run" "pip" "list" "--format=freeze" "--disable-pip-version-check")
-                               (error (minibuffer-message "%s" (error-message-string err)) nil)))
-                        ;; TODO:
-                        ;; 1. search the project root for something that looks a
-                        ;; virtualenv (or pyenv for now), go into the venv and
-                        ;; call venv/bin/pip list --format=freeze in it
-                        ;; 2. if requirements.txt is found but no virtualenv
-                        ;; found, make one and install the requirements
-                        (when-let ((project-root-requirements-file (python-x-find-file-from-project-root "requirements.txt")))
-                          (python-x-resolve-requirements
-                           (file-name-directory project-root-requirements-file)
-                           project-root-requirements-file))
-                        (condition-case err
-                            (process-lines "pip" "list" "--format=freeze" "--disable-pip-version-check")
-                          (error (minibuffer-message "%s" (error-message-string err)) nil)))))
-      (setf python-x-project-requirements-cache
-            (assoc-delete-all file-path python-x-project-requirements-cache))
-      (when requirements
-        (push (cons file-path requirements) python-x-project-requirements-cache)))
+      (let ((pip-args '("list" "--format=freeze" "--disable-pip-version-check")))
+        (setf requirements
+              (mapcar 'python-x-parse-requirement-spec
+                      (or (and (python-x-use-poetry-p)
+                               (condition-case err
+                                   (apply 'process-lines "poetry" (append '("run" "pip") pip-args))
+                                 (error (minibuffer-message "%s" (error-message-string err)) nil)))
+                          (and (python-x-use-pyenv-p)
+                               (condition-case err
+                                   (let ((pip-path (with-temp-buffer
+                                                     (call-process "pyenv" nil t nil "which" "pip")
+                                                     (string-trim (buffer-substring-no-properties (point-min) (point-max))))))
+                                     (apply 'process-lines pip-path pip-args))
+                                 (error (minibuffer-message "%s" (error-message-string err)) nil)))
+                          (when-let ((project-root-requirements-file (python-x-find-file-from-project-root "requirements.txt")))
+                            (python-x-resolve-requirements
+                             (file-name-directory project-root-requirements-file)
+                             project-root-requirements-file))
+                          (and (executable-find "pip")
+                               (condition-case err
+                                   (apply 'process-lines "pip" pip-args)
+                                 (error (minibuffer-message "%s" (error-message-string err)) nil))))))
+        (setf python-x-project-requirements-cache
+              (assoc-delete-all file-path python-x-project-requirements-cache))
+        (when requirements
+          (push (cons file-path requirements) python-x-project-requirements-cache))))
     requirements))
 
 (defun python-x-pre-commit-config-has-hook-p (id)
@@ -315,7 +340,7 @@
 (defun python-x-parse-pre-commit-db (db-file)
   (condition-case err
       (with-temp-buffer
-        (funcall 'call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
+        (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
         (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
     (error (error-message-string err) nil)))
 
@@ -374,18 +399,17 @@
 
 (defun python-x-pre-commit-ensure-virtualenv-path (hook-id)
   (let ((venv-path (python-x-pre-commit-virtualenv-path hook-id)))
-    (unless venv-path
+    (when (and (not venv-path) python-x-auto-install-virtual-environment)
       (condition-case err
-          (progn
-            (cond ((python-x-use-poetry-p)
-                   (with-temp-buffer
-                     (call-process "poetry" nil t nil "run" "pre-commit" "install" "--install-hooks")))
-                  ((executable-find "pre-commit")
-                   (with-temp-buffer
-                     (call-process "pre-commit" nil t nil "install" "--install-hooks")))
-                  (t (user-error "No pre-commit executable found.")))
+          (when (cond ((python-x-use-poetry-p)
+                       (with-temp-buffer
+                         (zerop (call-process "poetry" nil t nil "run" "pre-commit" "install" "--install-hooks"))))
+                      ((executable-find "pre-commit")
+                       (with-temp-buffer
+                         (zerop (call-process "pre-commit" nil t nil "install" "--install-hooks"))))
+                      (t (user-error "command pre-commit not found.")))
             (setf venv-path (python-x-pre-commit-virtualenv-path hook-id)))
-        (error (minibuffer-message (error-message-string err)))))
+        (error (minibuffer-message "%s" (error-message-string err)))))
     venv-path))
 
 (defun python-x-cleanup-watchers-and-caches ()
@@ -407,7 +431,9 @@
             (setf python-x-watched-config-files
                   (assoc-delete-all config-file python-x-watched-config-files))))
 
-        (dolist (cache '(python-x-pre-commit-config-cache python-x-pyproject-cache))
+        (dolist (cache '(python-x-pre-commit-config-cache
+                         python-x-pyproject-cache
+                         python-x-python-version-cache))
           (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
             (when (string-prefix-p root config-file)
               (setf (symbol-value cache)
@@ -426,11 +452,31 @@
            (concat (file-name-as-directory
                     (python-x-pre-commit-ensure-virtualenv-path executable))
                    "/bin/" executable))
-          ((and (python-x-use-poetry-p)
-                (member executable requirements))
-           (concat "poetry" "run" executable))
+          ((python-x-use-poetry-p)
+           (condition-case err
+               (with-temp-buffer
+                 (call-process "poetry" nil t nil "run" "which" executable)
+                 (string-trim (buffer-substring-no-properties (point-min) (point-max))))
+             (error (minibuffer-message "%s" (error-message-string err)))))
+          ((python-x-use-pyenv-p)
+           (condition-case err
+               (with-temp-buffer
+                 (call-process "pyenv" nil t nil "which" executable)
+                 (string-trim (buffer-substring-no-properties (point-min) (point-max))))
+             (error (minibuffer-message "%s" (error-message-string err)))))
           ((executable-find executable)
            executable))))
+
+;;;###autoload
+(defun python-x-virtualenv-root ()
+  (condition-case err
+      (with-temp-buffer
+        (cond ((python-x-use-poetry-p)
+               (call-process "poetry" nil t nil "env" "info" "--path"))
+              ((python-x-use-pyenv-p)
+               (call-process "pyenv" nil t nil "prefix")))
+        (string-trim (buffer-substring-no-properties (point-min) (point-max))))
+    (error (minibuffer-message "%s" (error-message-string err)))))
 
 (provide 'python-x)
 
