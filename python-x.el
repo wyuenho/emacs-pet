@@ -30,6 +30,7 @@
 ;; support setuptools
 ;; update variables when config change
 ;; output progress when initing virtualenv
+;; support direnv layouts
 
 ;;; Code:
 
@@ -442,6 +443,10 @@
 
 (add-hook 'kill-buffer-hook 'python-x-cleanup-watchers-and-caches)
 
+
+
+
+
 ;;;###autoload
 (defun python-x-executable-find (executable)
   (let ((requirements (python-x-project-requirements)))
@@ -483,6 +488,10 @@
                (call-process "pyenv" nil t nil "prefix")))
         (file-truename (string-trim (buffer-string))))
     (error (minibuffer-message (error-message-string err)))))
+
+
+
+
 
 (defun python-x-flycheck-python-pylint-find-pylintrc ()
   (or (when-let ((pylintrc (seq-find
