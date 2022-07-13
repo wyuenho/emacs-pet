@@ -79,12 +79,12 @@
       (with-temp-buffer
         (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
         (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
-    (error (minibuffer-message "%s" (error-message-string err)) nil)))
+    (error (minibuffer-message (error-message-string err)) nil)))
 
 (defun python-x-parse-python-version (file-path)
   (with-temp-buffer
     (insert-file-contents file-path)
-    (string-trim (buffer-substring-no-properties (point-min) (point-max)))))
+    (string-trim (buffer-string))))
 
 (defvar python-x-watched-config-files nil)
 (defun python-x-watch-config-file (config-file cache-var parser)
@@ -167,7 +167,7 @@
              (with-temp-buffer
                (or (zerop (call-process "poetry" nil t nil "env" "info" "-p"))
                    (zerop (call-process "poetry" nil t nil "install"))))
-           (error (minibuffer-message "%s" (error-message-string err))
+           (error (minibuffer-message (error-message-string err))
                   nil))
        t))))
 
@@ -309,14 +309,14 @@
                       (or (and (python-x-use-poetry-p)
                                (condition-case err
                                    (apply 'process-lines "poetry" (append '("run" "pip") pip-args))
-                                 (error (minibuffer-message "%s" (error-message-string err)) nil)))
+                                 (error (minibuffer-message (error-message-string err)) nil)))
                           (and (python-x-use-pyenv-p)
                                (condition-case err
                                    (let ((pip-path (with-temp-buffer
                                                      (call-process "pyenv" nil t nil "which" "pip")
-                                                     (string-trim (buffer-substring-no-properties (point-min) (point-max))))))
+                                                     (string-trim (buffer-string)))))
                                      (apply 'process-lines pip-path pip-args))
-                                 (error (minibuffer-message "%s" (error-message-string err)) nil)))
+                                 (error (minibuffer-message (error-message-string err)) nil)))
                           (when-let ((project-root-requirements-file (python-x-find-file-from-project-root "requirements.txt")))
                             (python-x-resolve-requirements
                              (file-name-directory project-root-requirements-file)
@@ -324,7 +324,7 @@
                           (and (executable-find "pip")
                                (condition-case err
                                    (apply 'process-lines "pip" pip-args)
-                                 (error (minibuffer-message "%s" (error-message-string err)) nil))))))
+                                 (error (minibuffer-message (error-message-string err)) nil))))))
         (setf python-x-project-requirements-cache
               (assoc-delete-all file-path python-x-project-requirements-cache))
         (when requirements
@@ -410,7 +410,7 @@
                          (zerop (call-process "pre-commit" nil t nil "install" "--install-hooks"))))
                       (t (user-error "command pre-commit not found.")))
             (setf venv-path (python-x-pre-commit-virtualenv-path hook-id)))
-        (error (minibuffer-message "%s" (error-message-string err)))))
+        (error (minibuffer-message (error-message-string err)))))
     venv-path))
 
 (defun python-x-cleanup-watchers-and-caches ()
@@ -457,14 +457,17 @@
            (condition-case err
                (with-temp-buffer
                  (call-process "poetry" nil t nil "run" "which" executable)
-                 (string-trim (buffer-substring-no-properties (point-min) (point-max))))
-             (error (minibuffer-message "%s" (error-message-string err)))))
+                 (string-trim (buffer-string)))
+             (error (minibuffer-message (error-message-string err)))))
           ((python-x-use-pyenv-p)
            (condition-case err
                (with-temp-buffer
-                 (call-process "pyenv" nil t nil "which" executable)
-                 (string-trim (buffer-substring-no-properties (point-min) (point-max))))
-             (error (minibuffer-message "%s" (error-message-string err)))))
+                 (if (zerop (call-process "pyenv" nil t nil "which" executable))
+                     (string-trim (buffer-string))
+                   (with-temp-buffer
+                     (call-process "pyenv" nil t nil "prefix")
+                     (user-error "%s not found under %s" executable (string-trim (buffer-string))))))
+             (error (minibuffer-message (error-message-string err)))))
           (t (executable-find executable)))))
 
 ;;;###autoload
@@ -476,7 +479,7 @@
               ((python-x-use-pyenv-p)
                (call-process "pyenv" nil t nil "prefix")))
         (file-truename (string-trim (buffer-string))))
-    (error (minibuffer-message "%s" (error-message-string err)))))
+    (error (minibuffer-message (error-message-string err)))))
 
 (defun python-x-flycheck-python-pylint-find-pylintrc ()
   (or (when-let ((pylintrc (seq-find
