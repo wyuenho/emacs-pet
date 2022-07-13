@@ -312,10 +312,7 @@
                                  (error (minibuffer-message (error-message-string err)) nil)))
                           (and (python-x-use-pyenv-p)
                                (condition-case err
-                                   (let ((pip-path (with-temp-buffer
-                                                     (call-process "pyenv" nil t nil "which" "pip")
-                                                     (string-trim (buffer-string)))))
-                                     (apply 'process-lines pip-path pip-args))
+                                   (apply 'process-lines "pyenv" (append '("exec" "pip") pip-args))
                                  (error (minibuffer-message (error-message-string err)) nil)))
                           (when-let ((project-root-requirements-file (python-x-find-file-from-project-root "requirements.txt")))
                             (python-x-resolve-requirements
