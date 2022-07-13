@@ -455,7 +455,7 @@
                (with-temp-buffer
                  (call-process "poetry" nil t nil "run" "which" executable)
                  (string-trim (buffer-string)))
-             (error (minibuffer-message (error-message-string err)))))
+             (error (minibuffer-message (error-message-string err)) nil)))
           ((python-x-use-pyenv-p)
            (condition-case err
                (with-temp-buffer
@@ -464,8 +464,14 @@
                    (with-temp-buffer
                      (call-process "pyenv" nil t nil "prefix")
                      (user-error "%s not found under %s" executable (string-trim (buffer-string))))))
-             (error (minibuffer-message (error-message-string err)))))
-          (t (executable-find executable)))))
+             (error (minibuffer-message (error-message-string err)) nil)))
+          (t (when-let ((path (executable-find executable)))
+               (condition-case err
+                   (if (and (executable-find "pyenv")
+                            (member path (process-lines "pyenv" "shims")))
+                       nil
+                     path)
+                 (error nil)))))))
 
 ;;;###autoload
 (defun python-x-virtualenv-root ()
