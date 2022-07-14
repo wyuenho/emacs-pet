@@ -471,7 +471,7 @@
                      (user-error "%s not found under %s" executable (string-trim (buffer-string))))))
              (error (minibuffer-message (error-message-string err)) nil)))
           (t (when-let ((path (executable-find executable)))
-               (condition-case err
+               (condition-case nil
                    (if (and (executable-find "pyenv")
                             (member path (process-lines "pyenv" "shims")))
                        nil
