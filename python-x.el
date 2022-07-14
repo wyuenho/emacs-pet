@@ -379,7 +379,7 @@
                           .additional_dependencies))))
                  (concat (let-alist repo-config .repo)
                          (if additional-deps
-                             (concat ":" (string-join additional-deps ":"))))))
+                             (concat ":" (string-join (sort additional-deps 'string<) ","))))))
 
               (repo-dir
                (let-alist (seq-find
