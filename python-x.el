@@ -121,11 +121,11 @@
 (cl-defmacro python-x-config-file-content (name &key file-path cache-var parser)
   `(defun ,name ()
      (let* ((config-file ,file-path)
-            (cache-value (and config-file
-                              (file-exists-p config-file)
-                              (assoc-default config-file ,cache-var))))
-       (if cache-value
-           cache-value
+            (cache-kvp (and config-file
+                            (file-exists-p config-file)
+                            (assoc config-file ,cache-var))))
+       (if cache-kvp
+           (cdr cache-kvp)
          (when config-file
            (python-x-watch-config-file config-file (quote ,cache-var) (quote ,parser))
            (when-let ((content (funcall (quote ,parser) config-file)))
@@ -301,9 +301,9 @@
 (defvar python-x-project-requirements-cache nil)
 (defun python-x-project-requirements ()
   (let* ((file-path (buffer-file-name))
-         (requirements
-          (assoc-default file-path python-x-project-requirements-cache)))
-    (unless requirements
+         (cache-kvp (alist-get file-path python-x-project-requirements-cache nil nil 'equal))
+         (requirements (cdr cache-kvp)))
+    (unless (or cache-kvp requirements)
       (let ((pip-args '("list" "--format=freeze" "--disable-pip-version-check")))
         (setf requirements
               (mapcar 'python-x-parse-requirement-spec
@@ -451,17 +451,16 @@
 (defun python-x-executable-find (executable)
   (let ((requirements (python-x-project-requirements)))
     (cond ((and (python-x-pre-commit-p requirements)
-                (python-x-pre-commit-config-has-hook-p executable))
-           (concat (file-name-as-directory
-                    (python-x-pre-commit-ensure-virtualenv-path executable))
-                   "/bin/" executable))
-          ((python-x-use-poetry-p)
+                (python-x-pre-commit-config-has-hook-p executable)
+                (not (string-prefix-p "python" executable)))
+           (concat (python-x-pre-commit-ensure-virtualenv-path executable) "/bin/" executable))
+          ((and (python-x-use-poetry-p) (member executable requirements))
            (condition-case err
                (with-temp-buffer
                  (call-process "poetry" nil t nil "run" "which" executable)
                  (string-trim (buffer-string)))
              (error (minibuffer-message (error-message-string err)) nil)))
-          ((python-x-use-pyenv-p)
+          ((and (python-x-use-pyenv-p) (member executable requirements))
            (condition-case err
                (with-temp-buffer
                  (if (zerop (call-process "pyenv" nil t nil "which" executable))
