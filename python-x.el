@@ -105,7 +105,7 @@
                         (setf python-x-watched-config-files
                               (assoc-delete-all file python-x-watched-config-files)))
                        ('changed
-                        (setf (assoc-default file (symbol-value cache-var))
+                        (setf (alist-get file (symbol-value cache-var) nil t 'equal)
                               (funcall parser file))))))))
           python-x-watched-config-files)))
 
