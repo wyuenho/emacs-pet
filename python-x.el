@@ -522,12 +522,7 @@
              "/etc/pylintrc"))))
 
 (defvar python-x-flycheck-checker-props
-  '(python-mypy . ((command . ((eval flycheck-python-mypy-executable)
-                               "--show-column-numbers"
-                               (config-file "--config-file" flycheck-python-mypy-config)
-                               (option "--cache-dir" flycheck-python-mypy-cache-dir)
-                               source-original))
-                   (enabled . (lambda () (not (null (flycheck-python-mypy-executable)))))
+  '(python-mypy . ((enabled . (lambda () (not (null (flycheck-python-mypy-executable)))))
                    (verify  . (lambda (_)
                                 (let ((mypy-config (flycheck-locate-config-file
                                                     flycheck-python-mypy-config
