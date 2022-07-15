@@ -98,6 +98,7 @@ Complete Example
 ++++++++++++++++
 
 .. code-block:: elisp
+   (require 'quelpa-use-package)
 
    (use-package exec-path-from-shell
      :if (memq (window-system) '(mac ns))
@@ -120,6 +121,7 @@ Complete Example
 
    (use-package python-x
      :quelpa (python-x :fetcher github :repo "wyuenho/emacs-python-x")
+     :ensure-system-package (dasel sqlite3)
      :config
      (add-hook 'python-mode-hook
                (lambda ()
