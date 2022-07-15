@@ -27,6 +27,38 @@
 
 ;;; Commentary:
 
+;; How to use
+;; ----------
+;;
+;; (use-package python-x
+;;   :quelpa (python-x :fetcher github :repo "wyuenho/emacs-python-x")
+;;   :config
+;;   (add-hook 'python-mode-hook
+;;             (lambda ()
+;;               (setq-local python-shell-interpreter (python-x-executable-find "python")
+;;                           python-shell-virtualenv-root (python-x-virtualenv-root)
+;;                           python-shell-exec-path (concat python-shell-virtualenv-root "/bin"))
+
+;;               (with-eval-after-load 'flycheck
+;;                 (python-x-flycheck-setup))
+
+;;               (with-eval-after-load 'lsp-pyright
+;;                 (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
+;;                             lsp-pyright-venv-path python-shell-virtualenv-root))
+
+;;               (with-eval-after-load 'dap-python
+;;                 (setq-local dap-python-executable python-shell-interpreter))
+
+;;               (with-eval-after-load 'python-black
+;;                 (when-let ((black-executable (python-x-executable-find "black")))
+;;                   (setq-local python-black-command black-executable)
+;;                   (python-black-on-save-mode 1)))
+
+;;               (with-eval-after-load 'python-isort
+;;                 (when-let ((isort-executable (python-x-executable-find "isort")))
+;;                   (setq-local python-isort-command isort-executable)
+;;                   (python-isort-on-save-mode 1))))))
+
 ;; TODO:
 ;; support setuptools
 ;; update variables when config change
