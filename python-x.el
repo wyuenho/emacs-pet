@@ -3,7 +3,6 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
-;; Package-Version: 20220714.2154
 ;; Package-Requires: ((emacs "28.1"))
 ;; Homepage: https://github.com/wyuenho/emacs-python-x/
 ;; Keywords: python
