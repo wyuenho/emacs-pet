@@ -30,10 +30,9 @@ As long as you use one of the supported Python virtualenv tools, ``python-x``
 will be able to find the virtualenv root and binary you ask for, with **zero
 Emacs configuration** necessary.
 
-While ``python-x`` has zero dependency on other Emacs packages, it works well
-with popular source code project management packages such as `Projectile
-<https://docs.projectile.mx/projectile/index.html>`_ and the built-in
-``project.el``. The first time you call one the few ``python-x`` helper
+``python-x`` works well with popular source code project management packages
+such as `Projectile <https://docs.projectile.mx/projectile/index.html>`_ and the
+built-in ``project.el``. The first time you call one the few ``python-x`` helper
 functions, it will use Projectile or project.el to detect the root of your
 project, search for configuration files for many supported Python virtualenv
 tools, and then lookup the location of the virtualenv based on the content of
@@ -50,6 +49,12 @@ Python Virtual Environment Tooling Support
 - `direnv <https://direnv.net/>`_
 - Whatever is on your ``$PATH``
 
+System Requirements
+-------------------
+
+Currently ``python-x`` requires `dasel <https://github.com/TomWright/dasel>`_
+and the ``sqlite3`` binary installed on your system. Both of which will be made
+optional in a future version.
 
 Usage
 -----
