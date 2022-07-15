@@ -179,10 +179,6 @@
   (and (python-x-python-version-file-path)
        (executable-find "pyenv")))
 
-(defun python-x-use-direnv-p ()
-  (and (executable-find "direnv")
-       (python-x-find-file-from-project-root ".envrc")))
-
 (defun python-x-requirements-from-file (anchor-dir file-path)
   (let ((requirements-file
          (if (and (null file-path) anchor-dir)
