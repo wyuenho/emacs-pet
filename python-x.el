@@ -502,7 +502,7 @@
   (let ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg")))
     (or (when-let ((pylintrc (seq-find
                               (lambda (file) (file-exists-p (concat default-directory file)))
-                              pylintc)))
+                              pylintrc)))
           (expand-file-name (concat default-directory pylintrc)))
         (and (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
              (when-let ((pylintrc (seq-find
