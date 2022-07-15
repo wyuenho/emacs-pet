@@ -197,7 +197,7 @@
     (save-match-data
       (flatten-list
        (cl-loop for req in requirements
-                collect (if (not (null (string-match-p
+                collect (if (not (null (string-match
                                         (rx (or "-r" "-c" "--requirement" "--constraint")
                                             (+ space)
                                             (group (+ nonl)))
@@ -212,7 +212,7 @@
 ;; https://pip.pypa.io/en/stable/cli/pip_install/#requirements-file-format
 (defun python-x-parse-requirement-spec (req)
   (save-match-data
-    (cond ((not (null (string-match-p (rx (or "http" "file" "git" "git+ssh") "://") req))) ;; URL
+    (cond ((not (null (string-match (rx (or "http" "file" "git" "git+ssh") "://") req))) ;; URL
            ;; https://datatracker.ietf.org/doc/html/rfc3987#section-2.2
            (rx-let ((ucschar (in "\uA000-\uD7FF"
                                  "\uF900-\uFDCF"
@@ -276,19 +276,19 @@
                     (fragment query)
                     (url (seq scheme authority (? path) (? "?" query) (? "#" fragment))))
 
-             (and (not (null (string-match-p (rx url) req))) (match-string 0 req))))
+             (and (not (null (string-match (rx url) req))) (match-string 0 req))))
           ;; Path
-          ((not (null (string-match-p (rx line-start (in "." "/")) req)))
+          ((not (null (string-match (rx line-start (in "." "/")) req)))
            (when-let ((requirement-spec (car (split-string req (rx (or ";" "@" "--")))))
                       (requirement-spec (string-trim requirement-spec)))
              (when (not (string-empty-p requirement-spec))
                requirement-spec)))
           ;; TODO: fetch the package and read the setup.cfg or setup.py files to
           ;; extract dependencies
-          ((not (null (string-match-p (rx (or "-e" "--editable") (+ space) (group (+ nonl)) eol) req)))
+          ((not (null (string-match (rx (or "-e" "--editable") (+ space) (group (+ nonl)) eol) req)))
            nil)
           ;; Options
-          ((not (null (string-match-p (rx "--" (+ (in alnum "-" "_"))) req)))
+          ((not (null (string-match (rx "--" (+ (in alnum "-" "_"))) req)))
            nil)
           ;; Requirement specifiers
           (t (let* ((requirement-spec (split-string req (rx (or ";" "@" "--"))))
