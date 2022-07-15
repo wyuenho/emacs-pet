@@ -98,6 +98,7 @@ Complete Example
 ++++++++++++++++
 
 .. code-block:: elisp
+
    (require 'quelpa-use-package)
 
    (use-package exec-path-from-shell
