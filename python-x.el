@@ -3,6 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
+;; Package-Version: 20220714.2154
 ;; Package-Requires: ((emacs "28.1"))
 ;; Homepage: https://github.com/wyuenho/emacs-python-x/
 ;; Keywords: python
@@ -449,18 +450,21 @@
 
 ;;;###autoload
 (defun python-x-executable-find (executable)
-  (let ((requirements (python-x-project-requirements)))
+  (let ((is-python (string-prefix-p "python" executable))
+        (requirements (python-x-project-requirements)))
     (cond ((and (python-x-pre-commit-p requirements)
                 (python-x-pre-commit-config-has-hook-p executable)
-                (not (string-prefix-p "python" executable)))
+                (not is-python))
            (concat (python-x-pre-commit-ensure-virtualenv-path executable) "/bin/" executable))
-          ((and (python-x-use-poetry-p) (member executable requirements))
+          ((and (python-x-use-poetry-p)
+                (or is-python (member executable requirements)))
            (condition-case err
                (with-temp-buffer
                  (call-process "poetry" nil t nil "run" "which" executable)
                  (string-trim (buffer-string)))
              (error (minibuffer-message (error-message-string err)) nil)))
-          ((and (python-x-use-pyenv-p) (member executable requirements))
+          ((and (python-x-use-pyenv-p)
+                (or is-python (member executable requirements)))
            (condition-case err
                (with-temp-buffer
                  (if (zerop (call-process "pyenv" nil t nil "which" executable))
