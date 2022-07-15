@@ -499,26 +499,27 @@
 
 
 (defun python-x-flycheck-python-pylint-find-pylintrc ()
-  (or (when-let ((pylintrc (seq-find
-                            (lambda (file) (file-exists-p (concat default-directory file)))
-                            '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg"))))
-        (expand-file-name (concat default-directory pylintrc)))
-      (and (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
-           (when-let ((pylintrc (seq-find
-                                 (apply-partially 'locate-dominating-file default-directory)
-                                 '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg"))))
-             (expand-file-name (concat (locate-dominating-file default-directory pylintrc) pylintrc))))
-      (and (getenv "PYLINTRC")
-           (expand-file-name (getenv "PYLINTRC")))
-      (when-let ((config-dir
-                  (or (and (getenv "XDG_CONFIG_HOME")
-                           (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
-                      "~/.config/")))
-        (expand-file-name (concat config-dir "pylintrc")))
-      (let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
-        (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc))
-      (and (file-exists-p "/etc/pylintrc")
-           "/etc/pylintrc")))
+  (let ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg")))
+    (or (when-let ((pylintrc (seq-find
+                              (lambda (file) (file-exists-p (concat default-directory file)))
+                              pylintc)))
+          (expand-file-name (concat default-directory pylintrc)))
+        (and (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
+             (when-let ((pylintrc (seq-find
+                                   (apply-partially 'locate-dominating-file default-directory)
+                                   pylintrc)))
+               (expand-file-name (concat (locate-dominating-file default-directory pylintrc) pylintrc))))
+        (and (getenv "PYLINTRC")
+             (expand-file-name (getenv "PYLINTRC")))
+        (when-let ((config-dir
+                    (or (and (getenv "XDG_CONFIG_HOME")
+                             (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
+                        "~/.config/")))
+          (expand-file-name (concat config-dir "pylintrc")))
+        (let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
+          (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc))
+        (and (file-exists-p "/etc/pylintrc")
+             "/etc/pylintrc"))))
 
 (defvar python-x-flycheck-checker-props
   '(python-mypy . ((command . ((eval flycheck-python-mypy-executable)
