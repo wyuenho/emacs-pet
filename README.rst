@@ -17,8 +17,8 @@ still can't find the right binaries?
 If you answer "yes" for any of these questions, you've come to the right place.
 
 
-How does `python-x` work?
--------------------------
+How does ``python-x`` work?
+---------------------------
 
 The first key insight is to recognize the executables that many of these linting
 and formatting Emacs packages rely on are configurable.
@@ -26,19 +26,19 @@ and formatting Emacs packages rely on are configurable.
 The second key insight is Emacs allows you to setup a different value for the
 exectuable path on a per buffer basis.
 
-As long as you use one of the supported Python virtualenv tools, `python-x` will
-be able to find the virtualenv root and binary you ask for, with **zero Emacs
-configuration** necessary.
+As long as you use one of the supported Python virtualenv tools, ``python-x``
+will be able to find the virtualenv root and binary you ask for, with **zero
+Emacs configuration** necessary.
 
-While `python-x` has zero dependency on other Emacs packages, it works well with
-popular source code project management packages such as `Projectile
+While ``python-x`` has zero dependency on other Emacs packages, it works well
+with popular source code project management packages such as `Projectile
 <https://docs.projectile.mx/projectile/index.html>`_ and the built-in
-`project.el`. The first time you call one the few `python-x` helper functions,
-it will use Projectile or project.el to detect the root of your project, search
-for configuration files for many supported Python virtualenv tools, and then
-lookup the location of the virtualenv based on the content of the configuration
-files. Once a virtualenv is found, all executables are found by looking into its
-`bin` directory.
+``project.el``. The first time you call one the few ``python-x`` helper
+functions, it will use Projectile or project.el to detect the root of your
+project, search for configuration files for many supported Python virtualenv
+tools, and then lookup the location of the virtualenv based on the content of
+the configuration files. Once a virtualenv is found, all executables are found
+by looking into its ``bin`` directory.
 
 
 Python Virtual Environment Tooling Support
@@ -48,26 +48,26 @@ Python Virtual Environment Tooling Support
 - `poetry <https://python-poetry.org/>`_
 - `pyenv <https://github.com/pyenv/pyenv>`_
 - `direnv <https://direnv.net/>`_
-- Whatever is on your `$PATH`
+- Whatever is on your ``$PATH``
 
 
 Usage
 -----
 
-To get the most out of `python-x`, it is best paired with `exec-path-from-shell
+To get the most out of ``python-x``, it is best paired with `exec-path-from-shell
 <https://github.com/purcell/exec-path-from-shell>`_. Once you have your
-`exec-path` synced up to your shell's `$PATH` environment variable, you can the
-following `python-x` functions to help you setup the rest of your Emacs packages
-***properly**.
+``exec-path`` synced up to your shell's ``$PATH`` environment variable, you can the
+following ``python-x`` functions to help you setup the rest of your Emacs packages
+**properly**.
 
-`python-x` offers 2 autoloaded functions to help you find the correct path to
+``python-x`` offers 2 autoloaded functions to help you find the correct path to
 the executable and virtualenv directory you'll need:
 
 - ``(python-x-executable-find)``
 - ``(python-x-virtualenv-root)``
 
-For example, to set up `python-mode` to use the correct interpreter for `M-x
-run-python`:
+For example, to set up ``python-mode`` to use the correct interpreter for ``M-x
+run-python``:
 
 .. code-block:: elisp
 
@@ -77,8 +77,8 @@ run-python`:
                            python-shell-virtualenv-root (python-x-virtualenv-root))))
 
 
-For `flycheck`, due to its complexity, `python-x` also comes with another
-autoloaded function to help you setup the `flake8`, `pylint` and `mypy`
+For ``flycheck``, due to its complexity, ``python-x`` also comes with another
+autoloaded function to help you setup the ``flake8``, ``pylint`` and ``mypy``
 checkers:
 
 .. code-block:: elisp
