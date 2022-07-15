@@ -54,14 +54,14 @@
 (defcustom python-x-yaml-parser "dasel"
   ""
   :group 'python-x
-  :type '(choice (const :tag "Elisp function" 'yaml-parse-string)
+  :type '(choice (function :tag "Elisp function" 'yaml-parse-string)
                  (const :tag "dasel" "dasel")
                  (string :tag "Executable")))
 
 (defcustom python-x-toml-parser "dasel"
   ""
   :group 'python-x
-  :type '(choice (const :tag "Elisp function" 'toml:read-from-string)
+  :type '(choice (function :tag "Elisp function" 'toml:read-from-string)
                  (const :tag "dasel" "dasel")
                  (string :tag "Executable")))
 
