@@ -64,6 +64,8 @@
 ;; update variables when config change
 ;; output progress when initing virtualenv
 ;; support direnv layouts
+;; support pipenv ????
+;; support pep 621 (flit/pdm)
 
 ;;; Code:
 
@@ -208,6 +210,10 @@
 (defun python-x-use-pyenv-p ()
   (and (python-x-python-version-file-path)
        (executable-find "pyenv")))
+
+(defun python-x-use-direnv-p ()
+  (and (executable-find "direnv")
+       (python-x-find-file-from-project-root ".envrc")))
 
 (defun python-x-requirements-from-file (anchor-dir file-path)
   (let ((requirements-file
@@ -595,6 +601,15 @@
                               flycheck-python-pylint-executable (python-x-executable-find "pylint")
                               flycheck-python-mypy-executable (python-x-executable-find "mypy"))
                   (advice-add 'flycheck-checker-get :around 'python-x-flycheck-checker-get-advice))))))
+
+
+
+
+
+(add-to-list 'auto-mode-alist '("\\.pythonrc\\'"   . python-mode))
+(add-to-list 'auto-mode-alist '("\\.pylintrc\\'"   . conf-mode))
+(add-to-list 'auto-mode-alist '("\\.flake8\\'"     . conf-mode))
+(add-to-list 'auto-mode-alist '("\\poetry.lock\\'" . conf-toml-mode))
 
 (provide 'python-x)
 
