@@ -12,7 +12,8 @@ in your virtualenv, or are using a wrong one?
 
 Have you ever tried one of the 11+ Emacs virtualenv packages to help you fix
 this problem, but are still at a lost at why your other favorite Emacs packages
-still can't find the right binaries?
+still can't find the right binaries, or they stop working when you switch to a
+different project using a different flavor of virtualenv?
 
 If you answer "yes" for any of these questions, you've come to the right place.
 
@@ -34,10 +35,10 @@ Emacs configuration** necessary.
 such as `Projectile <https://docs.projectile.mx/projectile/index.html>`_ and the
 built-in ``project.el``. The first time you call one the few ``python-x`` helper
 functions, it will use Projectile or project.el to detect the root of your
-project, search for configuration files for many supported Python virtualenv
-tools, and then lookup the location of the virtualenv based on the content of
-the configuration files. Once a virtualenv is found, all executables are found
-by looking into its ``bin`` directory.
+project, search for the configuration files for the many supported Python
+virtualenv tools, and then lookup the location of the virtualenv based on the
+content of the configuration files. Once a virtualenv is found, all executables
+are found by looking into its ``bin`` directory.
 
 
 Python Virtual Environment Tooling Support
@@ -59,20 +60,21 @@ optional in a future version.
 Usage
 -----
 
-To get the most out of ``python-x``, it is best paired with `exec-path-from-shell
+If you are using Emacs on macOS, to get the most out of ``python-x``, it is best
+paired with `exec-path-from-shell
 <https://github.com/purcell/exec-path-from-shell>`_. Once you have your
-``exec-path`` synced up to your shell's ``$PATH`` environment variable, you can the
-following ``python-x`` functions to help you setup the rest of your Emacs packages
-**properly**.
+``exec-path`` synced up to your shell's ``$PATH`` environment variable, you can
+use the following ``python-x`` functions to help you setup the rest of your
+Emacs packages **properly**.
 
 ``python-x`` offers 2 autoloaded functions to help you find the correct path to
-the executable and virtualenv directory you'll need:
+the executable and virtualenv directory:
 
-- ``(python-x-executable-find)``
+- ``(python-x-executable-find EXECUTABLE)``
 - ``(python-x-virtualenv-root)``
 
-For example, to set up ``python-mode`` to use the correct interpreter for ``M-x
-run-python``:
+For example, to set up ``python-mode`` to use the correct interpreter when you
+execute ``M-x run-python``:
 
 .. code-block:: elisp
 
