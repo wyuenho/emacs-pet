@@ -542,12 +542,12 @@
                             flycheck-python-pycompile-executable python-shell-interpreter)))))
 
 (defun python-x-flycheck-teardown ()
-  (kill-local-variable flycheck-pylintrc)
-  (kill-local-variable flycheck-python-flake8-executable)
-  (kill-local-variable flycheck-python-pylint-executable)
-  (kill-local-variable flycheck-python-mypy-executable)
-  (kill-local-variable flycheck-python-pyright-executable)
-  (kill-local-variable flycheck-python-pycompile-executable))
+  (kill-local-variable 'flycheck-pylintrc)
+  (kill-local-variable 'flycheck-python-flake8-executable)
+  (kill-local-variable 'flycheck-python-pylint-executable)
+  (kill-local-variable 'flycheck-python-mypy-executable)
+  (kill-local-variable 'flycheck-python-pyright-executable)
+  (kill-local-variable 'flycheck-python-pycompile-executable))
 
 
 
@@ -578,30 +578,30 @@
     (setq-local python-isort-command (python-x-executable-find "isort"))))
 
 (defun python-x-cleanup-buffer-local-vars ()
-  (kill-local-variable python-shell-interpreter)
-  (kill-local-variable python-shell-virtualenv-root)
+  (kill-local-variable 'python-shell-interpreter)
+  (kill-local-variable 'python-shell-virtualenv-root)
 
   (with-eval-after-load 'flycheck
     (python-x-flycheck-teardown))
 
   (with-eval-after-load 'lsp-jedi
-    (kill-local-variable lsp-jedi-executable-command))
+    (kill-local-variable 'lsp-jedi-executable-command))
 
   (with-eval-after-load 'lsp-pyright
-    (kill-local-variable lsp-pyright-python-executable-cmd)
-    (kill-local-variable lsp-pyright-venv-path))
+    (kill-local-variable 'lsp-pyright-python-executable-cmd)
+    (kill-local-variable 'lsp-pyright-venv-path))
 
   (with-eval-after-load 'dap-python
-    (kill-local-variable dap-python-executable))
+    (kill-local-variable 'dap-python-executable))
 
   (with-eval-after-load 'python-pytest
-    (kill-local-variable python-pytest-executable))
+    (kill-local-variable 'python-pytest-executable))
 
   (with-eval-after-load 'python-black
-    (kill-local-variable python-black-command))
+    (kill-local-variable 'python-black-command))
 
   (with-eval-after-load 'python-isort
-    (kill-local-variable python-isort-command)))
+    (kill-local-variable 'python-isort-command)))
 
 ;;;###autoload
 (define-minor-mode python-x-minor-mode ()
