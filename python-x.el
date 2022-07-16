@@ -616,7 +616,8 @@
     (python-x-cleanup-buffer-local-vars)))
 
 (defun python-x-minor-mode-on ()
-  (derived-mode-p 'python-mode))
+  (when (derived-mode-p 'python-mode)
+    (python-x-minor-mode 1)))
 
 ;;;###autoload
 (define-globalized-minor-mode global-python-x-minor-mode python-x-minor-mode python-x-minor-mode-on
