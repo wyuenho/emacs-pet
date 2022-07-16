@@ -519,6 +519,7 @@
 
 (defvar flycheck-flake8rc)
 (defvar flycheck-python-mypy-config)
+(defvar python-shell-interpreter)
 
 ;;;###autoload
 (defun python-x-flycheck-setup ()
@@ -604,7 +605,7 @@
     (kill-local-variable 'python-isort-command)))
 
 ;;;###autoload
-(define-minor-mode python-x-minor-mode ()
+(define-minor-mode python-x-minor-mode
   ""
   :lighter "PyX"
   :group 'python-x
