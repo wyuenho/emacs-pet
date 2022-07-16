@@ -446,9 +446,7 @@
 
 (add-hook 'kill-buffer-hook 'python-x-cleanup-watchers-and-caches)
 
-
 
-
 
 ;;;###autoload
 (defun python-x-executable-find (executable)
@@ -494,9 +492,7 @@
         (file-truename (string-trim (buffer-string))))
     (error (minibuffer-message (error-message-string err)))))
 
-
 
-
 
 (defun python-x-flycheck-python-pylint-find-pylintrc ()
   (let ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg")))
@@ -526,29 +522,106 @@
 
 ;;;###autoload
 (defun python-x-flycheck-setup ()
-  (with-eval-after-load 'flycheck
-    (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
+  (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
 
-    (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
-                                        ,(concat (expand-file-name
-                                                  (or (and (getenv "XDG_CONFIG_HOME")
-                                                           (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
-                                                      "~/.config/"))
-                                                 "mypy/config")))
+  (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
+                                      ,(concat (expand-file-name
+                                                (or (and (getenv "XDG_CONFIG_HOME")
+                                                         (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
+                                                    "~/.config/"))
+                                               "mypy/config")))
 
-    (add-hook 'flycheck-mode-hook
-              (lambda ()
-                (when (derived-mode-p 'python-mode)
-                  (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
-                              flycheck-python-flake8-executable (python-x-executable-find "flake8")
-                              flycheck-python-pylint-executable (python-x-executable-find "pylint")
-                              flycheck-python-mypy-executable (python-x-executable-find "mypy")
-                              flycheck-python-pyright-executable (python-x-executable-find "pyright")
-                              flycheck-python-pycompile-executable python-shell-interpreter))))))
+  (add-hook 'flycheck-mode-hook
+            (lambda ()
+              (when (derived-mode-p 'python-mode)
+                (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
+                            flycheck-python-flake8-executable (python-x-executable-find "flake8")
+                            flycheck-python-pylint-executable (python-x-executable-find "pylint")
+                            flycheck-python-mypy-executable (python-x-executable-find "mypy")
+                            flycheck-python-pyright-executable (python-x-executable-find "pyright")
+                            flycheck-python-pycompile-executable python-shell-interpreter)))))
 
+(defun python-x-flycheck-teardown ()
+  (kill-local-variable flycheck-pylintrc)
+  (kill-local-variable flycheck-python-flake8-executable)
+  (kill-local-variable flycheck-python-pylint-executable)
+  (kill-local-variable flycheck-python-mypy-executable)
+  (kill-local-variable flycheck-python-pyright-executable)
+  (kill-local-variable flycheck-python-pycompile-executable))
 
 
 
+(defun python-x-python-mode-hook-function ()
+  (setq-local python-shell-interpreter (python-x-executable-find "python")
+              python-shell-virtualenv-root (python-x-virtualenv-root))
+
+  (with-eval-after-load 'flycheck
+    (python-x-flycheck-setup))
+
+  (with-eval-after-load 'lsp-jedi
+    (setq-local lsp-jedi-executable-command (python-x-executable-find "jedi-language-server")))
+
+  (with-eval-after-load 'lsp-pyright
+    (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
+                lsp-pyright-venv-path python-shell-virtualenv-root))
+
+  (with-eval-after-load 'dap-python
+    (setq-local dap-python-executable python-shell-interpreter))
+
+  (with-eval-after-load 'python-pytest
+    (setq-local python-pytest-executable (python-x-executable-find "pytest")))
+
+  (with-eval-after-load 'python-black
+    (setq-local python-black-command (python-x-executable-find "black")))
+
+  (with-eval-after-load 'python-isort
+    (setq-local python-isort-command (python-x-executable-find "isort"))))
+
+(defun python-x-cleanup-buffer-local-vars ()
+  (kill-local-variable python-shell-interpreter)
+  (kill-local-variable python-shell-virtualenv-root)
+
+  (with-eval-after-load 'flycheck
+    (python-x-flycheck-teardown))
+
+  (with-eval-after-load 'lsp-jedi
+    (kill-local-variable lsp-jedi-executable-command))
+
+  (with-eval-after-load 'lsp-pyright
+    (kill-local-variable lsp-pyright-python-executable-cmd)
+    (kill-local-variable lsp-pyright-venv-path))
+
+  (with-eval-after-load 'dap-python
+    (kill-local-variable dap-python-executable))
+
+  (with-eval-after-load 'python-pytest
+    (kill-local-variable python-pytest-executable))
+
+  (with-eval-after-load 'python-black
+    (kill-local-variable python-black-command))
+
+  (with-eval-after-load 'python-isort
+    (kill-local-variable python-isort-command)))
+
+;;;###autoload
+(define-minor-mode python-x-minor-mode ()
+  ""
+  :lighter "PyX"
+  :group 'python-x
+  (if python-x-minor-mode
+      (add-hook 'python-mode-hook #'python-x-python-mode-hook-function)
+    (remove-hook 'python-mode-hook #'python-x-python-mode-hook-function)
+    (python-x-cleanup-watchers-and-caches)
+    (python-x-cleanup-buffer-local-vars)))
+
+(defun python-x-minor-mode-on ()
+  (derived-mode-p 'python-mode))
+
+;;;###autoload
+(define-globalized-minor-mode global-python-x-minor-mode python-x-minor-mode python-x-minor-mode-on
+  :group 'python-x)
+
+
 
 (add-to-list 'auto-mode-alist '("\\.pythonrc\\'"   . python-mode))
 (add-to-list 'auto-mode-alist '("\\.pylintrc\\'"   . conf-mode))
