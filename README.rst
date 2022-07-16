@@ -52,7 +52,20 @@ Python Virtual Environment Tooling Support
 - `pyenv <https://github.com/pyenv/pyenv>`_
 - `direnv <https://direnv.net/>`_
 - `pipx <https://pypa.github.io/pipx/>`_
-- Whatever is on your ``$PATH``
+- Whatever is on your ``exec-path``
+
+
+Supported Emacs Packages
+------------------------
+
+- `flycheck <https://www.flycheck.org/en/latest/>`_
+- `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
+- `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
+- `dap-python <https://emacs-lsp.github.io/dap-mode/page/configuration/#python>`_
+- `python-black <https://github.com/wbolster/emacs-python-black>`_
+- `python-isort <https://github.com/wyuenho/emacs-python-isort>`_
+- `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
+
 
 System Requirements
 -------------------
@@ -61,6 +74,7 @@ Currently ``python-x`` requires `dasel <https://github.com/TomWright/dasel>`_
 and the ``sqlite3`` binary installed on your system. Both of which will be made
 optional in a future version.
 
+
 Usage
 -----
 
@@ -68,9 +82,39 @@ If you are using Emacs on macOS, to get the most out of ``python-x``, it is best
 paired with `exec-path-from-shell
 <https://github.com/purcell/exec-path-from-shell>`_. Once you have your
 ``exec-path`` synced up to your shell's ``$PATH`` environment variable, you can
-use the following ``python-x`` functions to help you setup the rest of your
-Emacs packages **properly**.
+use the following ways to help you setup the rest of your Emacs packages
+**properly**.
 
+
+Basic Setup
++++++++++++
+
+Generally, the following snippet is all you'll need:
+
+.. code-block:: elisp
+
+   (require 'python-x)
+   (global-python-x-minor-mode 1)
+
+
+Or, if you use ``use-package``:
+
+.. code-block:: elisp
+
+   (use-package python-x
+     :config
+     (global-python-x-minor-mode 1))
+
+
+This will setup the buffer local variables for all of the `Supported Emacs
+Packages`_.
+
+
+Advanced Usage
+++++++++++++++
+
+If you need to configure a package that ``python-x`` doesn't support, or only
+want to configure a couple of packages instead of all the supported one,
 ``python-x`` offers 2 autoloaded functions to help you find the correct path to
 the executable and virtualenv directory:
 
@@ -81,6 +125,8 @@ For example, to set up ``python-mode`` to use the correct interpreter when you
 execute ``M-x run-python``:
 
 .. code-block:: elisp
+
+   (require 'python-x)
 
    (add-hook 'python-mode-hook
              (lambda ()
@@ -93,6 +139,8 @@ autoloaded function to help you setup the ``flake8``, ``pylint`` and ``mypy``
 checkers:
 
 .. code-block:: elisp
+
+   (require 'python-x)
 
    (add-hook 'python-mode-hook
              (lambda ()
@@ -113,7 +161,7 @@ Complete Example
 
    (use-package flycheck)
 
-   (use-package lsp)
+   (use-package lsp-jedi)
 
    (use-package lsp-pyright
      :after lsp)
@@ -137,6 +185,10 @@ Complete Example
 
                  (with-eval-after-load 'flycheck
                    (python-x-flycheck-setup))
+
+                 (with-eval-after-load 'lsp-jedi
+                   (setq-local lsp-jedi-executable-command
+                               (python-x-executable-find "jedi-language-server")))
 
                  (with-eval-after-load 'lsp-pyright
                    (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
