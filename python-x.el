@@ -542,6 +542,7 @@
                             flycheck-python-pyright-executable (python-x-executable-find "pyright")
                             flycheck-python-pycompile-executable python-shell-interpreter)))))
 
+;;;###autoload
 (defun python-x-flycheck-teardown ()
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
