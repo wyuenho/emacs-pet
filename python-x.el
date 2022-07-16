@@ -560,7 +560,8 @@
     (python-x-flycheck-setup))
 
   (with-eval-after-load 'lsp-jedi
-    (setq-local lsp-jedi-executable-command (python-x-executable-find "jedi-language-server")))
+    (setq-local lsp-jedi-executable-command
+                (python-x-executable-find "jedi-language-server")))
 
   (with-eval-after-load 'lsp-pyright
     (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
