@@ -48,6 +48,7 @@ Python Virtual Environment Tooling Support
 - `poetry <https://python-poetry.org/>`_
 - `pyenv <https://github.com/pyenv/pyenv>`_
 - `direnv <https://direnv.net/>`_
+- `pipx <https://pypa.github.io/pipx/>`_
 - Whatever is on your ``$PATH``
 
 System Requirements
