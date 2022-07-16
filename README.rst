@@ -97,7 +97,7 @@ Generally, the following snippet is all you'll need:
    (global-python-x-minor-mode 1)
 
 
-Or, if you use ``use-package``:
+Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
 .. code-block:: elisp
 
