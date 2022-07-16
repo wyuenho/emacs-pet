@@ -42,6 +42,7 @@
 (require 'filenotify)
 (require 'let-alist)
 (require 'pcase)
+(require 'python)
 (require 'rx)
 (require 'seq)
 (require 'subr-x)
@@ -519,7 +520,6 @@
 
 (defvar flycheck-flake8rc)
 (defvar flycheck-python-mypy-config)
-(defvar python-shell-interpreter)
 
 ;;;###autoload
 (defun python-x-flycheck-setup ()
@@ -552,7 +552,7 @@
 
 
 
-(defun python-x-python-mode-hook-function ()
+(defun python-x-buffer-local-vars-setup ()
   (setq-local python-shell-interpreter (python-x-executable-find "python")
               python-shell-virtualenv-root (python-x-virtualenv-root))
 
@@ -578,7 +578,7 @@
   (with-eval-after-load 'python-isort
     (setq-local python-isort-command (python-x-executable-find "isort"))))
 
-(defun python-x-cleanup-buffer-local-vars ()
+(defun python-x-buffer-local-vars-teardown ()
   (kill-local-variable 'python-shell-interpreter)
   (kill-local-variable 'python-shell-virtualenv-root)
 
@@ -610,10 +610,8 @@
   :lighter "PyX"
   :group 'python-x
   (if python-x-minor-mode
-      (add-hook 'python-mode-hook #'python-x-python-mode-hook-function)
-    (remove-hook 'python-mode-hook #'python-x-python-mode-hook-function)
-    (python-x-cleanup-watchers-and-caches)
-    (python-x-cleanup-buffer-local-vars)))
+      (python-x-buffer-local-vars-setup)
+    (python-x-buffer-local-vars-teardown)))
 
 (defun python-x-minor-mode-on ()
   (when (derived-mode-p 'python-mode)
