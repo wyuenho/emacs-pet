@@ -521,23 +521,6 @@
         (and (file-exists-p "/etc/pylintrc")
              "/etc/pylintrc"))))
 
-(defvar python-x-flycheck-checker-props
-  '(python-mypy . ((enabled . (lambda () (not (null (flycheck-python-mypy-executable)))))
-                   (verify  . (lambda (_)
-                                (let ((mypy-config (flycheck-locate-config-file
-                                                    flycheck-python-mypy-config
-                                                    'python-mypy)))
-                                  (list (flycheck-verification-result-new
-                                         :label "Mypy config"
-                                         :message (if mypy-config
-                                                      (format "Found at %S" mypy-config)
-                                                    "Not found")
-                                         :face (if mypy-config 'success '(bold error))))))))))
-
-(defun python-x-flycheck-checker-get-advice (fn checker property)
-  (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
-      (funcall fn checker property)))
-
 (defvar flycheck-flake8rc)
 (defvar flycheck-python-mypy-config)
 
@@ -561,8 +544,7 @@
                               flycheck-python-pylint-executable (python-x-executable-find "pylint")
                               flycheck-python-mypy-executable (python-x-executable-find "mypy")
                               flycheck-python-pyright-executable (python-x-executable-find "pyright")
-                              flycheck-python-pycompile-executable python-shell-interpreter)
-                  (advice-add 'flycheck-checker-get :around 'python-x-flycheck-checker-get-advice))))))
+                              flycheck-python-pycompile-executable python-shell-interpreter))))))
 
 
 
