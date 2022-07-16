@@ -93,7 +93,6 @@ Generally, the following snippet is all you'll need:
 
 .. code-block:: elisp
 
-   (require 'python-x)
    (global-python-x-minor-mode 1)
 
 
@@ -126,8 +125,6 @@ execute ``M-x run-python``:
 
 .. code-block:: elisp
 
-   (require 'python-x)
-
    (add-hook 'python-mode-hook
              (lambda ()
                (setq-local python-shell-interpreter (python-x-executable-find "python")
@@ -139,8 +136,6 @@ autoloaded function to help you setup the ``flake8``, ``pylint`` and ``mypy``
 checkers:
 
 .. code-block:: elisp
-
-   (require 'python-x)
 
    (add-hook 'python-mode-hook
              (lambda ()
