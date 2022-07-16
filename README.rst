@@ -27,6 +27,9 @@ and formatting Emacs packages rely on are configurable.
 The second key insight is Emacs allows you to setup a different value for the
 exectuable path on a per buffer basis.
 
+The hardest problem is finding the correct binary, this is what ``python-x``
+tries to solve.
+
 As long as you use one of the supported Python virtualenv tools, ``python-x``
 will be able to find the virtualenv root and binary you ask for, with **zero
 Emacs configuration** necessary.
