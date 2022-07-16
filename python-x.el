@@ -559,7 +559,9 @@
                   (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
                               flycheck-python-flake8-executable (python-x-executable-find "flake8")
                               flycheck-python-pylint-executable (python-x-executable-find "pylint")
-                              flycheck-python-mypy-executable (python-x-executable-find "mypy"))
+                              flycheck-python-mypy-executable (python-x-executable-find "mypy")
+                              flycheck-python-pyright-executable (python-x-executable-find "pyright")
+                              flycheck-python-pycompile-executable python-shell-interpreter)
                   (advice-add 'flycheck-checker-get :around 'python-x-flycheck-checker-get-advice))))))
 
 
