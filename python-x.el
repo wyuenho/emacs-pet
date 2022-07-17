@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1"))
+;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/wyuenho/emacs-python-x/
 ;; Keywords: python
 
@@ -180,11 +180,12 @@
   (and (python-x-python-version-file-path)
        (executable-find "pyenv")))
 
-(when (< emacs-major-version 28)
-  (defun string-lines (string &optional omit-nulls)
-    "Split STRING into a list of lines.
+(eval-when-compile
+  (when (< emacs-major-version 28)
+    (defun string-lines (string &optional omit-nulls)
+      "Split STRING into a list of lines.
 If OMIT-NULLS, empty lines will be removed from the results."
-    (split-string string "\n" omit-nulls)))
+      (split-string string "\n" omit-nulls))))
 
 (defun python-x-requirements-from-file (anchor-dir file-path)
   (let ((requirements-file
