@@ -180,6 +180,12 @@
   (and (python-x-python-version-file-path)
        (executable-find "pyenv")))
 
+(when (< emacs-major-version 28)
+  (defun string-lines (string &optional omit-nulls)
+    "Split STRING into a list of lines.
+If OMIT-NULLS, empty lines will be removed from the results."
+    (split-string string "\n" omit-nulls)))
+
 (defun python-x-requirements-from-file (anchor-dir file-path)
   (let ((requirements-file
          (if (and (null file-path) anchor-dir)
@@ -520,6 +526,12 @@
 
 (defvar flycheck-flake8rc)
 (defvar flycheck-python-mypy-config)
+(defvar flycheck-pylintrc)
+(defvar flycheck-python-flake8-executable)
+(defvar flycheck-python-pylint-executable)
+(defvar flycheck-python-mypy-executable)
+(defvar flycheck-python-pyright-executable)
+(defvar flycheck-python-pycompile-executable)
 
 ;;;###autoload
 (defun python-x-flycheck-setup ()
@@ -552,6 +564,14 @@
   (kill-local-variable 'flycheck-python-pycompile-executable))
 
 
+
+(defvar lsp-jedi-executable-command)
+(defvar lsp-pyright-python-executable-cmd)
+(defvar lsp-pyright-venv-path)
+(defvar dap-python-executable)
+(defvar python-pytest-executable)
+(defvar python-black-command)
+(defvar python-isort-command)
 
 (defun python-x-buffer-local-vars-setup ()
   (setq-local python-shell-interpreter (python-x-executable-find "python")
