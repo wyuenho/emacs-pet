@@ -58,6 +58,8 @@ Python Virtual Environment Tooling Support
 Supported Emacs Packages
 ------------------------
 
+- Built-in `project.el <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
+- `projectile <https://docs.projectile.mx/projectile/index.html>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
