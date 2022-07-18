@@ -53,20 +53,6 @@
   :group 'python
   :prefix "python-x-")
 
-(defcustom python-x-yaml-parser "dasel"
-  "Which YAML parser to use."
-  :group 'python-x
-  :type '(choice (function 'yaml-parse-string)
-                 (const :tag "dasel" "dasel")
-                 (string :tag "Executable")))
-
-(defcustom python-x-toml-parser "dasel"
-  "Which TOML parser to use."
-  :group 'python-x
-  :type '(choice (function 'toml:read-from-string)
-                 (const :tag "dasel" "dasel")
-                 (string :tag "Executable")))
-
 (defcustom python-x-debug nil
   "Whether to turn on debug messages."
   :group 'python-x
@@ -94,14 +80,17 @@
                    file-name)))
     (expand-file-name (concat (file-name-as-directory dir) file-name))))
 
+(defun python-x-parse-json (str)
+  (if (functionp 'json-parse-string)
+      (json-parse-string str :object-type 'alist :array-type 'list)
+    (let ((json-array-type 'list))
+      (json-read-from-string str))))
+
 (defun python-x-parse-config-file (file-path)
   (condition-case err
       (with-temp-buffer
         (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
-        (if (functionp 'json-parse-string)
-            (json-parse-string (buffer-string) :object-type 'alist :array-type 'list)
-          (let ((json-array-type 'list))
-            (json-read-from-string (buffer-string)))))
+        (python-x-parse-json (buffer-string)))
     (error (python-x-report-error err))))
 
 (defvar python-x-watched-config-files nil)
@@ -188,10 +177,7 @@
   (condition-case err
       (with-temp-buffer
         (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
-        (if (functionp 'json-parse-string)
-            (json-parse-string (buffer-string) :object-type 'alist :array-type 'list)
-          (let ((json-array-type 'list))
-            (json-read-from-string (buffer-string)))))
+        (python-x-parse-json (buffer-string)))
     (error (python-x-report-error err))))
 
 (defvar python-x-pre-commit-database-cache nil)
