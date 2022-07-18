@@ -345,7 +345,7 @@
   (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
       (funcall fn checker property)))
 
-(defun python-x-flycheck-mode-hook-function ()
+(defun python-x-flycheck-python-checkers-setup ()
   (when (derived-mode-p 'python-mode)
     (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
     (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
@@ -367,12 +367,12 @@
                                                "mypy/config")))
 
   (advice-add 'flycheck-checker-get :around #'python-x-flycheck-checker-get-advice)
-  (add-hook 'flycheck-mode-hook #'python-x-flycheck-mode-hook-function))
+  (add-hook 'flycheck-mode-hook #'python-x-flycheck-python-checkers-setup))
 
 ;;;###autoload
 (defun python-x-flycheck-teardown ()
   (advice-remove 'flycheck-checker-get #'python-x-flycheck-checker-get-advice)
-  (remove-hook 'flycheck-mode-hook #'python-x-flycheck-mode-hook-function)
+  (remove-hook 'flycheck-mode-hook #'python-x-flycheck-python-checkers-setup)
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
   (kill-local-variable 'flycheck-python-pylint-executable)
