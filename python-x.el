@@ -79,7 +79,10 @@
   (or (and (functionp 'projectile-project-root)
            (projectile-project-root))
       (when-let ((project (project-current)))
-        (expand-file-name (project-root project)))))
+        (or (and (functionp 'project-roots)
+                 (expand-file-name (car (project-roots project))))
+            (and (functionp 'project-root)
+                 (expand-file-name (project-root project)))))))
 
 (defun python-x-find-file-from-project-root (file-name)
   (when-let ((dir (locate-dominating-file
