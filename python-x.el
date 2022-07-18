@@ -46,6 +46,9 @@
 (require 'seq)
 (require 'subr-x)
 
+(when (< emacs-major-version 27)
+  (require 'json))
+
 (defgroup python-x nil
   "python-x"
   :group 'python
@@ -96,7 +99,10 @@
   (condition-case err
       (with-temp-buffer
         (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
-        (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
+        (if (functionp 'json-parse-string)
+            (json-parse-string (buffer-string) :object-type 'alist :array-type 'list)
+          (let ((json-array-type 'list))
+            (json-read-from-string (buffer-string)))))
     (error (python-x-report-error err))))
 
 (defvar python-x-watched-config-files nil)
@@ -175,17 +181,18 @@
        (executable-find "pyenv")))
 
 (defun python-x-pre-commit-config-has-hook-p (id)
-  (member id
-          (flatten-list
-           (cl-loop for repo in (let-alist (python-x-pre-commit-config) .repos)
-                    collect (cl-loop for hook in (let-alist repo .hooks)
-                                     collect (let-alist hook .id))))))
+  (member id (cl-loop for repo in (let-alist (python-x-pre-commit-config) .repos)
+                      append (cl-loop for hook in (let-alist repo .hooks)
+                                      collect (let-alist hook .id)))))
 
 (defun python-x-parse-pre-commit-db (db-file)
   (condition-case err
       (with-temp-buffer
         (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
-        (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
+        (if (functionp 'json-parse-string)
+            (json-parse-string (buffer-string) :object-type 'alist :array-type 'list)
+          (let ((json-array-type 'list))
+            (json-read-from-string (buffer-string)))))
     (error (python-x-report-error err))))
 
 (defvar python-x-pre-commit-database-cache nil)
