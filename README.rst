@@ -73,10 +73,10 @@ System Requirements
 -------------------
 
 Currently ``python-x`` requires `dasel <https://github.com/TomWright/dasel>`_
-and the ``sqlite3`` binary installed on your system. When a suitable Emacs Lisp
-YAML and TOML parser becomes available, dasel will be made optional. Likewise,
-when Emacs 29 is released, the ``sqlite3`` system requirement will be made
-optional.
+and the ``sqlite3`` command line programs installed on your system. When a
+suitable Emacs Lisp YAML and TOML parser becomes available, dasel will be made
+optional. Likewise, when Emacs 29 is released, the ``sqlite3`` system
+requirement will be made optional.
 
 
 Usage
