@@ -355,13 +355,13 @@
 
 (defun python-x-flycheck-mode-hook-function ()
   (when (derived-mode-p 'python-mode)
-    (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
-                flycheck-python-flake8-executable (python-x-executable-find "flake8")
-                flycheck-python-pylint-executable (python-x-executable-find "pylint")
-                flycheck-python-mypy-executable (python-x-executable-find "mypy")
-                flycheck-python-mypy-python-executable (python-x-executable-find "python")
-                flycheck-python-pyright-executable (python-x-executable-find "pyright")
-                flycheck-python-pycompile-executable python-shell-interpreter)))
+    (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
+    (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
+    (setq-local flycheck-python-pylint-executable (python-x-executable-find "pylint"))
+    (setq-local flycheck-python-mypy-executable (python-x-executable-find "mypy"))
+    (setq-local flycheck-python-mypy-python-executable (python-x-executable-find "python"))
+    (setq-local flycheck-python-pyright-executable (python-x-executable-find "pyright"))
+    (setq-local flycheck-python-pycompile-executable python-shell-interpreter)))
 
 ;;;###autoload
 (defun python-x-flycheck-setup ()
@@ -399,8 +399,8 @@
 (defvar python-isort-command)
 
 (defun python-x-buffer-local-vars-setup ()
-  (setq-local python-shell-interpreter (python-x-executable-find "python")
-              python-shell-virtualenv-root (python-x-virtualenv-root))
+  (setq-local python-shell-interpreter (python-x-executable-find "python"))
+  (setq-local python-shell-virtualenv-root (python-x-virtualenv-root))
 
   (with-eval-after-load 'flycheck
     (python-x-flycheck-setup))
@@ -410,8 +410,8 @@
                 (python-x-executable-find "jedi-language-server")))
 
   (with-eval-after-load 'lsp-pyright
-    (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
-                lsp-pyright-venv-path python-shell-virtualenv-root))
+    (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
+    (setq-local lsp-pyright-venv-path python-shell-virtualenv-root))
 
   (with-eval-after-load 'dap-python
     (setq-local dap-python-executable python-shell-interpreter))
