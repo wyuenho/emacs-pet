@@ -332,14 +332,15 @@
 (declare-function flycheck-string-or-nil-p "flycheck.el")
 (declare-function flycheck-register-option-var "flycheck.el")
 
-(defcustom flycheck-python-mypy-python-executable nil
-  "Python executable to find the installed PEP 561 packages."
-  :group 'flycheck-options
-  :type '(choice (const :tag "Same as mypy's" nil)
-                 (string :tag "Path"))
-  :safe #'flycheck-string-or-nil-p)
+(with-eval-after-load 'flycheck
+  (defcustom flycheck-python-mypy-python-executable nil
+    "Python executable to find the installed PEP 561 packages."
+    :group 'flycheck-options
+    :type '(choice (const :tag "Same as mypy's" nil)
+                   (string :tag "Path"))
+    :safe #'flycheck-string-or-nil-p)
 
-(flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy)
+  (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy))
 
 (defvar python-x-flycheck-checker-props
   '((python-mypy . ((command . ("mypy"
