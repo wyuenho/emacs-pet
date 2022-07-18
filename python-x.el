@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "26.1"))
 ;; Homepage: https://github.com/wyuenho/emacs-python-x/
 ;; Keywords: python
 
@@ -80,7 +80,8 @@
            (projectile-project-root))
       (when-let ((project (project-current)))
         (or (and (functionp 'project-roots)
-                 (expand-file-name (car (project-roots project))))
+                 (when-let ((root (car (project-roots project))))
+                   (expand-file-name root)))
             (and (functionp 'project-root)
                  (expand-file-name (project-root project)))))))
 
