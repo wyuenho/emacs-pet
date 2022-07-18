@@ -27,8 +27,6 @@
 ;;; Commentary:
 
 ;; TODO:
-;; Support yaml and toml parsers other than dasel
-;; Support alternative sqlite parser such as sqlite3 (https://github.com/pekingduck/emacs-sqlite3-api)
 ;; Support updating buffer local variables when config change
 ;; Support pipenv ????
 ;; Support flit/pdm ????
