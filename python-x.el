@@ -29,11 +29,9 @@
 ;; TODO:
 ;; Support yaml and toml parsers other than dasel
 ;; Support alternative sqlite parser such as sqlite3 (https://github.com/pekingduck/emacs-sqlite3-api)
-;; Support setuptools
 ;; Support updating buffer local variables when config change
-;; Output progress when initing virtualenv
 ;; Support pipenv ????
-;; Support pep 621 (flit/pdm) ????
+;; Support flit/pdm ????
 
 ;;; Code:
 
@@ -42,54 +40,60 @@
 (require 'filenotify)
 (require 'let-alist)
 (require 'pcase)
+(require 'project)
 (require 'python)
 (require 'rx)
 (require 'seq)
 (require 'subr-x)
 
 (defgroup python-x nil
-  ""
+  "python-x"
   :group 'python
   :prefix "python-x-")
 
 (defcustom python-x-yaml-parser "dasel"
-  ""
+  "Which YAML parser to use."
   :group 'python-x
-  :type '(choice (function :tag "Elisp function" 'yaml-parse-string)
+  :type '(choice (function 'yaml-parse-string)
                  (const :tag "dasel" "dasel")
                  (string :tag "Executable")))
 
 (defcustom python-x-toml-parser "dasel"
-  ""
+  "Which TOML parser to use."
   :group 'python-x
-  :type '(choice (function :tag "Elisp function" 'toml:read-from-string)
+  :type '(choice (function 'toml:read-from-string)
                  (const :tag "dasel" "dasel")
                  (string :tag "Executable")))
 
-(defcustom python-x-auto-install-virtual-environment nil
-  ""
+(defcustom python-x-debug nil
+  "Whether to turn on debug messages."
   :group 'python-x
   :type 'boolean)
 
+(defun python-x-report-error (err)
+  (when python-x-debug
+    (minibuffer-message (error-message-string err)))
+  nil)
+
+(defun python-x-project-root ()
+  (or (and (functionp 'projectile-project-root)
+           (projectile-project-root))
+      (when-let ((project (project-current)))
+        (expand-file-name (project-root project)))))
+
 (defun python-x-find-file-from-project-root (file-name)
   (when-let ((dir (locate-dominating-file
-                   (or (and (functionp 'projectile-project-root)
-                            (projectile-project-root))
+                   (or (python-x-project-root)
                        default-directory)
                    file-name)))
-    (expand-file-name (concat dir file-name))))
+    (expand-file-name (concat (file-name-as-directory dir) file-name))))
 
 (defun python-x-parse-config-file (file-path)
   (condition-case err
       (with-temp-buffer
         (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
         (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
-    (error (minibuffer-message (error-message-string err)) nil)))
-
-(defun python-x-parse-python-version (file-path)
-  (with-temp-buffer
-    (insert-file-contents file-path)
-    (string-trim (buffer-string))))
+    (error (python-x-report-error err))))
 
 (defvar python-x-watched-config-files nil)
 (defun python-x-watch-config-file (config-file cache-var parser)
@@ -104,10 +108,8 @@
                      (pcase action
                        ((or 'deleted 'renamed)
                         (file-notify-rm-watch (assoc-default file python-x-watched-config-files))
-                        (setf (symbol-value cache-var)
-                              (assoc-delete-all file (symbol-value cache-var)))
-                        (setf python-x-watched-config-files
-                              (assoc-delete-all file python-x-watched-config-files)))
+                        (setf (alist-get file (symbol-value cache-var) nil t 'equal) nil)
+                        (setf (alist-get file python-x-watched-config-files nil t 'equal) nil))
                        ('changed
                         (setf (alist-get file (symbol-value cache-var) nil t 'equal)
                               (funcall parser file))))))))
@@ -122,223 +124,51 @@
 (defun python-x-python-version-file-path ()
   (python-x-find-file-from-project-root ".python-version"))
 
-(cl-defmacro python-x-config-file-content (name &key file-path cache-var parser)
-  `(defun ,name ()
-     (let* ((config-file ,file-path)
-            (cache-kvp (and config-file
-                            (file-exists-p config-file)
-                            (assoc config-file ,cache-var))))
-       (if cache-kvp
-           (cdr cache-kvp)
-         (when config-file
-           (python-x-watch-config-file config-file (quote ,cache-var) (quote ,parser))
-           (when-let ((content (funcall (quote ,parser) config-file)))
-             (push (cons config-file content) ,cache-var)
-             content))))))
+(cl-defmacro python-x-config-file-content (name &key file-path parser)
+  (let ((cache-var (intern (concat (symbol-name name) "-cache"))))
+    `(progn
+       (defvar ,cache-var nil)
+       (defun ,name ()
+         (let* ((config-file ,file-path)
+                (cache-kvp (and config-file
+                                (assoc config-file ,cache-var))))
+           (if cache-kvp
+               (cdr cache-kvp)
+             (when config-file
+               (python-x-watch-config-file config-file (quote ,cache-var) (quote ,parser))
+               (when-let ((content (funcall (quote ,parser) config-file)))
+                 (push (cons config-file content) ,cache-var)
+                 content))))))))
 
-(defvar python-x-pre-commit-config-cache nil)
 (python-x-config-file-content python-x-pre-commit-config
                               :file-path (python-x-pre-commit-config-file-path)
-                              :cache-var python-x-pre-commit-config-cache
                               :parser python-x-parse-config-file)
 
-(defvar python-x-pyproject-cache nil)
 (python-x-config-file-content python-x-pyproject
                               :file-path (python-x-pyproject-file-path)
-                              :cache-var python-x-pyproject-cache
                               :parser python-x-parse-config-file)
 
-(defvar python-x-python-version-cache nil)
-(python-x-config-file-content python-x-python-version
-                              :file-path (python-x-python-version-file-path)
-                              :cache-var python-x-python-version-cache
-                              :parser python-x-parse-python-version)
-
-(defun python-x-pre-commit-p (requirements)
+(defun python-x-pre-commit-p ()
   (and (python-x-pre-commit-config-file-path)
        (or (executable-find "pre-commit")
-           (member "pre-commit" requirements))))
+           (and (python-x-use-poetry-p)
+                (when-let* ((venv (python-x-virtualenv-root))
+                            (exec-path (list (concat (file-name-as-directory venv) "bin"))))
+                  (executable-find "pre-commit"))))))
 
 (defun python-x-use-poetry-p ()
-  (when-let ((pyproject-path (python-x-pyproject-file-path)))
-    (and
-     (with-temp-buffer
-       (insert-file-contents pyproject-path)
-       (goto-char (point-min))
-       (re-search-forward "^\\[tool.poetry\\]$" nil t nil))
-     (executable-find "poetry")
-     (if python-x-auto-install-virtual-environment
-         (condition-case err
-             (with-temp-buffer
-               (or (zerop (call-process "poetry" nil t nil "env" "info" "-p"))
-                   (zerop (call-process "poetry" nil t nil "install"))))
-           (error (minibuffer-message (error-message-string err))
-                  nil))
-       t))))
+  (and (executable-find "poetry")
+       (not
+        (null
+         (string-match-p
+          "poetry"
+          (or (let-alist (python-x-pyproject)
+                .build-system.build-backend)
+              ""))))))
 
 (defun python-x-use-pyenv-p ()
   (and (python-x-python-version-file-path)
        (executable-find "pyenv")))
-
-(eval-when-compile
-  (when (< emacs-major-version 28)
-    (defun string-lines (string &optional omit-nulls)
-      "Split STRING into a list of lines.
-If OMIT-NULLS, empty lines will be removed from the results."
-      (split-string string "\n" omit-nulls))))
-
-(defun python-x-requirements-from-file (anchor-dir file-path)
-  (let ((requirements-file
-         (if (and (null file-path) anchor-dir)
-             (concat (file-name-as-directory anchor-dir) file-path)
-           (expand-file-name file-path (or anchor-dir default-directory)))))
-    (when (file-exists-p requirements-file)
-      (with-temp-buffer
-        (insert-file-contents requirements-file)
-        (goto-char (point-min))
-        (seq-remove 'string-empty-p
-                    (mapcar 'string-trim
-                            (string-lines (buffer-string) t)))))))
-
-(defun python-x-resolve-requirements (anchor-dir file-path)
-  (let ((requirements (python-x-requirements-from-file anchor-dir file-path)))
-    (save-match-data
-      (flatten-list
-       (cl-loop for req in requirements
-                collect (if (not (null (string-match
-                                        (rx (or "-r" "-c" "--requirement" "--constraint")
-                                            (+ space)
-                                            (group (+ nonl)))
-                                        req)))
-                            (let ((file-path (match-string 1 req)))
-                              (python-x-resolve-requirements
-                               (file-name-directory
-                                (expand-file-name file-path anchor-dir))
-                               (file-name-nondirectory file-path)))
-                          (python-x-parse-requirement-spec req)))))))
-
-;; https://pip.pypa.io/en/stable/cli/pip_install/#requirements-file-format
-(defun python-x-parse-requirement-spec (req)
-  (save-match-data
-    (cond ((not (null (string-match (rx (or "http" "file" "git" "git+ssh") "://") req))) ;; URL
-           ;; https://datatracker.ietf.org/doc/html/rfc3987#section-2.2
-           (rx-let ((ucschar (in "\uA000-\uD7FF"
-                                 "\uF900-\uFDCF"
-                                 "\uFDF0-\uFFEF"
-                                 "\u10000-\u1FFFD"
-                                 "\u20000-\u2FFFD"
-                                 "\u30000-\u3FFFD"
-                                 "\u40000-\u4FFFD"
-                                 "\u50000-\u5FFFD"
-                                 "\u60000-\u6FFFD"
-                                 "\u70000-\u7FFFD"
-                                 "\u80000-\u8FFFD"
-                                 "\u90000-\u9FFFD"
-                                 "\uA0000-\uAFFFD"
-                                 "\uB0000-\uBFFFD"
-                                 "\uC0000-\uCFFFD"
-                                 "\uD0000-\uDFFFD"
-                                 "\uE0000-\uEFFFD"))
-                    (iprivate (in "\uE000-\uF8FF"
-                                  "\uF0000-\uFFFFD"
-                                  "\u100000-\u10FFFD"))
-                    (pct-encoded (seq "%" (repeat 0 2 hex)))
-                    (gen-delims (in "#/:?@[]"))
-                    (sub-delims (in "!$&-,;="))
-                    (reserved (or gen-delims sub-delims))
-                    (unreserved (or alnum (in "-._~") ucschar))
-                    (scheme (seq (+ alpha) (* (in alnum "+-."))))
-                    (userinfo (* (or unreserved pct-encoded sub-delims ":")))
-                    (ipvfuture (seq "v" (+ hex) "." (+ (or unreserved sub-delims ":"))))
-                    (dec-octet (or digit
-                                   (seq (in "1-9") digit)
-                                   (seq "1" digit digit)
-                                   (seq "2" (in "0-5") (in "0-5"))))
-                    (ipv4address (seq dec-octet "." dec-octet "." dec-octet "." dec-octet))
-                    (h16 (repeat 1 4 hex))
-                    (ls32 (or (group  h16 ":" h16) ipv4address))
-                    (ipv6address (or (seq (repeat 6 (seq  h16 ":")) ls32)
-                                     (seq "::" (repeat 5 (seq h16 ":")) ls32)
-                                     (seq (? h16) "::" (repeat 4 (seq h16 ":")) ls32)
-                                     (seq (? (repeat 0 1 h16)) "::" (repeat 3 (seq h16 ":")) ls32)
-                                     (seq (? (repeat 0 2 h16)) "::" (repeat 2 (seq h16 ":")) ls32)
-                                     (seq (? (repeat 0 3 h16)) "::" h16 ":" ls32)
-                                     (seq (? (repeat 0 4 h16)) "::" ls32)
-                                     (seq (? (repeat 0 5 h16)) "::" h16)
-                                     (seq (? (repeat 0 6 h16)) "::")))
-                    (ip-literal (seq "[" (or ipv6address ipvfuture) "]"))
-                    (reg-name (* (or unreserved pct-encoded sub-delims)))
-                    (host (or ip-literal ipv4address reg-name))
-                    (port (* digit))
-                    (authority (seq (? userinfo "@") host (? ":" port)))
-                    (pchar (or unreserved pct-encoded sub-delims ":" "@"))
-                    (segment (* pchar))
-                    (segment-nz (+ pchar))
-                    (segment-nz-nc (+ (or unreserved pct-encoded sub-delims "@")))
-                    (path-rootless (seq segment-nz (* "/" segment)))
-                    (path-noscheme (seq segment-nz-nc (* "/" segment)))
-                    (path-absolute (seq "/" (? path-rootless)))
-                    (path-abempty (* "/" segment))
-                    (path (or path-abempty path-absolute path-noscheme path-rootless))
-                    (query (* (or pchar "/" "?" iprivate)))
-                    (fragment query)
-                    (url (seq scheme authority (? path) (? "?" query) (? "#" fragment))))
-
-             (and (not (null (string-match (rx url) req))) (match-string 0 req))))
-          ;; Path
-          ((not (null (string-match (rx line-start (in "." "/")) req)))
-           (when-let ((requirement-spec (car (split-string req (rx (or ";" "@" "--")))))
-                      (requirement-spec (string-trim requirement-spec)))
-             (when (not (string-empty-p requirement-spec))
-               requirement-spec)))
-          ;; TODO: fetch the package and read the setup.cfg or setup.py files to
-          ;; extract dependencies
-          ((not (null (string-match (rx (or "-e" "--editable") (+ space) (group (+ nonl)) eol) req)))
-           nil)
-          ;; Options
-          ((not (null (string-match (rx "--" (+ (in alnum "-" "_"))) req)))
-           nil)
-          ;; Requirement specifiers
-          (t (let* ((requirement-spec (split-string req (rx (or ";" "@" "--"))))
-                    (package-version-spec (string-trim (car requirement-spec)))
-                    (package
-                     (car
-                      (split-string
-                       package-version-spec
-                       (rx (or "==" "!=" "<=" ">=" "~=" "===" "<" ">"))))))
-               (when package
-                 (string-trim-right package (rx "[" (+ (in alnum "-" "_")) "]"))))))))
-
-(defvar python-x-project-requirements-cache nil)
-(defun python-x-project-requirements ()
-  (let* ((file-path (buffer-file-name))
-         (cache-kvp (alist-get file-path python-x-project-requirements-cache nil nil 'equal))
-         (requirements (cdr cache-kvp)))
-    (unless (or cache-kvp requirements)
-      (let ((pip-args '("list" "--format=freeze" "--disable-pip-version-check")))
-        (setf requirements
-              (mapcar 'python-x-parse-requirement-spec
-                      (or (and (python-x-use-poetry-p)
-                               (condition-case err
-                                   (apply 'process-lines "poetry" (append '("run" "pip") pip-args))
-                                 (error (minibuffer-message (error-message-string err)) nil)))
-                          (and (python-x-use-pyenv-p)
-                               (condition-case err
-                                   (apply 'process-lines "pyenv" (append '("exec" "pip") pip-args))
-                                 (error (minibuffer-message (error-message-string err)) nil)))
-                          (when-let ((project-root-requirements-file (python-x-find-file-from-project-root "requirements.txt")))
-                            (python-x-resolve-requirements
-                             (file-name-directory project-root-requirements-file)
-                             project-root-requirements-file))
-                          (and (executable-find "pip")
-                               (condition-case err
-                                   (apply 'process-lines "pip" pip-args)
-                                 (error (minibuffer-message (error-message-string err)) nil))))))
-        (setf python-x-project-requirements-cache
-              (assoc-delete-all file-path python-x-project-requirements-cache))
-        (when requirements
-          (push (cons file-path requirements) python-x-project-requirements-cache))))
-    requirements))
 
 (defun python-x-pre-commit-config-has-hook-p (id)
   (member id
@@ -352,7 +182,7 @@ If OMIT-NULLS, empty lines will be removed from the results."
       (with-temp-buffer
         (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
         (json-parse-string (buffer-string) :object-type 'alist :array-type 'list))
-    (error (minibuffer-message (error-message-string err)) nil)))
+    (error (python-x-report-error err))))
 
 (defvar python-x-pre-commit-database-cache nil)
 
@@ -407,98 +237,59 @@ If OMIT-NULLS, empty lines will be removed from the results."
        (concat (file-name-as-directory repo-dir) "py_env-*")
        t)))))
 
-(defun python-x-pre-commit-ensure-virtualenv-path (hook-id)
-  (let ((venv-path (python-x-pre-commit-virtualenv-path hook-id)))
-    (when (and (not venv-path) python-x-auto-install-virtual-environment)
-      (condition-case err
-          (when (cond ((python-x-use-poetry-p)
-                       (with-temp-buffer
-                         (zerop (call-process "poetry" nil t nil "run" "pre-commit" "install" "--install-hooks"))))
-                      ((executable-find "pre-commit")
-                       (with-temp-buffer
-                         (zerop (call-process "pre-commit" nil t nil "install" "--install-hooks"))))
-                      (t (user-error "command pre-commit not found.")))
-            (setf venv-path (python-x-pre-commit-virtualenv-path hook-id)))
-        (error (minibuffer-message (error-message-string err)))))
-    venv-path))
-
-(defun python-x-cleanup-watchers-and-caches ()
-  (when (and (buffer-file-name)
-             (derived-mode-p 'python-mode))
-    (let* ((buf-file (buffer-file-name))
-           (root (and (functionp 'projectile-project-root)
-                      (projectile-project-root (file-name-directory buf-file)))))
-
-      (when (and root
-                 (not (seq-some (lambda (buf)
-                                  (and (not (equal buf (current-buffer)))
-                                       (string-prefix-p root (buffer-file-name buf))))
-                                (buffer-list))))
-
-        (pcase-dolist (`(,config-file . ,watcher) python-x-watched-config-files)
-          (when (string-prefix-p root config-file)
-            (file-notify-rm-watch watcher)
-            (setf python-x-watched-config-files
-                  (assoc-delete-all config-file python-x-watched-config-files))))
-
-        (dolist (cache '(python-x-pre-commit-config-cache
-                         python-x-pyproject-cache
-                         python-x-python-version-cache))
-          (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
-            (when (string-prefix-p root config-file)
-              (setf (symbol-value cache)
-                    (assoc-delete-all config-file (symbol-value cache)))))))
-
-      (setf python-x-project-requirements-cache
-            (assoc-delete-all buf-file python-x-project-requirements-cache)))))
-
-(add-hook 'kill-buffer-hook 'python-x-cleanup-watchers-and-caches)
-
 
 
 ;;;###autoload
 (defun python-x-executable-find (executable)
-  (let ((is-python (string-prefix-p "python" executable))
-        (requirements (python-x-project-requirements)))
-    (cond ((and (python-x-pre-commit-p requirements)
-                (python-x-pre-commit-config-has-hook-p executable)
-                (not is-python))
-           (concat (python-x-pre-commit-ensure-virtualenv-path executable) "/bin/" executable))
-          ((and (python-x-use-poetry-p)
-                (or is-python (member executable requirements)))
-           (condition-case err
-               (with-temp-buffer
-                 (call-process "poetry" nil t nil "run" "which" executable)
-                 (string-trim (buffer-string)))
-             (error (minibuffer-message (error-message-string err)) nil)))
-          ((and (python-x-use-pyenv-p)
-                (or is-python (member executable requirements)))
-           (condition-case err
-               (with-temp-buffer
-                 (if (zerop (call-process "pyenv" nil t nil "which" executable))
-                     (string-trim (buffer-string))
-                   (with-temp-buffer
-                     (call-process "pyenv" nil t nil "prefix")
-                     (user-error "%s not found under %s" executable (string-trim (buffer-string))))))
-             (error (minibuffer-message (error-message-string err)) nil)))
-          (t (when-let ((path (executable-find executable)))
-               (condition-case nil
-                   (if (and (executable-find "pyenv")
-                            (member path (process-lines "pyenv" "shims")))
-                       nil
-                     path)
-                 (error nil)))))))
+  (cond ((and (python-x-pre-commit-p)
+              (not (string-prefix-p "python" executable)))
+         (condition-case err
+             (if (not (python-x-pre-commit-config-has-hook-p executable))
+                 (user-error "pre-commit does not have hook %s configured." executable)
+               (when-let* ((venv (python-x-pre-commit-virtualenv-path executable))
+                           (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
+                 (if (file-exists-p bin-path)
+                     bin-path
+                   (user-error "pre-commit is configured but the hook %s do not appear to be installed." executable))))
+           (error (python-x-report-error err))))
+        ((or (python-x-use-poetry-p)
+             (python-x-use-pyenv-p))
+         (when-let* ((venv (python-x-virtualenv-root))
+                     (exec-path (list (concat (file-name-as-directory venv) "bin"))))
+           (executable-find executable)))
+        (t (when-let ((path (executable-find executable)))
+             (condition-case nil
+                 (if (and (executable-find "pyenv")
+                          (member path (process-lines "pyenv" "shims")))
+                     nil
+                   path)
+               (error nil))))))
+
+(defvar python-x-project-virtualenv-cache nil)
 
 ;;;###autoload
 (defun python-x-virtualenv-root ()
-  (condition-case err
-      (with-temp-buffer
+  (let* ((root (python-x-project-root)))
+    (or (alist-get root python-x-project-virtualenv-cache nil nil 'equal)
         (cond ((python-x-use-poetry-p)
-               (call-process "poetry" nil t nil "env" "info" "--path"))
+               (condition-case err
+                   (with-temp-buffer
+                     (let ((exit-code (call-process "poetry" nil t nil "env" "info" "--path"))
+                           (output (string-trim (buffer-string))))
+                       (if (zerop exit-code)
+                           (setf (alist-get root python-x-project-virtualenv-cache nil nil 'equal) output)
+                         (user-error "poetry is configured but the virtualenv does not appear to be installed."))))
+                 (error (python-x-report-error err))))
               ((python-x-use-pyenv-p)
-               (call-process "pyenv" nil t nil "prefix")))
-        (file-truename (string-trim (buffer-string))))
-    (error (minibuffer-message (error-message-string err)))))
+               (condition-case err
+                   (with-temp-buffer
+                     (let ((exit-code (call-process "pyenv" nil t nil "prefix"))
+                           (output (string-trim (buffer-string))))
+                       (if (zerop exit-code)
+                           (setf (alist-get root python-x-project-virtualenv-cache nil nil 'equal) (file-truename output))
+                         (user-error "poetry is configured but the virtualenv does not appear to be installed."))))
+                 (error (python-x-report-error err))))
+              (t (getenv "VIRTUAL_ENV"))))))
 
 
 
@@ -533,6 +324,40 @@ If OMIT-NULLS, empty lines will be removed from the results."
 (defvar flycheck-python-mypy-executable)
 (defvar flycheck-python-pyright-executable)
 (defvar flycheck-python-pycompile-executable)
+(declare-function flycheck-checker-get "flycheck.el")
+(declare-function flycheck-string-or-nil-p "flycheck.el")
+(declare-function flycheck-register-option-var "flycheck.el")
+
+(defcustom flycheck-python-mypy-python-executable nil
+  "Python executable to find the installed PEP 561 packages."
+  :group 'flycheck-options
+  :type '(choice (const :tag "Same as mypy's" nil)
+                 (string :tag "Path"))
+  :safe #'flycheck-string-or-nil-p)
+
+(flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy)
+
+(defvar python-x-flycheck-checker-props
+  '((python-mypy . ((command . ("mypy"
+                                "--show-column-numbers"
+                                (config-file "--config-file" flycheck-python-mypy-config)
+                                (option "--python-executable" flycheck-python-mypy-python-executable)
+                                (option "--cache-dir" flycheck-python-mypy-cache-dir)
+                                source-original))))))
+
+(defun python-x-flycheck-checker-get-advice (fn checker property)
+  (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
+      (funcall fn checker property)))
+
+(defun python-x-flycheck-mode-hook-function ()
+  (when (derived-mode-p 'python-mode)
+    (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
+                flycheck-python-flake8-executable (python-x-executable-find "flake8")
+                flycheck-python-pylint-executable (python-x-executable-find "pylint")
+                flycheck-python-mypy-executable (python-x-executable-find "mypy")
+                flycheck-python-mypy-python-executable (python-x-executable-find "python")
+                flycheck-python-pyright-executable (python-x-executable-find "pyright")
+                flycheck-python-pycompile-executable python-shell-interpreter)))
 
 ;;;###autoload
 (defun python-x-flycheck-setup ()
@@ -545,18 +370,13 @@ If OMIT-NULLS, empty lines will be removed from the results."
                                                     "~/.config/"))
                                                "mypy/config")))
 
-  (add-hook 'flycheck-mode-hook
-            (lambda ()
-              (when (derived-mode-p 'python-mode)
-                (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc)
-                            flycheck-python-flake8-executable (python-x-executable-find "flake8")
-                            flycheck-python-pylint-executable (python-x-executable-find "pylint")
-                            flycheck-python-mypy-executable (python-x-executable-find "mypy")
-                            flycheck-python-pyright-executable (python-x-executable-find "pyright")
-                            flycheck-python-pycompile-executable python-shell-interpreter)))))
+  (advice-add 'flycheck-checker-get :around #'python-x-flycheck-checker-get-advice)
+  (add-hook 'flycheck-mode-hook #'python-x-flycheck-mode-hook-function))
 
 ;;;###autoload
 (defun python-x-flycheck-teardown ()
+  (advice-remove 'flycheck-checker-get #'python-x-flycheck-checker-get-advice)
+  (remove-hook 'flycheck-mode-hook #'python-x-flycheck-mode-hook-function)
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
   (kill-local-variable 'flycheck-python-pylint-executable)
@@ -650,6 +470,28 @@ If OMIT-NULLS, empty lines will be removed from the results."
 (add-to-list 'auto-mode-alist '("\\.pylintrc\\'"   . conf-mode))
 (add-to-list 'auto-mode-alist '("\\.flake8\\'"     . conf-mode))
 (add-to-list 'auto-mode-alist '("\\poetry.lock\\'" . conf-toml-mode))
+
+(defun python-x-cleanup-watchers-and-caches ()
+  (when-let* ((buffer-file-name)
+              (root (python-x-project-root))
+              (null (seq-some (lambda (buf)
+                                (and (not (equal buf (current-buffer)))
+                                     (string-prefix-p root (buffer-file-name buf))))
+                              (buffer-list))))
+    (setf (alist-get root python-x-project-virtualenv-cache nil t 'equal) nil)
+
+    (pcase-dolist (`(,config-file . ,watcher) python-x-watched-config-files)
+      (when (string-prefix-p root config-file)
+        (file-notify-rm-watch watcher)
+        (setf (alist-get config-file python-x-watched-config-files nil t 'equal) nil)))
+
+    (dolist (cache '(python-x-pre-commit-config-cache
+                     python-x-pyproject-cache))
+      (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
+        (when (string-prefix-p root config-file)
+          (setf (alist-get config-file (symbol-value cache) nil t 'equal) nil))))))
+
+(add-hook 'kill-buffer-hook 'python-x-cleanup-watchers-and-caches)
 
 (provide 'python-x)
 
