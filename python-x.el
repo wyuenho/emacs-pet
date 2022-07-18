@@ -329,9 +329,9 @@
 (defvar flycheck-python-mypy-python-executable)
 (defvar flycheck-python-pyright-executable)
 (defvar flycheck-python-pycompile-executable)
-(declare-function flycheck-checker-get "flycheck.el")
-(declare-function flycheck-string-or-nil-p "flycheck.el")
-(declare-function flycheck-register-option-var "flycheck.el")
+(declare-function flycheck-checker-get "ext:flycheck")
+(declare-function flycheck-string-or-nil-p "ext:flycheck")
+(declare-function flycheck-register-option-var "ext:flycheck")
 
 (with-eval-after-load 'flycheck
   (defcustom flycheck-python-mypy-python-executable nil
