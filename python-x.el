@@ -42,7 +42,6 @@
 (require 'pcase)
 (require 'project)
 (require 'python)
-(require 'rx)
 (require 'seq)
 (require 'subr-x)
 
