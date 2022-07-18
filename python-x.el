@@ -326,6 +326,7 @@
 (defvar flycheck-python-flake8-executable)
 (defvar flycheck-python-pylint-executable)
 (defvar flycheck-python-mypy-executable)
+(defvar flycheck-python-mypy-python-executable)
 (defvar flycheck-python-pyright-executable)
 (defvar flycheck-python-pycompile-executable)
 (declare-function flycheck-checker-get "flycheck.el")
