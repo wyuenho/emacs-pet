@@ -393,55 +393,57 @@
 (defvar python-isort-command)
 
 (defun python-x-buffer-local-vars-setup ()
-  (setq-local python-shell-interpreter (python-x-executable-find "python"))
-  (setq-local python-shell-virtualenv-root (python-x-virtualenv-root))
+  (with-eval-after-load 'python
+    (setq-local python-shell-interpreter (python-x-executable-find "python"))
+    (setq-local python-shell-virtualenv-root (python-x-virtualenv-root))
 
-  (python-x-flycheck-setup)
+    (python-x-flycheck-setup)
 
-  (with-eval-after-load 'lsp-jedi
-    (setq-local lsp-jedi-executable-command
-                (python-x-executable-find "jedi-language-server")))
+    (with-eval-after-load 'lsp-jedi
+      (setq-local lsp-jedi-executable-command
+                  (python-x-executable-find "jedi-language-server")))
 
-  (with-eval-after-load 'lsp-pyright
-    (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
-    (setq-local lsp-pyright-venv-path python-shell-virtualenv-root))
+    (with-eval-after-load 'lsp-pyright
+      (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
+      (setq-local lsp-pyright-venv-path python-shell-virtualenv-root))
 
-  (with-eval-after-load 'dap-python
-    (setq-local dap-python-executable python-shell-interpreter))
+    (with-eval-after-load 'dap-python
+      (setq-local dap-python-executable python-shell-interpreter))
 
-  (with-eval-after-load 'python-pytest
-    (setq-local python-pytest-executable (python-x-executable-find "pytest")))
+    (with-eval-after-load 'python-pytest
+      (setq-local python-pytest-executable (python-x-executable-find "pytest")))
 
-  (with-eval-after-load 'python-black
-    (setq-local python-black-command (python-x-executable-find "black")))
+    (with-eval-after-load 'python-black
+      (setq-local python-black-command (python-x-executable-find "black")))
 
-  (with-eval-after-load 'python-isort
-    (setq-local python-isort-command (python-x-executable-find "isort"))))
+    (with-eval-after-load 'python-isort
+      (setq-local python-isort-command (python-x-executable-find "isort")))))
 
 (defun python-x-buffer-local-vars-teardown ()
-  (kill-local-variable 'python-shell-interpreter)
-  (kill-local-variable 'python-shell-virtualenv-root)
+  (with-eval-after-load 'python
+    (kill-local-variable 'python-shell-interpreter)
+    (kill-local-variable 'python-shell-virtualenv-root)
 
-  (python-x-flycheck-teardown)
+    (python-x-flycheck-teardown)
 
-  (with-eval-after-load 'lsp-jedi
-    (kill-local-variable 'lsp-jedi-executable-command))
+    (with-eval-after-load 'lsp-jedi
+      (kill-local-variable 'lsp-jedi-executable-command))
 
-  (with-eval-after-load 'lsp-pyright
-    (kill-local-variable 'lsp-pyright-python-executable-cmd)
-    (kill-local-variable 'lsp-pyright-venv-path))
+    (with-eval-after-load 'lsp-pyright
+      (kill-local-variable 'lsp-pyright-python-executable-cmd)
+      (kill-local-variable 'lsp-pyright-venv-path))
 
-  (with-eval-after-load 'dap-python
-    (kill-local-variable 'dap-python-executable))
+    (with-eval-after-load 'dap-python
+      (kill-local-variable 'dap-python-executable))
 
-  (with-eval-after-load 'python-pytest
-    (kill-local-variable 'python-pytest-executable))
+    (with-eval-after-load 'python-pytest
+      (kill-local-variable 'python-pytest-executable))
 
-  (with-eval-after-load 'python-black
-    (kill-local-variable 'python-black-command))
+    (with-eval-after-load 'python-black
+      (kill-local-variable 'python-black-command))
 
-  (with-eval-after-load 'python-isort
-    (kill-local-variable 'python-isort-command)))
+    (with-eval-after-load 'python-isort
+      (kill-local-variable 'python-isort-command))))
 
 (defun python-x-verify-setup ()
   (interactive)
