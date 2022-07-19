@@ -518,6 +518,7 @@
 
 (defun python-x-cleanup-watchers-and-caches ()
   (when-let* ((buffer-file-name)
+              (derived-mode-p 'python-mode)
               (root (python-x-project-root))
               (null (seq-some (lambda (buf)
                                 (and (not (equal buf (current-buffer)))
