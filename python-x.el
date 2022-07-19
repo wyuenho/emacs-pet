@@ -440,6 +440,53 @@
   (with-eval-after-load 'python-isort
     (kill-local-variable 'python-isort-command)))
 
+(defun python-x-verify-setup ()
+  (interactive)
+
+  (unless (derived-mode-p 'python-mode)
+    (user-error "You are not in python-mode!"))
+
+  (with-output-to-temp-buffer "*python-x*"
+    (let ((printer (lambda (var)
+                     (princ (format "%-40s" (concat (symbol-name var) ":")))
+                     (prin1 (symbol-value var))
+                     (terpri))))
+      (funcall printer 'python-shell-interpreter)
+      (funcall printer 'python-shell-virtualenv-root)
+
+      (with-eval-after-load 'flycheck
+        (mapc printer
+              '(flycheck-flake8rc
+                flycheck-python-flake8-executable
+                flycheck-pylintrc
+                flycheck-python-pylint-executable
+                flycheck-python-mypy-executable
+                flycheck-python-mypy-config
+                flycheck-python-mypy-python-executable
+                flycheck-python-pyright-executable
+                flycheck-python-pycompile-executable)))
+
+      (with-eval-after-load 'lsp-jedi
+        (funcall printer 'lsp-jedi-executable-command))
+
+      (with-eval-after-load 'lsp-pyright
+        (funcall printer 'lsp-pyright-python-executable-cmd)
+        (funcall printer 'lsp-pyright-venv-path))
+
+      (with-eval-after-load 'dap-python
+        (funcall printer 'dap-python-executable))
+
+      (with-eval-after-load 'python-pytest
+        (funcall printer 'python-pytest-executable))
+
+      (with-eval-after-load 'python-black
+        (funcall printer 'python-black-command))
+
+      (with-eval-after-load 'python-isort
+        (funcall printer 'python-isort-command))))
+
+  (select-window (get-buffer-window "*python-x*")))
+
 ;;;###autoload
 (define-minor-mode python-x-minor-mode
   ""
