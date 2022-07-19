@@ -345,6 +345,16 @@
   (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
       (funcall fn checker property)))
 
+(defun python-x-flycheck-checkers-setup ()
+  (when (derived-mode-p 'python-mode)
+    (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
+    (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
+    (setq-local flycheck-python-pylint-executable (python-x-executable-find "pylint"))
+    (setq-local flycheck-python-mypy-executable (python-x-executable-find "mypy"))
+    (setq-local flycheck-python-mypy-python-executable (python-x-executable-find "python"))
+    (setq-local flycheck-python-pyright-executable (python-x-executable-find "pyright"))
+    (setq-local flycheck-python-pycompile-executable python-shell-interpreter)))
+
 ;;;###autoload
 (defun python-x-flycheck-setup ()
   (with-eval-after-load 'flycheck
@@ -358,20 +368,13 @@
                                                  "mypy/config")))
 
     (advice-add 'flycheck-checker-get :around #'python-x-flycheck-checker-get-advice)
-
-    (when (derived-mode-p 'python-mode)
-      (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
-      (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
-      (setq-local flycheck-python-pylint-executable (python-x-executable-find "pylint"))
-      (setq-local flycheck-python-mypy-executable (python-x-executable-find "mypy"))
-      (setq-local flycheck-python-mypy-python-executable (python-x-executable-find "python"))
-      (setq-local flycheck-python-pyright-executable (python-x-executable-find "pyright"))
-      (setq-local flycheck-python-pycompile-executable python-shell-interpreter))))
+    (add-hook 'flycheck-mode-hook #'python-x-flycheck-checkers-setup)))
 
 ;;;###autoload
 (defun python-x-flycheck-teardown ()
   (with-eval-after-load 'flycheck
     (advice-remove 'flycheck-checker-get #'python-x-flycheck-checker-get-advice)
+    (remove-hook 'flycheck-mode-hook #'python-x-flycheck-checkers-setup)
     (kill-local-variable 'flycheck-pylintrc)
     (kill-local-variable 'flycheck-python-flake8-executable)
     (kill-local-variable 'flycheck-python-pylint-executable)
