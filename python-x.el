@@ -235,29 +235,29 @@
 
 ;;;###autoload
 (defun python-x-executable-find (executable)
-  (cond ((and (python-x-pre-commit-p)
-              (not (string-prefix-p "python" executable)))
-         (condition-case err
-             (if (not (python-x-pre-commit-config-has-hook-p executable))
-                 (user-error "pre-commit does not have hook %s configured." executable)
-               (when-let* ((venv (python-x-pre-commit-virtualenv-path executable))
-                           (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
-                 (if (file-exists-p bin-path)
-                     bin-path
-                   (user-error "pre-commit is configured but the hook %s do not appear to be installed." executable))))
-           (error (python-x-report-error err))))
-        ((or (python-x-use-poetry-p)
-             (python-x-use-pyenv-p))
-         (when-let* ((venv (python-x-virtualenv-root))
-                     (exec-path (list (concat (file-name-as-directory venv) "bin"))))
-           (executable-find executable)))
-        (t (when-let ((path (executable-find executable)))
-             (condition-case nil
-                 (if (and (executable-find "pyenv")
-                          (member path (process-lines "pyenv" "shims")))
-                     nil
-                   path)
-               (error nil))))))
+  (or (and (python-x-pre-commit-p)
+           (not (string-prefix-p "python" executable))
+           (condition-case err
+               (if (not (python-x-pre-commit-config-has-hook-p executable))
+                   (user-error "pre-commit does not have hook %s configured." executable)
+                 (when-let* ((venv (python-x-pre-commit-virtualenv-path executable))
+                             (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
+                   (if (file-exists-p bin-path)
+                       bin-path
+                     (user-error "pre-commit is configured but the hook %s do not appear to be installed." executable))))
+             (error (python-x-report-error err))))
+      (and (or (python-x-use-poetry-p)
+               (python-x-use-pyenv-p))
+           (when-let* ((venv (python-x-virtualenv-root))
+                       (exec-path (list (concat (file-name-as-directory venv) "bin"))))
+             (executable-find executable)))
+      (when-let ((path (executable-find executable)))
+        (condition-case nil
+            (if (and (executable-find "pyenv")
+                     (member path (process-lines "pyenv" "shims")))
+                nil
+              path)
+          (error nil)))))
 
 (defvar python-x-project-virtualenv-cache nil)
 
