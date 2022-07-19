@@ -310,6 +310,7 @@
         (and (file-exists-p "/etc/pylintrc")
              "/etc/pylintrc"))))
 
+(defvar flycheck-mode)
 (defvar flycheck-flake8rc)
 (defvar flycheck-python-mypy-config)
 (defvar flycheck-pylintrc)
