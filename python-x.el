@@ -345,40 +345,39 @@
   (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
       (funcall fn checker property)))
 
-(defun python-x-flycheck-python-checkers-setup ()
-  (when (derived-mode-p 'python-mode)
-    (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
-    (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
-    (setq-local flycheck-python-pylint-executable (python-x-executable-find "pylint"))
-    (setq-local flycheck-python-mypy-executable (python-x-executable-find "mypy"))
-    (setq-local flycheck-python-mypy-python-executable (python-x-executable-find "python"))
-    (setq-local flycheck-python-pyright-executable (python-x-executable-find "pyright"))
-    (setq-local flycheck-python-pycompile-executable python-shell-interpreter)))
-
 ;;;###autoload
 (defun python-x-flycheck-setup ()
-  (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
+  (with-eval-after-load 'flycheck
+    (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
 
-  (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
-                                      ,(concat (expand-file-name
-                                                (or (and (getenv "XDG_CONFIG_HOME")
-                                                         (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
-                                                    "~/.config/"))
-                                               "mypy/config")))
+    (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
+                                        ,(concat (expand-file-name
+                                                  (or (and (getenv "XDG_CONFIG_HOME")
+                                                           (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
+                                                      "~/.config/"))
+                                                 "mypy/config")))
 
-  (advice-add 'flycheck-checker-get :around #'python-x-flycheck-checker-get-advice)
-  (add-hook 'flycheck-mode-hook #'python-x-flycheck-python-checkers-setup))
+    (advice-add 'flycheck-checker-get :around #'python-x-flycheck-checker-get-advice)
+
+    (when (derived-mode-p 'python-mode)
+      (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
+      (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
+      (setq-local flycheck-python-pylint-executable (python-x-executable-find "pylint"))
+      (setq-local flycheck-python-mypy-executable (python-x-executable-find "mypy"))
+      (setq-local flycheck-python-mypy-python-executable (python-x-executable-find "python"))
+      (setq-local flycheck-python-pyright-executable (python-x-executable-find "pyright"))
+      (setq-local flycheck-python-pycompile-executable python-shell-interpreter))))
 
 ;;;###autoload
 (defun python-x-flycheck-teardown ()
-  (advice-remove 'flycheck-checker-get #'python-x-flycheck-checker-get-advice)
-  (remove-hook 'flycheck-mode-hook #'python-x-flycheck-python-checkers-setup)
-  (kill-local-variable 'flycheck-pylintrc)
-  (kill-local-variable 'flycheck-python-flake8-executable)
-  (kill-local-variable 'flycheck-python-pylint-executable)
-  (kill-local-variable 'flycheck-python-mypy-executable)
-  (kill-local-variable 'flycheck-python-pyright-executable)
-  (kill-local-variable 'flycheck-python-pycompile-executable))
+  (with-eval-after-load 'flycheck
+    (advice-remove 'flycheck-checker-get #'python-x-flycheck-checker-get-advice)
+    (kill-local-variable 'flycheck-pylintrc)
+    (kill-local-variable 'flycheck-python-flake8-executable)
+    (kill-local-variable 'flycheck-python-pylint-executable)
+    (kill-local-variable 'flycheck-python-mypy-executable)
+    (kill-local-variable 'flycheck-python-pyright-executable)
+    (kill-local-variable 'flycheck-python-pycompile-executable)))
 
 
 
@@ -394,8 +393,7 @@
   (setq-local python-shell-interpreter (python-x-executable-find "python"))
   (setq-local python-shell-virtualenv-root (python-x-virtualenv-root))
 
-  (with-eval-after-load 'flycheck
-    (python-x-flycheck-setup))
+  (python-x-flycheck-setup)
 
   (with-eval-after-load 'lsp-jedi
     (setq-local lsp-jedi-executable-command
@@ -421,8 +419,7 @@
   (kill-local-variable 'python-shell-interpreter)
   (kill-local-variable 'python-shell-virtualenv-root)
 
-  (with-eval-after-load 'flycheck
-    (python-x-flycheck-teardown))
+  (python-x-flycheck-teardown)
 
   (with-eval-after-load 'lsp-jedi
     (kill-local-variable 'lsp-jedi-executable-command))
