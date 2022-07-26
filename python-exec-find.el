@@ -1,11 +1,11 @@
-;;; python-x.el --- python mode extensions -*- lexical-binding: t -*-
+;;; python-exec-find.el --- Executable and virtualenv finder for python-mode -*- lexical-binding: t -*-
 
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
 ;; Package-Requires: ((emacs "26.1"))
-;; Homepage: https://github.com/wyuenho/emacs-python-x/
-;; Keywords: python
+;; Homepage: https://github.com/wyuenho/emacs-python-exec-find/
+;; Keywords: tools
 
 
 ;; This file is not part of GNU Emacs
@@ -46,22 +46,30 @@
 (when (< emacs-major-version 27)
   (require 'json))
 
-(defgroup python-x nil
-  "python-x"
+(defgroup python-exec-find nil
+  "Customization group for `python-exec-find'."
   :group 'python
-  :prefix "python-x-")
+  :prefix "python-exec-find-")
 
-(defcustom python-x-debug nil
+(defcustom python-exec-find-debug nil
   "Whether to turn on debug messages."
-  :group 'python-x
+  :group 'python-exec-find
   :type 'boolean)
 
-(defun python-x-report-error (err)
-  (when python-x-debug
+(defun python-exec-find-report-error (err)
+  "Report ERR to the minibuffer.
+
+Only reports to the minibuffer if `python-exec-find-debug' is non-nil."
+  (when python-exec-find-debug
     (minibuffer-message (error-message-string err)))
   nil)
 
-(defun python-x-project-root ()
+(defun python-exec-find-project-root ()
+  "Return the path of root of the project.
+
+If `projectile' is available, this function uses
+`projectile-project-root' to the the project root.  Otherwise, it
+uses `project-root'."
   (or (and (functionp 'projectile-project-root)
            (projectile-project-root))
       (when-let ((project (project-current)))
@@ -71,29 +79,42 @@
                  (when-let ((root (car (project-roots project))))
                    (expand-file-name root)))))))
 
-(defun python-x-find-file-from-project-root (file-name)
+(defun python-exec-find-find-file-from-project-root (file-name)
+  "Find FILE-NAME from project root.
+
+Returns absolute path to FILE-NAME if found from in the root of
+the project or its ancestor directories, nil otherwise."
   (when-let ((dir (locate-dominating-file
-                   (or (python-x-project-root)
+                   (or (python-exec-find-project-root)
                        default-directory)
                    file-name)))
     (expand-file-name (concat (file-name-as-directory dir) file-name))))
 
-(defun python-x-parse-json (str)
+(defun python-exec-find-parse-json (str)
+  "Parse JSON STR to an alist.  Arrays are converted to lists."
   (if (functionp 'json-parse-string)
       (json-parse-string str :object-type 'alist :array-type 'list)
     (let ((json-array-type 'list))
       (json-read-from-string str))))
 
-(defun python-x-parse-config-file (file-path)
+(defun python-exec-find-parse-config-file (file-path)
+  "Parse a configuration file at FILE-PATH into JSON."
   (condition-case err
       (with-temp-buffer
         (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
-        (python-x-parse-json (buffer-string)))
-    (error (python-x-report-error err))))
+        (python-exec-find-parse-json (buffer-string)))
+    (error (python-exec-find-report-error err))))
 
-(defvar python-x-watched-config-files nil)
-(defun python-x-watch-config-file (config-file cache-var parser)
-  (unless (assoc-default config-file python-x-watched-config-files)
+(defvar python-exec-find-watched-config-files nil)
+(defun python-exec-find-watch-config-file (config-file cache-var parser)
+  "Watch for changes in config file to keep cache fresh.
+
+CONFIG-FILE is the path to the configuration file to watch for
+changes.  CACHE-VAR is the symbol to the variable where the
+parsed configuration file content is stored.  PARSER is the
+symbol to the function that parses the configuration file into an
+alist."
+  (unless (assoc-default config-file python-exec-find-watched-config-files)
     (push (cons config-file
                 (file-notify-add-watch
                  config-file
@@ -103,24 +124,45 @@
                                 event))
                      (pcase action
                        ((or 'deleted 'renamed)
-                        (file-notify-rm-watch (assoc-default file python-x-watched-config-files))
+                        (file-notify-rm-watch (assoc-default file python-exec-find-watched-config-files))
                         (setf (alist-get file (symbol-value cache-var) nil t 'equal) nil)
-                        (setf (alist-get file python-x-watched-config-files nil t 'equal) nil))
+                        (setf (alist-get file python-exec-find-watched-config-files nil t 'equal) nil))
                        ('changed
                         (setf (alist-get file (symbol-value cache-var) nil t 'equal)
                               (funcall parser file))))))))
-          python-x-watched-config-files)))
+          python-exec-find-watched-config-files)))
 
-(defun python-x-pre-commit-config-file-path ()
-  (python-x-find-file-from-project-root ".pre-commit-config.yaml"))
+(defun python-exec-find-pre-commit-config-file-path ()
+  "Path to the `.pre-commit-config.yaml' file in the current project.
 
-(defun python-x-pyproject-file-path ()
-  (python-x-find-file-from-project-root "pyproject.toml"))
+Return the absolute path to `.pre-commit-config.yaml' for the
+current Python project."
+  (python-exec-find-find-file-from-project-root ".pre-commit-config.yaml"))
 
-(defun python-x-python-version-file-path ()
-  (python-x-find-file-from-project-root ".python-version"))
+(defun python-exec-find-pyproject-file-path ()
+  "Path to the `pyproject.toml' file in the current project.
 
-(cl-defmacro python-x-config-file-content (name &key file-path parser)
+Return the absolute path to `pyproject.toml' for the current
+Python project."
+  (python-exec-find-find-file-from-project-root "pyproject.toml"))
+
+(defun python-exec-find-python-version-file-path ()
+  "Path to the `.python-version' file in the current project.
+
+Return the absolute path to `.python-version' for the current
+Python project."
+  (python-exec-find-find-file-from-project-root ".python-version"))
+
+(cl-defmacro python-exec-find-config-file-content (name &key file-path parser)
+  "Create a function for reading the content of a config file.
+
+NAME is the name of the memorized function that will be created
+to return the content of the configuration file FILE-PATH.  The
+content of the file is will be parsed by PARSER and then cached
+in a variable called NAME-cache.
+
+Changes to the file will automatically update the cached content
+See `python-exec-find-watch-config-file' for details."
   (let ((cache-var (intern (concat (symbol-name name) "-cache"))))
     `(progn
        (defvar ,cache-var nil)
@@ -131,56 +173,75 @@
            (if cache-kvp
                (cdr cache-kvp)
              (when config-file
-               (python-x-watch-config-file config-file (quote ,cache-var) (quote ,parser))
+               (python-exec-find-watch-config-file config-file (quote ,cache-var) (quote ,parser))
                (when-let ((content (funcall (quote ,parser) config-file)))
                  (push (cons config-file content) ,cache-var)
                  content))))))))
 
-(python-x-config-file-content python-x-pre-commit-config
-                              :file-path (python-x-pre-commit-config-file-path)
-                              :parser python-x-parse-config-file)
+(python-exec-find-config-file-content python-exec-find-pre-commit-config
+                              :file-path (python-exec-find-pre-commit-config-file-path)
+                              :parser python-exec-find-parse-config-file)
 
-(python-x-config-file-content python-x-pyproject
-                              :file-path (python-x-pyproject-file-path)
-                              :parser python-x-parse-config-file)
+(python-exec-find-config-file-content python-exec-find-pyproject
+                              :file-path (python-exec-find-pyproject-file-path)
+                              :parser python-exec-find-parse-config-file)
 
-(defun python-x-pre-commit-p ()
-  (and (python-x-pre-commit-config-file-path)
+(defun python-exec-find-pre-commit-p ()
+  "Whether the current project is using `pre-commit'."
+  (and (python-exec-find-pre-commit-config-file-path)
        (or (executable-find "pre-commit")
-           (and (python-x-use-poetry-p)
-                (when-let* ((venv (python-x-virtualenv-root))
+           (and (python-exec-find-use-poetry-p)
+                (when-let* ((venv (python-exec-find-virtualenv-root))
                             (exec-path (list (concat (file-name-as-directory venv) "bin"))))
                   (executable-find "pre-commit"))))))
 
-(defun python-x-use-poetry-p ()
+(defun python-exec-find-use-poetry-p ()
+  "Whether the current project is using `poetry'."
   (and (executable-find "poetry")
        (not
         (null
          (string-match-p
           "poetry"
-          (or (let-alist (python-x-pyproject)
+          (or (let-alist (python-exec-find-pyproject)
                 .build-system.build-backend)
               ""))))))
 
-(defun python-x-use-pyenv-p ()
-  (and (python-x-python-version-file-path)
+(defun python-exec-find-use-pyenv-p ()
+  "Whether the current project is using `pyenv'."
+  (and (python-exec-find-python-version-file-path)
        (executable-find "pyenv")))
 
-(defun python-x-pre-commit-config-has-hook-p (id)
-  (member id (cl-loop for repo in (let-alist (python-x-pre-commit-config) .repos)
+(defun python-exec-find-pre-commit-config-has-hook-p (id)
+  "Determine if the `pre-commit' configuration has a hook.
+
+Return non-nil if the `pre-commit' configuration for the current
+project has hook ID set up."
+  (member id (cl-loop for repo in (let-alist (python-exec-find-pre-commit-config) .repos)
                       append (cl-loop for hook in (let-alist repo .hooks)
                                       collect (let-alist hook .id)))))
 
-(defun python-x-parse-pre-commit-db (db-file)
+(defun python-exec-find-parse-pre-commit-db (db-file)
+  "Parse `pre-commit' database.
+
+Parse the pre-commit SQLite database located at DB-FILE to JSON."
   (condition-case err
       (with-temp-buffer
         (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
-        (python-x-parse-json (buffer-string)))
-    (error (python-x-report-error err))))
+        (python-exec-find-parse-json (buffer-string)))
+    (error (python-exec-find-report-error err))))
 
-(defvar python-x-pre-commit-database-cache nil)
+(defvar python-exec-find-pre-commit-database-cache nil)
 
-(defun python-x-pre-commit-virtualenv-path (hook-id)
+(defun python-exec-find-pre-commit-virtualenv-path (hook-id)
+  "Find the virtualenv location from the `pre-commit' database.
+
+If the `pre-commit' hook HOOK-ID is found in the current Python
+project's `.pre-commit-config.yaml' file, the hook ID and its
+additional dependencies are used to construct a key for looking
+up a virtualenv for the hook from the pre-commit database.
+
+In order to find the hook virtualenv, `pre-commit' and the hooks
+must both be installed into the current project first."
   (when-let* ((db-file
                (concat
                 (expand-file-name
@@ -191,11 +252,11 @@
                 "pre-commit/db.db"))
 
               (db
-               (or (assoc-default db-file python-x-pre-commit-database-cache)
+               (or (assoc-default db-file python-exec-find-pre-commit-database-cache)
                    (when (file-exists-p db-file)
-                     (python-x-watch-config-file db-file 'python-x-pre-commit-database-cache 'python-x-parse-pre-commit-db)
-                     (when-let ((content (python-x-parse-pre-commit-db db-file)))
-                       (push (cons db-file content) python-x-pre-commit-database-cache)
+                     (python-exec-find-watch-config-file db-file 'python-exec-find-pre-commit-database-cache 'python-exec-find-parse-pre-commit-db)
+                     (when-let ((content (python-exec-find-parse-pre-commit-db db-file)))
+                       (push (cons db-file content) python-exec-find-pre-commit-database-cache)
                        content))))
 
               (repo-config
@@ -205,7 +266,7 @@
                    (lambda (hook)
                      (equal (let-alist hook .id) hook-id))
                    (let-alist repo .hooks)))
-                (let-alist (python-x-pre-commit-config) .repos)))
+                (let-alist (python-exec-find-pre-commit-config) .repos)))
 
               (repo-url
                (let ((additional-deps
@@ -234,21 +295,29 @@
 
 
 ;;;###autoload
-(defun python-x-executable-find (executable)
-  (or (and (python-x-pre-commit-p)
+(defun python-exec-find-executable-find (executable)
+  "Find the correct EXECUTABLE for the current Python project.
+
+Search for EXECUTABLE first in the `pre-commit' virtualenv, then
+`poetry', then finally from the variable `exec-path'.
+
+The executable will only be searched in an environment created by
+a Python virtualenv management tool if the project is setup to
+use it."
+  (or (and (python-exec-find-pre-commit-p)
            (not (string-prefix-p "python" executable))
            (condition-case err
-               (if (not (python-x-pre-commit-config-has-hook-p executable))
-                   (user-error "pre-commit does not have hook %s configured." executable)
-                 (when-let* ((venv (python-x-pre-commit-virtualenv-path executable))
+               (if (not (python-exec-find-pre-commit-config-has-hook-p executable))
+                   (user-error "`pre-commit' does not have hook %s configured" executable)
+                 (when-let* ((venv (python-exec-find-pre-commit-virtualenv-path executable))
                              (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
                    (if (file-exists-p bin-path)
                        bin-path
-                     (user-error "pre-commit is configured but the hook %s do not appear to be installed." executable))))
-             (error (python-x-report-error err))))
-      (and (or (python-x-use-poetry-p)
-               (python-x-use-pyenv-p))
-           (when-let* ((venv (python-x-virtualenv-root))
+                     (user-error "`pre-commit' is configured but the hook %s do not appear to be installed" executable))))
+             (error (python-exec-find-report-error err))))
+      (and (or (python-exec-find-use-poetry-p)
+               (python-exec-find-use-pyenv-p))
+           (when-let* ((venv (python-exec-find-virtualenv-root))
                        (exec-path (list (concat (file-name-as-directory venv) "bin"))))
              (executable-find executable)))
       (when-let ((path (executable-find executable)))
@@ -259,35 +328,48 @@
               path)
           (error nil)))))
 
-(defvar python-x-project-virtualenv-cache nil)
+(defvar python-exec-find-project-virtualenv-cache nil)
 
 ;;;###autoload
-(defun python-x-virtualenv-root ()
-  (let* ((root (python-x-project-root)))
-    (or (alist-get root python-x-project-virtualenv-cache nil nil 'equal)
-        (cond ((python-x-use-poetry-p)
+(defun python-exec-find-virtualenv-root ()
+  "Find the path to the virtualenv for the current Python project.
+
+If the current project is using `poetry', return the path to the
+virtualenv directory `poetry' created.  If the current project is
+using `pyenv', return the path to the virtualenv directory by
+looking up the prefix from `.python-version'.  If neither case is
+true, return the value of the environment variable
+`VIRTUAL_ENV'."
+  (let* ((root (python-exec-find-project-root)))
+    (or (alist-get root python-exec-find-project-virtualenv-cache nil nil 'equal)
+        (cond ((python-exec-find-use-poetry-p)
                (condition-case err
                    (with-temp-buffer
                      (let ((exit-code (call-process "poetry" nil t nil "env" "info" "--path"))
                            (output (string-trim (buffer-string))))
                        (if (zerop exit-code)
-                           (setf (alist-get root python-x-project-virtualenv-cache nil nil 'equal) output)
-                         (user-error "poetry is configured but the virtualenv does not appear to be installed."))))
-                 (error (python-x-report-error err))))
-              ((python-x-use-pyenv-p)
+                           (setf (alist-get root python-exec-find-project-virtualenv-cache nil nil 'equal) output)
+                         (user-error "`poetry' is configured but the virtualenv does not appear to be installed"))))
+                 (error (python-exec-find-report-error err))))
+              ((python-exec-find-use-pyenv-p)
                (condition-case err
                    (with-temp-buffer
                      (let ((exit-code (call-process "pyenv" nil t nil "prefix"))
                            (output (string-trim (buffer-string))))
                        (if (zerop exit-code)
-                           (setf (alist-get root python-x-project-virtualenv-cache nil nil 'equal) (file-truename output))
-                         (user-error "poetry is configured but the virtualenv does not appear to be installed."))))
-                 (error (python-x-report-error err))))
+                           (setf (alist-get root python-exec-find-project-virtualenv-cache nil nil 'equal) (file-truename output))
+                         (user-error "`poetry' is configured but the virtualenv does not appear to be installed"))))
+                 (error (python-exec-find-report-error err))))
               (t (getenv "VIRTUAL_ENV"))))))
 
 
 
-(defun python-x-flycheck-python-pylint-find-pylintrc ()
+(defun python-exec-find-flycheck-python-pylint-find-pylintrc ()
+  "Polyfill `flycheck-pylintrc'.
+
+Find the correct `pylint' configuration file according to the
+algorithm described at
+`https://pylint.pycqa.org/en/latest/user_guide/usage/run.html'."
   (let ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg")))
     (or (when-let ((pylintrc (seq-find
                               (lambda (file) (file-exists-p (concat default-directory file)))
@@ -334,28 +416,43 @@
 
   (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy))
 
-(defvar python-x-flycheck-checker-props
+(defvar python-exec-find-flycheck-checker-props
   '((python-mypy . ((command . ("mypy"
                                 "--show-column-numbers"
                                 (config-file "--config-file" flycheck-python-mypy-config)
                                 (option "--python-executable" flycheck-python-mypy-python-executable)
                                 (option "--cache-dir" flycheck-python-mypy-cache-dir)
-                                source-original))))))
+                                source-original)))))
+  "`flycheck' Python checker property overrides.")
 
-(defun python-x-flycheck-checker-get-advice (fn checker property)
-  (or (alist-get property (alist-get checker python-x-flycheck-checker-props))
+(defun python-exec-find-flycheck-checker-get-advice (fn checker property)
+  "Advice `flycheck-checker-get'.
+
+This function installs an advice to `flycheck-checker-get' to
+redirect supported `flycheck' Python checker property lookups to
+those defined in `python-exec-find-flycheck-check-props'.
+
+FN is `flycheck-check-get', CHECKER is a `flycheck' Python
+checker symbol, and PROPERTY is the checker property.  See
+`flycheck-define-generic-checker' for details."
+  (or (alist-get property (alist-get checker python-exec-find-flycheck-checker-props))
       (funcall fn checker property)))
 
-(defun python-x-flycheck-toggle-local-vars ()
+(defun python-exec-find-flycheck-toggle-local-vars ()
+  "Toggle buffer local variables for `flycheck' Python checkers.
+
+When `flycheck-mode' is non-nil, set up all supported Python
+checker executable variables buffer-locally.  Reset them to
+default otherwise."
   (if flycheck-mode
       (progn
         (when (derived-mode-p 'python-mode)
-          (setq-local flycheck-pylintrc (python-x-flycheck-python-pylint-find-pylintrc))
-          (setq-local flycheck-python-flake8-executable (python-x-executable-find "flake8"))
-          (setq-local flycheck-python-pylint-executable (python-x-executable-find "pylint"))
-          (setq-local flycheck-python-mypy-executable (python-x-executable-find "mypy"))
-          (setq-local flycheck-python-mypy-python-executable (python-x-executable-find "python"))
-          (setq-local flycheck-python-pyright-executable (python-x-executable-find "pyright"))
+          (setq-local flycheck-pylintrc (python-exec-find-flycheck-python-pylint-find-pylintrc))
+          (setq-local flycheck-python-flake8-executable (python-exec-find-executable-find "flake8"))
+          (setq-local flycheck-python-pylint-executable (python-exec-find-executable-find "pylint"))
+          (setq-local flycheck-python-mypy-executable (python-exec-find-executable-find "mypy"))
+          (setq-local flycheck-python-mypy-python-executable (python-exec-find-executable-find "python"))
+          (setq-local flycheck-python-pyright-executable (python-exec-find-executable-find "pyright"))
           (setq-local flycheck-python-pycompile-executable python-shell-interpreter)))
     (kill-local-variable 'flycheck-pylintrc)
     (kill-local-variable 'flycheck-python-flake8-executable)
@@ -365,7 +462,9 @@
     (kill-local-variable 'flycheck-python-pycompile-executable)))
 
 ;;;###autoload
-(defun python-x-flycheck-setup ()
+(defun python-exec-find-flycheck-setup ()
+  "Setup all `flycheck' Python checker configuration."
+
   (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
 
   (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
@@ -376,13 +475,15 @@
                                                "mypy/config")))
 
   (with-eval-after-load 'flycheck
-    (advice-add 'flycheck-checker-get :around #'python-x-flycheck-checker-get-advice)
-    (add-hook 'flycheck-mode-hook #'python-x-flycheck-toggle-local-vars)))
+    (advice-add 'flycheck-checker-get :around #'python-exec-find-flycheck-checker-get-advice)
+    (add-hook 'flycheck-mode-hook #'python-exec-find-flycheck-toggle-local-vars)))
 
 ;;;###autoload
-(defun python-x-flycheck-teardown ()
-  (advice-remove 'flycheck-checker-get #'python-x-flycheck-checker-get-advice)
-  (remove-hook 'flycheck-mode-hook #'python-x-flycheck-toggle-local-vars)
+(defun python-exec-find-flycheck-teardown ()
+  "Reset all `flycheck' Python checker configuration to default."
+
+  (advice-remove 'flycheck-checker-get #'python-exec-find-flycheck-checker-get-advice)
+  (remove-hook 'flycheck-mode-hook #'python-exec-find-flycheck-toggle-local-vars)
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
   (kill-local-variable 'flycheck-python-pylint-executable)
@@ -400,26 +501,32 @@
 (defvar python-black-command)
 (defvar python-isort-command)
 
-(defun python-x-buffer-local-vars-setup ()
-  (setq-local python-shell-interpreter (python-x-executable-find "python"))
-  (setq-local python-shell-virtualenv-root (python-x-virtualenv-root))
+(defun python-exec-find-buffer-local-vars-setup ()
+  "Setup the buffer local variables for Python tools.
 
-  (python-x-flycheck-setup)
+Assign all supported Python tooling executable variables to
+buffer local values."
+  (setq-local python-shell-interpreter (python-exec-find-executable-find "python"))
+  (setq-local python-shell-virtualenv-root (python-exec-find-virtualenv-root))
+
+  (python-exec-find-flycheck-setup)
 
   (setq-local lsp-jedi-executable-command
-              (python-x-executable-find "jedi-language-server"))
+              (python-exec-find-executable-find "jedi-language-server"))
   (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
   (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
-  (setq-local python-pytest-executable (python-x-executable-find "pytest"))
-  (setq-local python-black-command (python-x-executable-find "black"))
-  (setq-local python-isort-command (python-x-executable-find "isort")))
+  (setq-local python-pytest-executable (python-exec-find-executable-find "pytest"))
+  (setq-local python-black-command (python-exec-find-executable-find "black"))
+  (setq-local python-isort-command (python-exec-find-executable-find "isort")))
 
-(defun python-x-buffer-local-vars-teardown ()
+(defun python-exec-find-buffer-local-vars-teardown ()
+  "Reset all supported buffer local variable values to default."
+
   (kill-local-variable 'python-shell-interpreter)
   (kill-local-variable 'python-shell-virtualenv-root)
 
-  (python-x-flycheck-teardown)
+  (python-exec-find-flycheck-teardown)
 
   (kill-local-variable 'lsp-jedi-executable-command)
   (kill-local-variable 'lsp-pyright-venv-path)
@@ -429,13 +536,17 @@
   (kill-local-variable 'python-black-command)
   (kill-local-variable 'python-isort-command))
 
-(defun python-x-verify-setup ()
+(defun python-exec-find-verify-setup ()
+  "Verify the values of buffer local variables visually.
+
+Print all of the buffer local variable values
+`python-exec-find-minor-mode' has assigned to."
   (interactive)
 
   (unless (derived-mode-p 'python-mode)
     (user-error "You are not in python-mode!"))
 
-  (with-output-to-temp-buffer "*python-x*"
+  (with-output-to-temp-buffer "*python-exec-find*"
     (mapc (lambda (var)
             (princ (format "%-40s" (concat (symbol-name var) ":")))
             (prin1 (symbol-value var))
@@ -459,24 +570,25 @@
             python-black-command
             python-isort-command)))
 
-  (select-window (get-buffer-window "*python-x*")))
+  (select-window (get-buffer-window "*python-exec-find*")))
 
 ;;;###autoload
-(define-minor-mode python-x-minor-mode
-  ""
-  :lighter "PyX"
-  :group 'python-x
-  (if python-x-minor-mode
-      (python-x-buffer-local-vars-setup)
-    (python-x-buffer-local-vars-teardown)))
+(define-minor-mode python-exec-find-minor-mode
+  "Minor mode to setup buffer local variables for Python tools."
+  :lighter "PyXF"
+  :group 'python-exec-find
+  (if python-exec-find-minor-mode
+      (python-exec-find-buffer-local-vars-setup)
+    (python-exec-find-buffer-local-vars-teardown)))
 
-(defun python-x-minor-mode-on ()
+(defun python-exec-find-minor-mode-on ()
+  "Whether `python-exec-find-minor-mode' should be enabled."
   (when (derived-mode-p 'python-mode)
-    (python-x-minor-mode 1)))
+    (python-exec-find-minor-mode 1)))
 
 ;;;###autoload
-(define-globalized-minor-mode global-python-x-minor-mode python-x-minor-mode python-x-minor-mode-on
-  :group 'python-x)
+(define-globalized-minor-mode global-python-exec-find-minor-mode python-exec-find-minor-mode python-exec-find-minor-mode-on
+  :group 'python-exec-find)
 
 
 
@@ -485,29 +597,33 @@
 (add-to-list 'auto-mode-alist '("\\.flake8\\'"     . conf-mode))
 (add-to-list 'auto-mode-alist '("\\poetry.lock\\'" . conf-toml-mode))
 
-(defun python-x-cleanup-watchers-and-caches ()
+(defun python-exec-find-cleanup-watchers-and-caches ()
+  "Clean up configuration file caches and watchers.
+
+Delete configuration file caches and watchers when all
+`python-mode' buffers of a project have been closed."
   (when-let* ((buffer-file-name)
               (derived-mode-p 'python-mode)
-              (root (python-x-project-root))
+              (root (python-exec-find-project-root))
               (null (seq-some (lambda (buf)
                                 (and (not (equal buf (current-buffer)))
                                      (string-prefix-p root (buffer-file-name buf))))
                               (buffer-list))))
-    (setf (alist-get root python-x-project-virtualenv-cache nil t 'equal) nil)
+    (setf (alist-get root python-exec-find-project-virtualenv-cache nil t 'equal) nil)
 
-    (pcase-dolist (`(,config-file . ,watcher) python-x-watched-config-files)
+    (pcase-dolist (`(,config-file . ,watcher) python-exec-find-watched-config-files)
       (when (string-prefix-p root config-file)
         (file-notify-rm-watch watcher)
-        (setf (alist-get config-file python-x-watched-config-files nil t 'equal) nil)))
+        (setf (alist-get config-file python-exec-find-watched-config-files nil t 'equal) nil)))
 
-    (dolist (cache '(python-x-pre-commit-config-cache
-                     python-x-pyproject-cache))
+    (dolist (cache '(python-exec-find-pre-commit-config-cache
+                     python-exec-find-pyproject-cache))
       (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
         (when (string-prefix-p root config-file)
           (setf (alist-get config-file (symbol-value cache) nil t 'equal) nil))))))
 
-(add-hook 'kill-buffer-hook 'python-x-cleanup-watchers-and-caches)
+(add-hook 'kill-buffer-hook 'python-exec-find-cleanup-watchers-and-caches)
 
-(provide 'python-x)
+(provide 'python-exec-find)
 
-;;; python-x.el ends here
+;;; python-exec-find.el ends here

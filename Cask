@@ -15,4 +15,4 @@
  (depends-on "python-pytest")
  (depends-on "buttercup"))
 
-(package-file "python-x.el")
+(package-file "python-exec-find.el")
