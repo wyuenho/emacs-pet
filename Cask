@@ -2,8 +2,6 @@
 (source melpa)
 
 (development
- (depends-on "yaml")
- (depends-on "toml")
  (depends-on "flycheck")
  (depends-on "projectile")
  (depends-on "direnv")

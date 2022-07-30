@@ -15,6 +15,6 @@ compile: cask
 		 | egrep -a "(Warning|Error):") ; \
 		(ret=$$? ; cask clean-elc && exit $$ret)
 
-# .PHONY: test
-# test: compile
-#		cask emacs --batch -L ./test -l python-x.el -f ert-run-tests-batch
+.PHONY: test
+test: compile
+	cask exec buttercup -L . test
