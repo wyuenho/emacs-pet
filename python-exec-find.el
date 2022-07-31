@@ -371,15 +371,17 @@ Find the correct `pylint' configuration file according to the
 algorithm described at
 `https://pylint.pycqa.org/en/latest/user_guide/usage/run.html'."
   (let ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg")))
-    (or (when-let ((pylintrc (seq-find
-                              (lambda (file) (file-exists-p (concat default-directory file)))
-                              pylintrc)))
-          (expand-file-name (concat default-directory pylintrc)))
+    (or (when-let ((path (seq-find
+                          (lambda (file) (file-exists-p (concat default-directory file)))
+                          pylintrc)))
+          (expand-file-name (concat default-directory path)))
         (and (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
-             (when-let ((dir (seq-find
-                              (apply-partially 'locate-dominating-file default-directory)
-                              pylintrc)))
-               (expand-file-name (concat dir pylintrc))))
+             (when-let ((path (cl-loop for f in pylintrc
+                                       with dir = nil
+                                       do (setq dir (locate-dominating-file default-directory f))
+                                       if dir
+                                       return (concat dir f))))
+               (expand-file-name path)))
         (and (getenv "PYLINTRC")
              (expand-file-name (getenv "PYLINTRC")))
         (when-let ((config-dir
