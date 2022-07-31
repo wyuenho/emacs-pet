@@ -186,7 +186,7 @@ See `python-exec-find-watch-config-file' for details."
                               :file-path (python-exec-find-pyproject-file-path)
                               :parser python-exec-find-parse-config-file)
 
-(defun python-exec-find-pre-commit-p ()
+(defun python-exec-find-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'."
   (and (python-exec-find-pre-commit-config-file-path)
        (or (executable-find "pre-commit")
@@ -304,7 +304,7 @@ Search for EXECUTABLE first in the `pre-commit' virtualenv, then
 The executable will only be searched in an environment created by
 a Python virtualenv management tool if the project is setup to
 use it."
-  (or (and (python-exec-find-pre-commit-p)
+  (or (and (python-exec-find-use-pre-commit-p)
            (not (string-prefix-p "python" executable))
            (condition-case err
                (if (not (python-exec-find-pre-commit-config-has-hook-p executable))
