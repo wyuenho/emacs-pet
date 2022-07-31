@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "26.1"))
+;; Package-Requires: ((emacs "26.1") (f "0.20.0"))
 ;; Homepage: https://github.com/wyuenho/emacs-python-exec-find/
 ;; Keywords: tools
 
@@ -35,6 +35,7 @@
 
 
 (require 'cl-lib)
+(require 'f)
 (require 'filenotify)
 (require 'let-alist)
 (require 'pcase)
@@ -112,8 +113,8 @@ the project or its ancestor directories, nil otherwise."
 CONFIG-FILE is the path to the configuration file to watch for
 changes.  CACHE-VAR is the symbol to the variable where the
 parsed configuration file content is stored.  PARSER is the
-symbol to the function that parses the configuration file into an
-alist."
+symbol to a function that takes a file path and parses its
+content into an alist."
   (unless (assoc-default config-file python-exec-find-watched-config-files)
     (push (cons config-file
                 (file-notify-add-watch
@@ -132,34 +133,14 @@ alist."
                               (funcall parser file))))))))
           python-exec-find-watched-config-files)))
 
-(defun python-exec-find-pre-commit-config-file-path ()
-  "Path to the `.pre-commit-config.yaml' file in the current project.
-
-Return the absolute path to `.pre-commit-config.yaml' for the
-current Python project."
-  (python-exec-find-find-file-from-project-root ".pre-commit-config.yaml"))
-
-(defun python-exec-find-pyproject-file-path ()
-  "Path to the `pyproject.toml' file in the current project.
-
-Return the absolute path to `pyproject.toml' for the current
-Python project."
-  (python-exec-find-find-file-from-project-root "pyproject.toml"))
-
-(defun python-exec-find-python-version-file-path ()
-  "Path to the `.python-version' file in the current project.
-
-Return the absolute path to `.python-version' for the current
-Python project."
-  (python-exec-find-find-file-from-project-root ".python-version"))
-
-(cl-defmacro python-exec-find-config-file-content (name &key file-path parser)
+(cl-defmacro python-exec-find-config-file-content (name &key file-name parser)
   "Create a function for reading the content of a config file.
 
 NAME is the name of the memorized function that will be created
-to return the content of the configuration file FILE-PATH.  The
-content of the file is will be parsed by PARSER and then cached
-in a variable called NAME-cache.
+to return the content of the configuration file FILE-NAME.
+FILE-NAME is the name of the configuration file that will be
+searched in the project.  The content of the file will be parsed
+by PARSER and then cached in a variable called NAME-cache.
 
 Changes to the file will automatically update the cached content
 See `python-exec-find-watch-config-file' for details."
@@ -167,7 +148,7 @@ See `python-exec-find-watch-config-file' for details."
     `(progn
        (defvar ,cache-var nil)
        (defun ,name ()
-         (let* ((config-file ,file-path)
+         (let* ((config-file (python-exec-find-find-file-from-project-root ,file-name))
                 (cache-kvp (and config-file
                                 (assoc config-file ,cache-var))))
            (if cache-kvp
@@ -179,16 +160,20 @@ See `python-exec-find-watch-config-file' for details."
                  content))))))))
 
 (python-exec-find-config-file-content python-exec-find-pre-commit-config
-                              :file-path (python-exec-find-pre-commit-config-file-path)
-                              :parser python-exec-find-parse-config-file)
+                                      :file-name ".pre-commit-config.yaml"
+                                      :parser python-exec-find-parse-config-file)
 
 (python-exec-find-config-file-content python-exec-find-pyproject
-                              :file-path (python-exec-find-pyproject-file-path)
-                              :parser python-exec-find-parse-config-file)
+                                      :file-name "pyproject.toml"
+                                      :parser python-exec-find-parse-config-file)
+
+(python-exec-find-config-file-content python-exec-find-python-version
+                                      :file-name ".python-version"
+                                      :parser f-read-text)
 
 (defun python-exec-find-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'."
-  (and (python-exec-find-pre-commit-config-file-path)
+  (and (python-exec-find-pre-commit-config)
        (or (executable-find "pre-commit")
            (and (python-exec-find-use-poetry-p)
                 (when-let* ((venv (python-exec-find-virtualenv-root))
@@ -208,7 +193,7 @@ See `python-exec-find-watch-config-file' for details."
 
 (defun python-exec-find-use-pyenv-p ()
   "Whether the current project is using `pyenv'."
-  (and (python-exec-find-python-version-file-path)
+  (and (python-exec-find-python-version)
        (executable-find "pyenv")))
 
 (defun python-exec-find-pre-commit-config-has-hook-p (id)

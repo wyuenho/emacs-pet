@@ -15,15 +15,6 @@
 (describe "python-exec-find-watch-config-file"
   (it "should watch for changes in config file and update cache variable"))
 
-(describe "python-exec-find-pre-commit-config-file-path"
-  (it "should return absolute path to project `.pre-commit-config.yaml' file"))
-
-(describe "python-exec-find-pyproject-file-path"
-  (it "should return absolute path to project `pyproject.toml' file"))
-
-(describe "python-exec-find-python-version-file-path"
-  (it "should return absolute path to project `.python-version' file"))
-
 (describe "python-exec-find-config-file-content"
   (it "should create cache variable")
   (it "should create cache access function"))

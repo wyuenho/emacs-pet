@@ -1,6 +1,8 @@
 (source gnu)
 (source melpa)
 
+(depends-on "f")
+
 (development
  (depends-on "flycheck")
  (depends-on "projectile")
