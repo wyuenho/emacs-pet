@@ -376,10 +376,10 @@ algorithm described at
                               pylintrc)))
           (expand-file-name (concat default-directory pylintrc)))
         (and (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
-             (when-let ((pylintrc (seq-find
-                                   (apply-partially 'locate-dominating-file default-directory)
-                                   pylintrc)))
-               (expand-file-name (concat (locate-dominating-file default-directory pylintrc) pylintrc))))
+             (when-let ((dir (seq-find
+                              (apply-partially 'locate-dominating-file default-directory)
+                              pylintrc)))
+               (expand-file-name (concat dir pylintrc))))
         (and (getenv "PYLINTRC")
              (expand-file-name (getenv "PYLINTRC")))
         (when-let ((config-dir
