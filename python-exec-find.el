@@ -67,9 +67,9 @@ Only reports to the minibuffer if `python-exec-find-debug' is non-nil."
 (defun python-exec-find-project-root ()
   "Return the path of root of the project.
 
-If `projectile' is available, this function uses
-`projectile-project-root' to the the project root.  Otherwise, it
-uses `project-root'."
+If `projectile' is available, the function
+`projectile-project-root' is used to find the project root.
+Otherwise, `project-root' is used."
   (or (and (functionp 'projectile-project-root)
            (projectile-project-root))
       (when-let ((project (project-current)))
@@ -107,7 +107,7 @@ the project or its ancestor directories, nil otherwise."
 
 (defvar python-exec-find-watched-config-files nil)
 (defun python-exec-find-watch-config-file (config-file cache-var parser)
-  "Watch for changes in config file to keep cache fresh.
+  "Keep cache fresh by watching for changes in the config file.
 
 CONFIG-FILE is the path to the configuration file to watch for
 changes.  CACHE-VAR is the symbol to the variable where the
