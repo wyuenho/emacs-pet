@@ -406,16 +406,7 @@ algorithm described at
 (declare-function flycheck-string-or-nil-p "ext:flycheck")
 (declare-function flycheck-register-option-var "ext:flycheck")
 
-(with-eval-after-load 'flycheck
-  (defcustom flycheck-python-mypy-python-executable nil
-    "Python executable to find the installed PEP 561 packages."
-    :group 'flycheck-options
-    :type '(choice (const :tag "Same as mypy's" nil)
-                   (string :tag "Path"))
-    :safe #'flycheck-string-or-nil-p)
-
-  (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy))
-
+;; https://github.com/flycheck/flycheck/pull/1955
 (defvar python-exec-find-flycheck-checker-props
   '((python-mypy . ((command . ("mypy"
                                 "--show-column-numbers"
@@ -465,6 +456,7 @@ default otherwise."
 (defun python-exec-find-flycheck-setup ()
   "Setup all `flycheck' Python checker configuration."
 
+  ;; https://github.com/flycheck/flycheck/pull/1956
   (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
 
   (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
@@ -474,15 +466,31 @@ default otherwise."
                                                     "~/.config/"))
                                                "mypy/config")))
 
-  (with-eval-after-load 'flycheck
-    (advice-add 'flycheck-checker-get :around #'python-exec-find-flycheck-checker-get-advice)
-    (add-hook 'flycheck-mode-hook #'python-exec-find-flycheck-toggle-local-vars)))
+  ;; https://github.com/flycheck/flycheck/pull/1955
+  (defcustom flycheck-python-mypy-python-executable nil
+    "Python executable to find the installed PEP 561 packages.
+
+This variable is an option for the following syntax checkers:
+
+  - `python-mypy'"
+    :group 'flycheck-options
+    :type '(choice (const :tag "Same as mypy's" nil)
+                   (string :tag "Path"))
+    :safe 'flycheck-string-or-nil-p)
+
+  (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy)
+
+  (when (functionp 'flycheck-checker-get)
+    (advice-add 'flycheck-checker-get :around #'python-exec-find-flycheck-checker-get-advice))
+
+  (add-hook 'flycheck-mode-hook #'python-exec-find-flycheck-toggle-local-vars))
 
 ;;;###autoload
 (defun python-exec-find-flycheck-teardown ()
   "Reset all `flycheck' Python checker configuration to default."
 
-  (advice-remove 'flycheck-checker-get #'python-exec-find-flycheck-checker-get-advice)
+  (when (functionp 'flycheck-checker-get)
+    (advice-remove 'flycheck-checker-get #'python-exec-find-flycheck-checker-get-advice))
   (remove-hook 'flycheck-mode-hook #'python-exec-find-flycheck-toggle-local-vars)
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
