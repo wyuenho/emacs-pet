@@ -50,4 +50,10 @@ jobs:
       - uses: cask/setup-cask@master
         with:
           version: snapshot
+      - name: Install packages
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
+          sudo add-apt-repository ppa:rmescandon/yq
+          sudo apt update
+          sudo apt-get -y install sqlite3 golang-github-pelletier-go-toml yq
       - run: make test
