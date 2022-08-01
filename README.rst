@@ -72,11 +72,19 @@ Supported Emacs Packages
 System Requirements
 -------------------
 
-Currently ``python-exec-find`` requires `dasel <https://github.com/TomWright/dasel>`_
-and the ``sqlite3`` command line programs installed on your system. When a
-suitable Emacs Lisp YAML and TOML parser becomes available, dasel will be made
-optional. Likewise, when Emacs 29 is released, the ``sqlite3`` system
-requirement will be made optional.
+Currently ``python-exec-find`` requires a program to convert TOML to JSON, a
+program to convert YAML to JSON, and ``sqlite3`` to be installed on your system.
+
+By default, both the TOML to JSON and YAML to JSON converters are configured to
+use `dasel <https://github.com/TomWright/dasel>`_.  If you are on Linux, it may
+be more convenient to use `tomljson
+<https://github.com/pelletier/go-toml#tools>`_ and `yq
+<https://github.com/mikefarah/yq>`_ since both of which are likely to be
+available on the system package manager.
+
+When a suitable Emacs Lisp YAML and TOML parser becomes available, ``dasel``
+will be made optional. Likewise, when Emacs 29 is released, the ``sqlite3``
+system requirement will be made optional.
 
 
 Usage
