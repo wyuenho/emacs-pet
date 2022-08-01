@@ -186,7 +186,7 @@ content into an alist."
                               (funcall parser file))))))))
           python-exec-find-watched-config-files)))
 
-(cl-defmacro python-exec-find-config-file-content (name &key file-name parser)
+(cl-defmacro python-exec-find-def-config-accessor (name &key file-name parser)
   "Create a function for reading the content of a config file.
 
 NAME is the name of the memorized function that will be created
@@ -212,15 +212,15 @@ See `python-exec-find-watch-config-file' for details."
                  (push (cons config-file content) ,cache-var)
                  content))))))))
 
-(python-exec-find-config-file-content python-exec-find-pre-commit-config
+(python-exec-find-def-config-accessor python-exec-find-pre-commit-config
                                       :file-name ".pre-commit-config.yaml"
                                       :parser python-exec-find-parse-config-file)
 
-(python-exec-find-config-file-content python-exec-find-pyproject
+(python-exec-find-def-config-accessor python-exec-find-pyproject
                                       :file-name "pyproject.toml"
                                       :parser python-exec-find-parse-config-file)
 
-(python-exec-find-config-file-content python-exec-find-python-version
+(python-exec-find-def-config-accessor python-exec-find-python-version
                                       :file-name ".python-version"
                                       :parser f-read-text)
 

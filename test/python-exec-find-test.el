@@ -15,7 +15,7 @@
 (describe "python-exec-find-watch-config-file"
   (it "should watch for changes in config file and update cache variable"))
 
-(describe "python-exec-find-config-file-content"
+(describe "python-exec-find-def-config-accessor"
   (it "should create cache variable")
   (it "should create cache access function"))
 
