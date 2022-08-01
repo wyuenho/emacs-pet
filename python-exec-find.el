@@ -57,6 +57,44 @@
   :group 'python-exec-find
   :type 'boolean)
 
+(defcustom python-exec-find-toml-to-json-program "dasel"
+  "Name of the program to convert TOML to JSON.
+
+The program must accept input from STDIN and output a JSON to
+STDOUT.
+
+You can customize the arguments that will be passed to the
+program by adjusting
+`python-exec-find-toml-to-json-program-arguments'"
+  :group 'python-exec-find
+  :type '(choice (const "dasel")
+                 (const "tomljson")
+                 (string :tag "Other")))
+
+(defcustom python-exec-find-toml-to-json-program-arguments '("select" "-f" "-" "-p" "toml" "-w" "json")
+  "Arguments for `python-exec-find-toml-to-json-program'."
+  :group 'python-exec-find
+  :type '(repeat string))
+
+(defcustom python-exec-find-yaml-to-json-program "dasel"
+  "Name of the program to convert YAML to JSON.
+
+The program must accept input from STDIN and output a JSON to
+STDOUT.
+
+You can customize the arguments that will be passed to the
+program by adjusting
+`python-exec-find-yaml-to-json-program-arguments'"
+  :group 'python-exec-find
+  :type '(choice (const "dasel")
+                 (const "yq")
+                 (string :tag "Other")))
+
+(defcustom python-exec-find-yaml-to-json-program-arguments '("select" "-f" "-" "-p" "yaml" "-w" "json")
+  "Arguments for `python-exec-find-yaml-to-json-program'."
+  :group 'python-exec-find
+  :type '(repeat string))
+
 (defun python-exec-find-report-error (err)
   "Report ERR to the minibuffer.
 
@@ -101,9 +139,24 @@ the project or its ancestor directories, nil otherwise."
 (defun python-exec-find-parse-config-file (file-path)
   "Parse a configuration file at FILE-PATH into JSON."
   (condition-case err
-      (with-temp-buffer
-        (call-process "dasel" nil t nil "select" "-f" file-path "-w" "json")
-        (python-exec-find-parse-json (buffer-string)))
+      (let ((ext (downcase (or (file-name-extension file-path) ""))))
+        (with-temp-buffer
+          (insert-file-contents file-path)
+          (apply 'call-process-region
+                 (point-min)
+                 (point-max)
+                 (cond ((equal ext "toml")
+                        python-exec-find-toml-to-json-program)
+                       ((equal ext "yaml")
+                        python-exec-find-yaml-to-json-program))
+                 t
+                 t
+                 nil
+                 (cond ((equal ext "toml")
+                        python-exec-find-toml-to-json-program-arguments)
+                       ((equal ext "yaml")
+                        python-exec-find-yaml-to-json-program-arguments)))
+          (python-exec-find-parse-json (buffer-string))))
     (error (python-exec-find-report-error err))))
 
 (defvar python-exec-find-watched-config-files nil)
