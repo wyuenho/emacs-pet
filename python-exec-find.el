@@ -597,27 +597,29 @@ Print all of the buffer local variable values
 
 Delete configuration file caches and watchers when all
 `python-mode' buffers of a project have been closed."
-  (when-let* ((buffer-file-name)
-              (derived-mode-p 'python-mode)
-              (root (python-exec-find-project-root))
-              (null (seq-some (lambda (buf)
-                                (and (not (equal buf (current-buffer)))
-                                     (string-prefix-p root (buffer-file-name buf))))
-                              (buffer-list))))
-    (setf (alist-get root python-exec-find-project-virtualenv-cache nil t 'equal) nil)
+  (when (and (buffer-file-name)
+             (derived-mode-p 'python-mode))
+    (let ((root (python-exec-find-project-root)))
+      (when (null (cl-loop for buf in (buffer-list)
+                           if (and (not (equal buf (current-buffer)))
+                                   (string-prefix-p root (buffer-file-name buf)))
+                           return buf))
 
-    (pcase-dolist (`(,config-file . ,watcher) python-exec-find-watched-config-files)
-      (when (string-prefix-p root config-file)
-        (file-notify-rm-watch watcher)
-        (setf (alist-get config-file python-exec-find-watched-config-files nil t 'equal) nil)))
+        (setf (alist-get root python-exec-find-project-virtualenv-cache nil t 'equal) nil)
 
-    (dolist (cache '(python-exec-find-pre-commit-config-cache
-                     python-exec-find-pyproject-cache))
-      (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
-        (when (string-prefix-p root config-file)
-          (setf (alist-get config-file (symbol-value cache) nil t 'equal) nil))))))
+        (pcase-dolist (`(,config-file . ,watcher) python-exec-find-watched-config-files)
+          (when (string-prefix-p root config-file)
+            (file-notify-rm-watch watcher)
+            (setf (alist-get config-file python-exec-find-watched-config-files nil t 'equal) nil)))
 
-(add-hook 'kill-buffer-hook 'python-exec-find-cleanup-watchers-and-caches)
+        (dolist (cache '(python-exec-find-pre-commit-config-cache
+                         python-exec-find-pyproject-cache
+                         python-exec-find-python-version-cache))
+          (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
+            (when (string-prefix-p root config-file)
+              (setf (alist-get config-file (symbol-value cache) nil t 'equal) nil))))))))
+
+(add-hook 'kill-buffer-hook #'python-exec-find-cleanup-watchers-and-caches)
 
 (provide 'python-exec-find)
 
