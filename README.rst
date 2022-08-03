@@ -113,6 +113,7 @@ Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 .. code-block:: elisp
 
    (use-package python-exec-find
+     :quelpa (python-exec-find :fetcher github :repo "wyuenho/emacs-python-exec-find")
      :config
      (global-python-exec-find-minor-mode 1))
 
