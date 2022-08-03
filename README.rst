@@ -80,7 +80,7 @@ use `dasel <https://github.com/TomWright/dasel>`_.  If you are on Linux, it may
 be more convenient to use `tomljson
 <https://github.com/pelletier/go-toml#tools>`_ and `yq
 <https://github.com/mikefarah/yq>`_ since both of which are likely to be
-available on the system package manager.
+available from the system package management system.
 
 When a suitable Emacs Lisp YAML and TOML parser becomes available, ``dasel``
 will be made optional. Likewise, when Emacs 29 is released, the ``sqlite3``
