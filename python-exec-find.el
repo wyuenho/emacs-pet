@@ -147,14 +147,14 @@ the project or its ancestor directories, nil otherwise."
                  (point-max)
                  (cond ((equal ext "toml")
                         python-exec-find-toml-to-json-program)
-                       ((equal ext "yaml")
+                       ((string-match-p "ya?ml" ext)
                         python-exec-find-yaml-to-json-program))
                  t
                  t
                  nil
                  (cond ((equal ext "toml")
                         python-exec-find-toml-to-json-program-arguments)
-                       ((equal ext "yaml")
+                       ((string-match-p "ya?ml" ext)
                         python-exec-find-yaml-to-json-program-arguments)))
           (python-exec-find-parse-json (buffer-string))))
     (error (python-exec-find-report-error err))))
