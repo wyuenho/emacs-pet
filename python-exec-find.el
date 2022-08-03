@@ -378,7 +378,7 @@ using `pyenv', return the path to the virtualenv directory by
 looking up the prefix from `.python-version'.  If neither case is
 true, return the value of the environment variable
 `VIRTUAL_ENV'."
-  (let* ((root (python-exec-find-project-root)))
+  (let ((root (python-exec-find-project-root)))
     (or (alist-get root python-exec-find-project-virtualenv-cache nil nil 'equal)
         (cond ((python-exec-find-use-poetry-p)
                (condition-case err
