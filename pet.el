@@ -28,8 +28,6 @@
 
 ;; TODO:
 ;; Support updating buffer local variables when config change
-;; Support pipenv ????
-;; Support flit/pdm ????
 
 ;;; Code:
 
@@ -211,16 +209,20 @@ See `pet-watch-config-file' for details."
                  content))))))))
 
 (pet-def-config-accessor pet-pre-commit-config
-                                      :file-name ".pre-commit-config.yaml"
-                                      :parser pet-parse-config-file)
+                         :file-name ".pre-commit-config.yaml"
+                         :parser pet-parse-config-file)
 
 (pet-def-config-accessor pet-pyproject
-                                      :file-name "pyproject.toml"
-                                      :parser pet-parse-config-file)
+                         :file-name "pyproject.toml"
+                         :parser pet-parse-config-file)
 
 (pet-def-config-accessor pet-python-version
-                                      :file-name ".python-version"
-                                      :parser f-read-text)
+                         :file-name ".python-version"
+                         :parser f-read-text)
+
+(pet-def-config-accessor pet-pipfile
+                         :file-name "Pipfile"
+                         :parser pet-parse-config-file)
 
 (defun pet-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'."
@@ -246,6 +248,11 @@ See `pet-watch-config-file' for details."
   "Whether the current project is using `pyenv'."
   (and (pet-python-version)
        (executable-find "pyenv")))
+
+(defun pet-use-pipenv-p ()
+  "Whether the current project is using `pipenv'."
+  (and (pet-pipfile)
+       (executable-find "pipenv")))
 
 (defun pet-pre-commit-config-has-hook-p (id)
   "Determine if the `pre-commit' configuration has a hook.
@@ -340,29 +347,27 @@ Search for EXECUTABLE first in the `pre-commit' virtualenv, then
 The executable will only be searched in an environment created by
 a Python virtualenv management tool if the project is setup to
 use it."
-  (or (and (pet-use-pre-commit-p)
-           (not (string-prefix-p "python" executable))
-           (condition-case err
-               (if (not (pet-pre-commit-config-has-hook-p executable))
-                   (user-error "`pre-commit' does not have hook %s configured" executable)
-                 (when-let* ((venv (pet-pre-commit-virtualenv-path executable))
-                             (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
-                   (if (file-exists-p bin-path)
-                       bin-path
-                     (user-error "`pre-commit' is configured but the hook %s do not appear to be installed" executable))))
-             (error (pet-report-error err))))
-      (and (or (pet-use-poetry-p)
-               (pet-use-pyenv-p))
-           (when-let* ((venv (pet-virtualenv-root))
-                       (exec-path (list (concat (file-name-as-directory venv) "bin"))))
-             (executable-find executable)))
-      (when-let ((path (executable-find executable)))
-        (condition-case nil
-            (if (and (executable-find "pyenv")
-                     (member path (process-lines "pyenv" "shims")))
-                nil
-              path)
-          (error nil)))))
+  (cond ((and (pet-use-pre-commit-p)
+              (not (string-prefix-p "python" executable)))
+         (condition-case err
+             (if (not (pet-pre-commit-config-has-hook-p executable))
+                 (user-error "`pre-commit' does not have hook %s configured" executable)
+               (when-let* ((venv (pet-pre-commit-virtualenv-path executable))
+                           (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
+                 (if (file-exists-p bin-path)
+                     bin-path
+                   (user-error "`pre-commit' is configured but the hook %s do not appear to be installed" executable))))
+           (error (pet-report-error err))))
+        ((when-let* ((venv (pet-virtualenv-root))
+                     (exec-path (list (concat (file-name-as-directory venv) "bin"))))
+           (executable-find executable)))
+        ((when-let ((path (executable-find executable)))
+           (condition-case nil
+               (if (and (executable-find "pyenv")
+                        (member path (process-lines "pyenv" "shims")))
+                   nil
+                 path)
+             (error nil))))))
 
 (defvar pet-project-virtualenv-cache nil)
 
@@ -370,33 +375,50 @@ use it."
 (defun pet-virtualenv-root ()
   "Find the path to the virtualenv for the current Python project.
 
-If the current project is using `poetry', return the path to the
-virtualenv directory `poetry' created.  If the current project is
-using `pyenv', return the path to the virtualenv directory by
-looking up the prefix from `.python-version'.  If neither case is
-true, return the value of the environment variable
-`VIRTUAL_ENV'."
+Selects a virtualenv in the follow order:
+
+1. If the current project is using `poetry', return the absolute path to the
+   virtualenv directory `poetry' created.
+2. Ditto for `pipenv'.
+3. The value of the environment variable `VIRTUAL_ENV' if defined.
+4. The `.venv' or `venv' directory in the project root if found.
+5. If the current project is using `pyenv', return the path to the virtualenv
+   directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
-    (or (alist-get root pet-project-virtualenv-cache nil nil 'equal)
-        (cond ((pet-use-poetry-p)
-               (condition-case err
-                   (with-temp-buffer
-                     (let ((exit-code (call-process "poetry" nil t nil "env" "info" "--path"))
-                           (output (string-trim (buffer-string))))
-                       (if (zerop exit-code)
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
-                         (user-error "`poetry' is configured but the virtualenv does not appear to be installed"))))
-                 (error (pet-report-error err))))
-              ((pet-use-pyenv-p)
-               (condition-case err
-                   (with-temp-buffer
-                     (let ((exit-code (call-process "pyenv" nil t nil "prefix"))
-                           (output (string-trim (buffer-string))))
-                       (if (zerop exit-code)
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
-                         (user-error "`poetry' is configured but the virtualenv does not appear to be installed"))))
-                 (error (pet-report-error err))))
-              (t (getenv "VIRTUAL_ENV"))))))
+    (cond ((alist-get root pet-project-virtualenv-cache nil nil 'equal))
+          ((pet-use-poetry-p)
+           (condition-case err
+               (with-temp-buffer
+                 (let ((exit-code (call-process "poetry" nil t nil "env" "info" "--no-ansi" "--path"))
+                       (output (string-trim (buffer-string))))
+                   (if (zerop exit-code)
+                       (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
+                     (user-error (buffer-string)))))
+             (error (pet-report-error err))))
+          ((pet-use-pipenv-p)
+           (condition-case err
+               (with-temp-buffer
+                 (let ((exit-code (call-process "pipenv" nil t nil "--venv"))
+                       (output (string-trim (buffer-string))))
+                   (if (zerop exit-code)
+                       (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
+                     (user-error (buffer-string)))))
+             (error (pet-report-error err))))
+          ((getenv "VIRTUAL_ENV")
+           (expand-file-name (getenv "VIRTUAL_ENV")))
+          ((when-let* ((venv-dirs '(".venv" "venv"))
+                       (root (pet-project-root))
+                       (found-dir (seq-find (lambda (dir) (file-exists-p (concat root dir))) venv-dirs)))
+             (concat (pet-project-root) found-dir)))
+          ((pet-use-pyenv-p)
+           (condition-case err
+               (with-temp-buffer
+                 (let ((exit-code (call-process "pyenv" nil t nil "prefix"))
+                       (output (string-trim (buffer-string))))
+                   (if (zerop exit-code)
+                       (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
+                     (user-error (buffer-string)))))
+             (error (pet-report-error err)))))))
 
 
 

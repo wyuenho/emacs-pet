@@ -49,9 +49,13 @@ Supported Python Virtual Environment Tools
 
 - `pre-commit <https://pre-commit.com/>`_
 - `poetry <https://python-poetry.org/>`_
-- `pyenv <https://github.com/pyenv/pyenv>`_
+- `pipenv <https://pipenv.pypa.io/en/latest/>`_
 - `direnv <https://direnv.net/>`_
+- `venv <https://docs.python.org/3/library/venv.html>`_ or `virtualenv
+  <https://virtualenv.pypa.io/en/latest/>`_
+- `pdm <https://github.com/pdm-project/pdm>`_
 - `pipx <https://pypa.github.io/pipx/>`_
+- `pyenv <https://github.com/pyenv/pyenv>`_
 - Whatever is on your ``exec-path``
 
 

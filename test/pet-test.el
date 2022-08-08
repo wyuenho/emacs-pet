@@ -43,6 +43,10 @@
   (it "should return t if project uses `pyenv'")
   (it "should return nil if project does not use `pyenv'"))
 
+(describe "pet-use-pipenv-p"
+  (it "should return t if project uses `pipenv'")
+  (it "should return nil if project does not use `pipenv'"))
+
 (describe "pet-pre-commit-config-has-hook-p"
   (it "should return t if `.pre-commit-config.yaml' has hook declared")
   (it "should return nil if `.pre-commit-config.yaml' does not have hook declared"))
@@ -55,14 +59,15 @@
 
 (describe "pet-executable-find"
   (it "should return the absolute path to the executable for a project using `pre-commit'")
-  (it "should return the absolute path the executable for a project using `poetry'")
-  (it "should return the absolute path the executable for a project using `pyenv'")
+  (it "should return the absolute path the executable for a project if its virtualenv is found")
   (it "should return the absolute path the executable for a project from `exec-path'"))
 
 (describe "pet-virtualenv-root"
-  (it "should return the absolute path the virtualenv for a project using `poetry'")
-  (it "should return the absolute path the virtualenv for a project using `pyenv'")
-  (it "should return the absolute path the virtualenv for a project from `VIRTUAL_ENV'"))
+  (it "should return the absolute path of the virtualenv for a project using `poetry'")
+  (it "should return the absolute path of the virtualenv for a project using `pipenv'")
+  (it "should return the absolute path of the virtualenv for a project from `VIRTUAL_ENV'")
+  (it "should return the absolute path of the `.venv' or `venv' directory in a project")
+  (it "should return the absolute path of the virtualenv for a project using `pyenv'"))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   (it "should return the absolute path to `pylintrc' from the project root")
