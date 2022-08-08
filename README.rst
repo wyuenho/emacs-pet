@@ -171,12 +171,16 @@ Complete Example
 
    (use-package flycheck)
 
-   (use-package lsp-jedi)
+   (use-package lsp)
+
+   (use-package lsp-jedi
+     :after lsp)
 
    (use-package lsp-pyright
      :after lsp)
 
-   (use-package dap-python)
+   (use-package dap-python
+     :after lsp)
 
    (use-package python-pytest)
 
