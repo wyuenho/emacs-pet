@@ -219,13 +219,16 @@ FAQ
 
 How do I get ``pet`` to pick up the virtualenv created by ``direnv``?
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 If you are on macOS, you can install `envrc <https://github.com/purcell/envrc>`_
 or `direnv.el <https://github.com/wbolster/emacs-direnv>`_. You also need to
 make sure they are loaded and configured before ``pet`` is. Once either is set
 up, ``pet`` will automatically pick up the executables from ``exec-path``.
 
+
 Why ``pet`` didn't set up the executable variables on a fresh Python project clone?
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 ``Pet`` does not automatically create virtualenvs for you. If you have a fresh
 clone, you must create the virtualenv and install your development dependencies
 into it first. Once it is done, the next time you open a Python file buffer
@@ -235,6 +238,11 @@ To find out how to do it, please find the virtualenv tool in question from
 `Supported Python Virtual Environment Tools`_, and visit its documentation for
 details.
 
+
+Do I still need any of the 11+ virtualenv Emacs packages?
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Nope. You can delete them all. This is the raison d'être of this package.
 
 License
 -------
