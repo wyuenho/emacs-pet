@@ -1,5 +1,5 @@
-python-exec-find.el
-===================
+**P** ython **E** xecutable **T** racker
+========================================
 
 Greatings fellow Pythonistas and Emacs users!
 
@@ -18,8 +18,8 @@ different project using a different flavor of virtualenv?
 If you answer "yes" for any of these questions, you've come to the right place.
 
 
-How does ``python-exec-find`` work?
------------------------------------
+How does ``pet`` work?
+----------------------
 
 The first key insight is to recognize the executables that many of these linting
 and formatting Emacs packages rely on are configurable.
@@ -27,16 +27,16 @@ and formatting Emacs packages rely on are configurable.
 The second key insight is Emacs allows you to setup a different value for the
 exectuable path on a per buffer basis.
 
-The hardest problem is finding the correct binary, this is what ``python-exec-find``
-tries to solve.
+The hardest problem is finding the correct binary, this is what ``pet`` tries to
+solve.
 
-As long as you use one of the supported Python virtualenv tools, ``python-exec-find``
-will be able to find the virtualenv root and binary you ask for, with **zero
-Emacs configuration** necessary.
+As long as you use one of the supported Python virtualenv tools, ``pet`` will be
+able to find the virtualenv root and binary you ask for, with **zero Emacs
+configuration** necessary.
 
-``python-exec-find`` works well with popular source code project management packages
-such as `Projectile <https://docs.projectile.mx/projectile/index.html>`_ and the
-built-in ``project.el``. The first time you call one the few ``python-exec-find`` helper
+``pet`` works well with popular source code project management packages such as
+`Projectile <https://docs.projectile.mx/projectile/index.html>`_ and the
+built-in ``project.el``. The first time you call one the few ``pet`` helper
 functions, it will use Projectile or project.el to detect the root of your
 project, search for the configuration files for the many supported Python
 virtualenv tools, and then lookup the location of the virtualenv based on the
@@ -72,8 +72,8 @@ Supported Emacs Packages
 System Requirements
 -------------------
 
-Currently ``python-exec-find`` requires a program to convert TOML to JSON, a
-program to convert YAML to JSON, and ``sqlite3`` to be installed on your system.
+Currently ``pet`` requires a program to convert TOML to JSON, a program to
+convert YAML to JSON, and ``sqlite3`` to be installed on your system.
 
 By default, both the TOML to JSON and YAML to JSON converters are configured to
 use `dasel <https://github.com/TomWright/dasel>`_.  If you are on Linux, it may
@@ -90,7 +90,7 @@ system requirement will be made optional.
 Usage
 -----
 
-If you are using Emacs on macOS, to get the most out of ``python-exec-find``, it is best
+If you are using Emacs on macOS, to get the most out of ``pet``, it is best
 paired with `exec-path-from-shell
 <https://github.com/purcell/exec-path-from-shell>`_. Once you have your
 ``exec-path`` synced up to your shell's ``$PATH`` environment variable, you can
@@ -105,17 +105,17 @@ Generally, the following snippet is all you'll need:
 
 .. code-block:: elisp
 
-   (global-python-exec-find-minor-mode 1)
+   (global-pet-minor-mode 1)
 
 
 Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
 .. code-block:: elisp
 
-   (use-package python-exec-find
-     :quelpa (python-exec-find :fetcher github :repo "wyuenho/emacs-python-exec-find")
+   (use-package pet
+     :quelpa (pet :fetcher github :repo "wyuenho/emacs-pet")
      :config
-     (global-python-exec-find-minor-mode 1))
+     (global-pet-minor-mode 1))
 
 
 This will setup the buffer local variables for all of the `Supported Emacs
@@ -125,13 +125,13 @@ Packages`_.
 Advanced Usage
 ++++++++++++++
 
-If you need to configure a package that ``python-exec-find`` doesn't support, or only
-want to configure a couple of packages instead of all the supported one,
-``python-exec-find`` offers 2 autoloaded functions to help you find the correct path to
-the executable and virtualenv directory:
+If you need to configure a package that ``pet`` doesn't support, or only want to
+configure a couple of packages instead of all the supported one, ``pet`` offers
+2 autoloaded functions to help you find the correct path to the executable and
+virtualenv directory:
 
-- ``(python-exec-find-executable-find EXECUTABLE)``
-- ``(python-exec-find-virtualenv-root)``
+- ``(pet-executable-find EXECUTABLE)``
+- ``(pet-virtualenv-root)``
 
 For example, to set up ``python-mode`` to use the correct interpreter when you
 execute ``M-x run-python``:
@@ -140,17 +140,17 @@ execute ``M-x run-python``:
 
    (add-hook 'python-mode-hook
              (lambda ()
-               (setq-local python-shell-interpreter (python-exec-find-executable-find "python")
-                           python-shell-virtualenv-root (python-exec-find-virtualenv-root))))
+               (setq-local python-shell-interpreter (pet-executable-find "python")
+                           python-shell-virtualenv-root (pet-virtualenv-root))))
 
 
-For ``flycheck``, due to its complexity, ``python-exec-find`` also comes with another
+For ``flycheck``, due to its complexity, ``pet`` also comes with another
 autoloaded function to help you setup the ``flake8``, ``pylint`` and ``mypy``
 checkers:
 
 .. code-block:: elisp
 
-   (add-hook 'python-mode-hook 'python-exec-find-flycheck-setup)
+   (add-hook 'python-mode-hook 'pet-flycheck-setup)
 
 
 Complete Example
@@ -179,32 +179,32 @@ Complete Example
 
    (use-package python-isort)
 
-   (use-package python-exec-find
-     :quelpa (python-exec-find :fetcher github :repo "wyuenho/emacs-python-exec-find")
+   (use-package pet
+     :quelpa (pet :fetcher github :repo "wyuenho/emacs-pet")
      :ensure-system-package (dasel sqlite3)
      :config
      (add-hook 'python-mode-hook
                (lambda ()
-                 (setq-local python-shell-interpreter (python-exec-find-executable-find "python")
-                             python-shell-virtualenv-root (python-exec-find-virtualenv-root))
+                 (setq-local python-shell-interpreter (pet-executable-find "python")
+                             python-shell-virtualenv-root (pet-virtualenv-root))
 
-                 (python-exec-find-flycheck-setup)
+                 (pet-flycheck-setup)
 
                  (setq-local lsp-jedi-executable-command
-                             (python-exec-find-executable-find "jedi-language-server"))
+                             (pet-executable-find "jedi-language-server"))
 
                  (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
                              lsp-pyright-venv-path python-shell-virtualenv-root)
 
                  (setq-local dap-python-executable python-shell-interpreter)
 
-                 (setq-local python-pytest-executable (python-exec-find-executable-find "pytest"))
+                 (setq-local python-pytest-executable (pet-executable-find "pytest"))
 
-                 (when-let ((black-executable (python-exec-find-executable-find "black")))
+                 (when-let ((black-executable (pet-executable-find "black")))
                    (setq-local python-black-command black-executable)
                    (python-black-on-save-mode 1))
 
-                 (when-let ((isort-executable (python-exec-find-executable-find "isort")))
+                 (when-let ((isort-executable (pet-executable-find "isort")))
                    (setq-local python-isort-command isort-executable)
                    (python-isort-on-save-mode 1)))))
 
