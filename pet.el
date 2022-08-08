@@ -621,7 +621,7 @@ has assigned to."
 ;;;###autoload
 (define-minor-mode pet-minor-mode
   "Minor mode to setup buffer local variables for Python tools."
-  :lighter "PyXF"
+  :lighter "Pet"
   :group 'pet
   (if pet-minor-mode
       (pet-buffer-local-vars-setup)
