@@ -64,8 +64,7 @@ The program must accept input from STDIN and output a JSON to
 STDOUT.
 
 You can customize the arguments that will be passed to the
-program by adjusting
-`pet-toml-to-json-program-arguments'"
+program by adjusting `pet-toml-to-json-program-arguments'"
   :group 'pet
   :type '(choice (const "dasel")
                  (const "tomljson")
@@ -83,8 +82,7 @@ The program must accept input from STDIN and output a JSON to
 STDOUT.
 
 You can customize the arguments that will be passed to the
-program by adjusting
-`pet-yaml-to-json-program-arguments'"
+program by adjusting `pet-yaml-to-json-program-arguments'"
   :group 'pet
   :type '(choice (const "dasel")
                  (const "yq")
@@ -587,8 +585,8 @@ buffer local values."
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.
 
-Print all of the buffer local variable values
-`pet-minor-mode' has assigned to."
+Print all of the buffer local variable values `pet-minor-mode'
+has assigned to."
   (interactive)
 
   (unless (derived-mode-p 'python-mode)
