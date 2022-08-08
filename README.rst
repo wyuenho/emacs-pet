@@ -44,7 +44,7 @@ content of the configuration files. Once a virtualenv is found, all executables
 are found by looking into its ``bin`` directory.
 
 
-Python Virtual Environment Tooling Support
+Supported Python Virtual Environment Tools
 ------------------------------------------
 
 - `pre-commit <https://pre-commit.com/>`_
@@ -90,12 +90,13 @@ system requirement will be made optional.
 Usage
 -----
 
-If you are using Emacs on macOS, to get the most out of ``pet``, it is best
-paired with `exec-path-from-shell
-<https://github.com/purcell/exec-path-from-shell>`_. Once you have your
-``exec-path`` synced up to your shell's ``$PATH`` environment variable, you can
-use the following ways to help you setup the rest of your Emacs packages
-**properly**.
+If you are using Emacs on macOS, to get the most out of ``pet``, it is best to
+install `exec-path-from-shell
+<https://github.com/purcell/exec-path-from-shell>`_ first to ensure all of the
+`Supported Python Virtual Environment Tools`_ are available in your
+``exec-path``. Once your ``exec-path`` is synced up to your shell's ``$PATH``
+environment variable, you can use the following ways to help you setup the rest
+of your Emacs packages **properly**.
 
 
 Basic Setup
