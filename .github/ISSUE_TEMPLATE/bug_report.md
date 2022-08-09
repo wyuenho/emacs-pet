@@ -32,4 +32,4 @@ assignees: ''
 - toml [e.g. v2.0.2]
 
 **Additional context**
-<!-- Add any other context such as stack trace here. -->
+<!-- Add any other context such as stack trace or the result of M-x (pet-verify-setup) here. -->
