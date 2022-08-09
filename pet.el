@@ -135,23 +135,37 @@ the project or its ancestor directories, nil otherwise."
 (defun pet-parse-config-file (file-path)
   "Parse a configuration file at FILE-PATH into JSON."
   (condition-case err
-      (let ((ext (downcase (or (file-name-extension file-path) ""))))
+      (let* ((ext (downcase (or (file-name-extension file-path) "")))
+             (file-name (file-name-nondirectory file-path))
+             (auto-mode-alist-matcher (lambda (a b) (not (null (string-match-p a b)))))
+             (toml-p (or (equal ext "toml")
+                         (eq 'conf-toml-mode
+                             (alist-get
+                              file-name
+                              auto-mode-alist
+                              nil
+                              nil
+                              auto-mode-alist-matcher))))
+             (yaml-p (or (not (null (string-match-p "ya?ml" ext)))
+                         (eq 'yaml-mode
+                             (alist-get
+                              file-name
+                              auto-mode-alist
+                              nil
+                              nil
+                              auto-mode-alist-matcher)))))
         (with-temp-buffer
           (insert-file-contents file-path)
           (apply 'call-process-region
                  (point-min)
                  (point-max)
-                 (cond ((equal ext "toml")
-                        pet-toml-to-json-program)
-                       ((string-match-p "ya?ml" ext)
-                        pet-yaml-to-json-program))
+                 (cond (toml-p pet-toml-to-json-program)
+                       (yaml-p pet-yaml-to-json-program))
                  t
                  t
                  nil
-                 (cond ((equal ext "toml")
-                        pet-toml-to-json-program-arguments)
-                       ((string-match-p "ya?ml" ext)
-                        pet-yaml-to-json-program-arguments)))
+                 (cond (toml-p pet-toml-to-json-program-arguments)
+                       (yaml-p pet-yaml-to-json-program-arguments)))
           (pet-parse-json (buffer-string))))
     (error (pet-report-error err))))
 
