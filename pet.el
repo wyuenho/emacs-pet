@@ -660,10 +660,14 @@ has assigned to."
 
 
 
-(add-to-list 'auto-mode-alist '("\\.pythonrc\\'"   . python-mode))
-(add-to-list 'auto-mode-alist '("\\.pylintrc\\'"   . conf-mode))
-(add-to-list 'auto-mode-alist '("\\.flake8\\'"     . conf-mode))
-(add-to-list 'auto-mode-alist '("\\poetry.lock\\'" . conf-toml-mode))
+(add-to-list 'auto-mode-alist '("\\.pythonrc\\'"    . python-mode))
+(add-to-list 'auto-mode-alist '("\\.pylintrc\\'"    . conf-mode))
+(add-to-list 'auto-mode-alist '("\\.flake8\\'"      . conf-mode))
+(add-to-list 'auto-mode-alist '("\\poetry.lock\\'"  . conf-toml-mode))
+(add-to-list 'auto-mode-alist '("\\Pipfile\\'"      . conf-toml-mode))
+(add-to-list 'auto-mode-alist '("\\Pipfile.lock\\'" . conf-toml-mode))
+
+
 
 (defun pet-cleanup-watchers-and-caches ()
   "Clean up configuration file caches and watchers.
