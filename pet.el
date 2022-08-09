@@ -362,16 +362,16 @@ The executable will only be searched in an environment created by
 a Python virtualenv management tool if the project is setup to
 use it."
   (cond ((and (pet-use-pre-commit-p)
-              (not (string-prefix-p "python" executable)))
-         (condition-case err
-             (if (not (pet-pre-commit-config-has-hook-p executable))
-                 (user-error "`pre-commit' does not have hook %s configured" executable)
-               (when-let* ((venv (pet-pre-commit-virtualenv-path executable))
-                           (bin-path (concat (file-name-as-directory venv) "bin" "/" executable)))
-                 (if (file-exists-p bin-path)
-                     bin-path
-                   (user-error "`pre-commit' is configured but the hook %s do not appear to be installed" executable))))
-           (error (pet-report-error err))))
+              (not (string-prefix-p "python" executable))
+              (condition-case err
+                  (if (not (pet-pre-commit-config-has-hook-p executable))
+                      (user-error "`pre-commit' does not have hook %s configured" executable)
+                    (when-let* ((venv (pet-pre-commit-virtualenv-path executable))
+                                (bin-path (concat (file-name-as-directory venv) "bin/" executable)))
+                      (if (file-exists-p bin-path)
+                          bin-path
+                        (user-error "`pre-commit' is configured but the hook %s do not appear to be installed" executable))))
+                (error (pet-report-error err)))))
         ((when-let* ((venv (pet-virtualenv-root))
                      (exec-path (list (concat (file-name-as-directory venv) "bin"))))
            (executable-find executable)))
