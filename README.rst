@@ -221,13 +221,15 @@ Complete Example
 FAQ
 ---
 
-How do I get ``pet`` to pick up the virtualenv created by ``direnv``?
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+How do I get ``pet`` to pick up the virtualenv created by ``direnv`` or similar tools?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-If you are on macOS, you can install `envrc <https://github.com/purcell/envrc>`_
-or `direnv.el <https://github.com/wbolster/emacs-direnv>`_. You also need to
-make sure they are loaded and configured before ``pet`` is. Once either is set
-up, ``pet`` will automatically pick up the executables from ``exec-path``.
+You can try `envrc <https://github.com/purcell/envrc>`_ , `direnv.el
+<https://github.com/wbolster/emacs-direnv>`_ or `buffer-env
+<https://github.com/astoff/buffer-env>`_. You also need to make sure they are
+loaded and configured before any ``pet`` function is executed. Once one of these
+packages has set up ``exec-path`` in your ``python-mode`` buffer, ``pet`` will
+automatically pick up the executables.
 
 
 Why ``pet`` didn't set up the executable variables on a fresh Python project clone?
