@@ -397,10 +397,10 @@ use it."
 
 Selects a virtualenv in the follow order:
 
-1. If the current project is using `poetry', return the absolute path to the
+1. The value of the environment variable `VIRTUAL_ENV' if defined.
+2. If the current project is using `poetry', return the absolute path to the
    virtualenv directory `poetry' created.
-2. Ditto for `pipenv'.
-3. The value of the environment variable `VIRTUAL_ENV' if defined.
+3. Ditto for `pipenv'.
 4. The `.venv' or `venv' directory in the project root if found.
 5. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
