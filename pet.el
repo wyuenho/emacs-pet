@@ -588,6 +588,8 @@ This variable is an option for the following syntax checkers:
 (defvar python-pytest-executable)
 (defvar python-black-command)
 (defvar python-isort-command)
+(defvar blacken-executable)
+(defvar yapfify-executable)
 
 (defun pet-buffer-local-vars-setup ()
   "Setup the buffer local variables for Python tools.
@@ -606,8 +608,8 @@ buffer local values."
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
-  (setq-local blacken-executable python-black-command)
   (setq-local python-isort-command (pet-executable-find "isort"))
+  (setq-local blacken-executable python-black-command)
   (setq-local yapfify-executable (pet-executable-find "yapf")))
 
 (defun pet-buffer-local-vars-teardown ()
@@ -624,8 +626,8 @@ buffer local values."
   (kill-local-variable 'dap-python-executable)
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
-  (kill-local-variable 'blacken-executable)
   (kill-local-variable 'python-isort-command)
+  (kill-local-variable 'blacken-executable)
   (kill-local-variable 'yapfify-executable))
 
 (defun pet-verify-setup ()
