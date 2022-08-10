@@ -406,6 +406,8 @@ Selects a virtualenv in the follow order:
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
     (cond ((alist-get root pet-project-virtualenv-cache nil nil 'equal))
+          ((getenv "VIRTUAL_ENV")
+           (expand-file-name (getenv "VIRTUAL_ENV")))
           ((pet-use-poetry-p)
            (condition-case err
                (with-temp-buffer
@@ -424,8 +426,6 @@ Selects a virtualenv in the follow order:
                        (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
                      (user-error (buffer-string)))))
              (error (pet-report-error err))))
-          ((getenv "VIRTUAL_ENV")
-           (expand-file-name (getenv "VIRTUAL_ENV")))
           ((cl-loop for d in (mapcar (apply-partially 'concat root) '(".venv" "venv"))
                     if (file-exists-p d)
                     return d))
