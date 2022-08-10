@@ -1,4 +1,4 @@
-;; -*- lisp-indent-offset: 2; -*-
+;; -*- lisp-indent-offset: 2; lexical-binding: t; -*-
 
 (require 'dap-python)
 (require 'flycheck)
@@ -11,6 +11,25 @@
 (require 'projectile)
 
 (require 'pet)
+
+(describe "pet-system-bin-dir"
+  (describe "when called on Windows"
+    (before-each
+      (setq-local system-type 'windows-nt))
+    (after-each
+      (kill-local-variable 'system-type))
+
+    (it "should return Scripts"
+      (expect (pet-system-bin-dir) :to-equal "Scripts")))
+
+  (describe "when called on non-Windows"
+    (before-each
+      (setq-local system-type 'gnu/linux))
+    (after-each
+      (kill-local-variable 'system-type))
+
+    (it "should return bin"
+      (expect (pet-system-bin-dir) :to-equal "bin"))))
 
 (describe "pet-project-root"
   (it "should find project root"))

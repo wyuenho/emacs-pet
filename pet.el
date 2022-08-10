@@ -91,6 +91,12 @@ program by adjusting `pet-yaml-to-json-program-arguments'"
   :group 'pet
   :type '(repeat string))
 
+
+
+(defun pet-system-bin-dir ()
+  "Determine the correct script directory based on `system-type'."
+  (if (eq system-type 'windows-nt) "Scripts" "bin"))
+
 (defun pet-report-error (err)
   "Report ERR to the minibuffer.
 
@@ -244,7 +250,7 @@ See `pet-watch-config-file' for details."
        (or (executable-find "pre-commit")
            (and (pet-use-poetry-p)
                 (when-let* ((venv (pet-virtualenv-root))
-                            (exec-path (list (concat (file-name-as-directory venv) "bin"))))
+                            (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
                   (executable-find "pre-commit"))))))
 
 (defun pet-use-poetry-p ()
@@ -367,13 +373,13 @@ use it."
                   (if (not (pet-pre-commit-config-has-hook-p executable))
                       (user-error "`pre-commit' does not have hook %s configured" executable)
                     (when-let* ((venv (pet-pre-commit-virtualenv-path executable))
-                                (bin-path (concat (file-name-as-directory venv) "bin/" executable)))
+                                (bin-path (concat (file-name-as-directory venv) (pet-system-bin-dir) "/" executable)))
                       (if (file-exists-p bin-path)
                           bin-path
                         (user-error "`pre-commit' is configured but the hook %s do not appear to be installed" executable))))
                 (error (pet-report-error err)))))
         ((when-let* ((venv (pet-virtualenv-root))
-                     (exec-path (list (concat (file-name-as-directory venv) "bin"))))
+                     (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
            (executable-find executable)))
         ((when-let ((path (executable-find executable)))
            (condition-case nil
