@@ -1,5 +1,6 @@
 ;; -*- lisp-indent-offset: 2; lexical-binding: t; -*-
 
+(require 'blacken)
 (require 'dap-python)
 (require 'flycheck)
 (require 'lsp-jedi)
@@ -8,7 +9,9 @@
 (require 'python-black)
 (require 'python-isort)
 (require 'python-pytest)
+(require 'project)
 (require 'projectile)
+(require 'yapfify)
 
 (require 'pet)
 

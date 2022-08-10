@@ -606,7 +606,9 @@ buffer local values."
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
-  (setq-local python-isort-command (pet-executable-find "isort")))
+  (setq-local blacken-executable python-black-command)
+  (setq-local python-isort-command (pet-executable-find "isort"))
+  (setq-local yapfify-executable (pet-executable-find "yapf")))
 
 (defun pet-buffer-local-vars-teardown ()
   "Reset all supported buffer local variable values to default."
@@ -622,7 +624,9 @@ buffer local values."
   (kill-local-variable 'dap-python-executable)
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
-  (kill-local-variable 'python-isort-command))
+  (kill-local-variable 'blacken-executable)
+  (kill-local-variable 'python-isort-command)
+  (kill-local-variable 'yapfify-executable))
 
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.
@@ -656,7 +660,9 @@ has assigned to."
             dap-python-executable
             python-pytest-executable
             python-black-command
-            python-isort-command)))
+            blacken-executable
+            python-isort-command
+            yapfify-executable)))
 
   (select-window (get-buffer-window "*pet*")))
 
