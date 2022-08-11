@@ -5,7 +5,7 @@ Greatings fellow Pythonistas and Emacs users!
 
 Have you ever worked on a project that uses one of the many Python package
 managers and/or virtual environments, where all the linters, formatters and
-commit hooks are setup meticulously, and then when you fire up Emacs, packages
+commit hooks are set up meticulously, and then when you fire up Emacs, packages
 like `flycheck <https://www.flycheck.org/en/latest/>`_ or `lsp-mode
 <https://emacs-lsp.github.io/lsp-mode/>`_ are either unable to find the binary
 in your virtualenv, or are using a wrong one?
