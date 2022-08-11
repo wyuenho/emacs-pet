@@ -21,14 +21,15 @@ If you answer "yes" for any of these questions, you've come to the right place.
 How does ``pet`` work?
 ----------------------
 
-The first key insight is to recognize the executables that many of these linting
-and formatting Emacs packages rely on are configurable.
+The first key insight is to recognize the paths to executables of many of these
+linting and formatting Emacs packages rely on are configurable.
 
 The second key insight is Emacs allows you to setup a different value for the
-exectuable path on a per buffer basis.
+exectuable path on a per buffer basis, and that these packages work with these
+buffer-local values.
 
-The hardest problem is finding the correct binary, this is what ``pet`` tries to
-solve.
+The hardest problem is finding the correct executable, this is what ``pet``
+tries to solve.
 
 As long as you use one of the supported Python virtualenv tools, ``pet`` will be
 able to find the virtualenv root and binary you ask for, with **zero Emacs
@@ -64,10 +65,15 @@ Supported Emacs Packages
 
 - Built-in `project.el <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
 - `projectile <https://docs.projectile.mx/projectile/index.html>`_
+- `direnv.el <https://github.com/wbolster/emacs-direnv>`_
+- `envrc <https://github.com/purcell/envrc>`_
+- `buffer-env <https://github.com/astoff/buffer-env>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
 - `dap-python <https://emacs-lsp.github.io/dap-mode/page/configuration/#python>`_
+- `blacken <https://github.com/pythonic-emacs/blacken>`_
+- `yapfify <https://github.com/JorisE/yapfify>`_
 - `python-black <https://github.com/wbolster/emacs-python-black>`_
 - `python-isort <https://github.com/wyuenho/emacs-python-isort>`_
 - `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
@@ -224,12 +230,17 @@ FAQ
 How do I get ``pet`` to pick up the virtualenv created by ``direnv`` or similar tools?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-You can try `envrc <https://github.com/purcell/envrc>`_ , `direnv.el
-<https://github.com/wbolster/emacs-direnv>`_ or `buffer-env
-<https://github.com/astoff/buffer-env>`_. You also need to make sure they are
-loaded and configured before any ``pet`` function is executed. Once one of these
-packages has set up ``exec-path`` in your ``python-mode`` buffer, ``pet`` will
-automatically pick up the executables.
+Try `direnv.el <https://github.com/wbolster/emacs-direnv>`_, `envrc
+<https://github.com/purcell/envrc>`_ or `buffer-env
+<https://github.com/astoff/buffer-env>`_. You also need to make sure it is
+loaded and configured before any ``pet`` function is executed. This usually
+means the function you add to ``python-mode-hook`` must be the **last** to
+execute, which means the **first** to add to ``python-mode-hook`` in Emacs < 27,
+and has the largest *depth* in Emacs >= 27. Please see the documentation for
+``add-hook`` in your Emacs installation for details.
+
+Once you have hav set up ``exec-path`` in your ``python-mode`` buffer using one
+of these packages, ``pet`` will automatically pick up the executables.
 
 
 Why ``pet`` didn't set up the executable variables on a fresh Python project clone?
@@ -245,10 +256,33 @@ To find out how to do it, please find the virtualenv tool in question from
 details.
 
 
+Why ``pet`` doesn't simply set a buffer-local ``exec-path``?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The reason is mainly due to the fact that many Python projects use development
+tools located in more than different virtualenvs. This means ``exec-path`` needs
+to be prepended with all of the virtualenvs for all of the dev tools, and always
+kept in the correct order. An example where this approach may cause issues is
+dealing with projects that use ``pre-commit`` and ``direnv``. A typical
+``pre-commit`` configuration may include many "hooks", where each of them is
+isolated in its own virtualenv. While prepending many directories to
+``exec-path`` is not problematic in itself, playing well with other Emacs
+packages that mutate ``exec-path`` is non-trivial. Providing an absolute path to
+executable variables conveniently side-step this complexity, while being
+slightly more performant.
+
+In addition, there are Emacs packages, most prominantly ``flycheck`` that by
+default require dev tools to be install into the same virtualenv as the first
+``python`` executable found on ``exec-path``. Changing this behavior requires
+setting the corresponding ``flycheck`` checker executable variable to an
+absolute path to the executable that the user intends to use.
+
+
 Do I still need any of the 11+ virtualenv Emacs packages?
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Nope. You can delete them all. This is the raison d'être of this package.
+Nope. You can uninstall them all. This is the raison d'être of this package.
+
 
 License
 -------
