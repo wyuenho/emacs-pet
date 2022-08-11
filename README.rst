@@ -260,16 +260,15 @@ Why ``pet`` doesn't simply set a buffer-local ``exec-path``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 The reason is mainly due to the fact that many Python projects use development
-tools located in more than different virtualenvs. This means ``exec-path`` needs
-to be prepended with all of the virtualenvs for all of the dev tools, and always
-kept in the correct order. An example where this approach may cause issues is
-dealing with projects that use ``pre-commit`` and ``direnv``. A typical
-``pre-commit`` configuration may include many "hooks", where each of them is
-isolated in its own virtualenv. While prepending many directories to
-``exec-path`` is not problematic in itself, playing well with other Emacs
-packages that mutate ``exec-path`` is non-trivial. Providing an absolute path to
-executable variables conveniently sidesteps this complexity, while being
-slightly more performant.
+tools located in different virtualenvs. This means ``exec-path`` needs to be
+prepended with all of the virtualenvs for all of the dev tools, and always kept
+in the correct order. An example where this approach may cause issues is dealing
+with projects that use ``pre-commit`` and ``direnv``. A typical ``pre-commit``
+configuration may include many "hooks", where each of them is isolated in its
+own virtualenv. While prepending many directories to ``exec-path`` is not
+problematic in itself, playing well with other Emacs packages that mutate
+``exec-path`` is non-trivial. Providing an absolute path to executable variables
+conveniently sidesteps this complexity, while being slightly more performant.
 
 In addition, there are Emacs packages, most prominantly ``flycheck`` that by
 default require dev tools to be install into the same virtualenv as the first
