@@ -239,8 +239,8 @@ execute, which means the **first** to add to ``python-mode-hook`` in Emacs < 27,
 and has the largest *depth* in Emacs >= 27. Please see the documentation for
 ``add-hook`` in your Emacs installation for details.
 
-Once you have hav set up ``exec-path`` in your ``python-mode`` buffer using one
-of these packages, ``pet`` will automatically pick up the executables.
+Once you have set up ``exec-path`` in your ``python-mode`` buffer using one of
+these packages, ``pet`` will automatically pick up the executables.
 
 
 Why ``pet`` didn't set up the executable variables on a fresh Python project clone?
@@ -268,7 +268,7 @@ dealing with projects that use ``pre-commit`` and ``direnv``. A typical
 isolated in its own virtualenv. While prepending many directories to
 ``exec-path`` is not problematic in itself, playing well with other Emacs
 packages that mutate ``exec-path`` is non-trivial. Providing an absolute path to
-executable variables conveniently side-step this complexity, while being
+executable variables conveniently sidesteps this complexity, while being
 slightly more performant.
 
 In addition, there are Emacs packages, most prominantly ``flycheck`` that by
