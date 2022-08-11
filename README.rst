@@ -273,8 +273,8 @@ conveniently sidesteps this complexity, while being slightly more performant.
 In addition, there are Emacs packages, most prominantly ``flycheck`` that by
 default require dev tools to be installed into the same virtualenv as the first
 ``python`` executable found on ``exec-path``. Changing this behavior requires
-setting the corresponding ``flycheck`` checker executable variable to an
-absolute path to the executable that the user intends to use.
+setting the corresponding ``flycheck`` checker executable variable to the
+intended absolute path.
 
 
 Do I still need any of the 11+ virtualenv Emacs packages?
