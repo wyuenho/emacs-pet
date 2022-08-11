@@ -34,6 +34,22 @@
     (it "should return bin"
       (expect (pet-system-bin-dir) :to-equal "bin"))))
 
+(describe "pet-report-error"
+  (describe "when `pet-debug' is t"
+    (before-each
+      (setq-local pet-debug t))
+    (after-each
+      (kill-local-variable 'pet-debug))
+
+    (it "should call minibuffer-message"
+      (spy-on 'minibuffer-message :and-call-fake 'ignore)
+      (pet-report-error '(error . ("error")))
+      (expect 'minibuffer-message :to-have-been-called-with "error")))
+
+  (it "should not call minibuffer-message when `pet-debug' is nil"
+    (pet-report-error '(error . ("error")))
+    (expect 'minibuffer-message :not :to-have-been-called)))
+
 (describe "pet-project-root"
   (it "should find project root"))
 
