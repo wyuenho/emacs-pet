@@ -124,12 +124,8 @@ Otherwise, `project-root' is used."
   "Find FILE-NAME from project root.
 
 Returns absolute path to FILE-NAME if found from in the root of
-the project or its ancestor directories, nil otherwise."
-  (when-let ((dir (locate-dominating-file
-                   (or (pet-project-root)
-                       default-directory)
-                   file-name)))
-    (expand-file-name (concat (file-name-as-directory dir) file-name))))
+the project, nil otherwise."
+  (car (directory-files (pet-project-root) t file-name)))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
@@ -244,6 +240,10 @@ See `pet-watch-config-file' for details."
                          :file-name "Pipfile"
                          :parser pet-parse-config-file)
 
+(pet-def-config-accessor pet-environment
+                         :file-name "environment[a-zA-Z0-9-_]*.ya?ml"
+                         :parser pet-parse-config-file)
+
 (defun pet-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'."
   (and (pet-pre-commit-config)
@@ -253,16 +253,27 @@ See `pet-watch-config-file' for details."
                             (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
                   (executable-find "pre-commit"))))))
 
+(defun pet-use-conda-p ()
+  "Whether the current project is using `conda'.
+
+Returns the path to the `conda' variant found executable."
+  (and (pet-environment)
+       (or (executable-find "conda")
+           (executable-find "mamba")
+           (executable-find "minimamba"))))
+
 (defun pet-use-poetry-p ()
-  "Whether the current project is using `poetry'."
-  (and (executable-find "poetry")
-       (not
+  "Whether the current project is using `poetry'.
+
+Returns the path to the `poetry' executable."
+  (and (not
         (null
          (string-match-p
           "poetry"
           (or (let-alist (pet-pyproject)
                 .build-system.build-backend)
-              ""))))))
+              ""))))
+       (executable-find "poetry")))
 
 (defun pet-use-pyenv-p ()
   "Whether the current project is using `pyenv'."
@@ -408,6 +419,16 @@ Selects a virtualenv in the follow order:
     (cond ((alist-get root pet-project-virtualenv-cache nil nil 'equal))
           ((getenv "VIRTUAL_ENV")
            (expand-file-name (getenv "VIRTUAL_ENV")))
+          ((when-let (program (pet-use-conda-p))
+             (condition-case err
+                 (with-temp-buffer
+                   (let ((exit-code (call-process program nil t nil "info" "--envs" "--json"))
+                         (output (string-trim (buffer-string))))
+                     (if (zerop exit-code)
+                         (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal)
+                               (let-alist (pet-parse-json output) .active_prefix))
+                       (user-error (buffer-string)))))
+               (error (pet-report-error err)))))
           ((pet-use-poetry-p)
            (condition-case err
                (with-temp-buffer
@@ -719,10 +740,12 @@ Delete configuration file caches and watchers when all
 
         (dolist (cache '(pet-pre-commit-config-cache
                          pet-pyproject-cache
-                         pet-python-version-cache))
-          (pcase-dolist (`(,config-file . ,_) (symbol-value cache))
-            (when (string-prefix-p root config-file)
-              (setf (alist-get config-file (symbol-value cache) nil t 'equal) nil))))))))
+                         pet-python-version-cache
+                         pet-pipfile-cache
+                         pet-environment-cache))
+          (pcase-dolist (`(,key . ,_) (symbol-value cache))
+            (when (string-prefix-p root key)
+              (setf (alist-get key (symbol-value cache) nil t 'equal) nil))))))))
 
 (add-hook 'kill-buffer-hook #'pet-cleanup-watchers-and-caches)
 
