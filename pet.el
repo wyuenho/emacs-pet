@@ -28,6 +28,7 @@
 
 ;; TODO:
 ;; Support updating buffer local variables when config change
+;; Support guix/nix-env?
 
 ;;; Code:
 
