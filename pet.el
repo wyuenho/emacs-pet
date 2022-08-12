@@ -673,7 +673,8 @@ has assigned to."
             (princ (format "%-40s" (concat (symbol-name var) ":")))
             (prin1 (symbol-value var))
             (terpri))
-          '(python-shell-interpreter
+          '(exec-path
+            python-shell-interpreter
             python-shell-virtualenv-root
             flycheck-flake8rc
             flycheck-python-flake8-executable
