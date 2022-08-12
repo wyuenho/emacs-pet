@@ -66,8 +66,6 @@ Supported Emacs Packages
 - Built-in `project.el <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
 - `projectile <https://docs.projectile.mx/projectile/index.html>`_
 - `direnv.el <https://github.com/wbolster/emacs-direnv>`_
-- `envrc <https://github.com/purcell/envrc>`_
-- `buffer-env <https://github.com/astoff/buffer-env>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
@@ -116,7 +114,8 @@ Generally, the following snippet is all you'll need:
 
 .. code-block:: elisp
 
-   (global-pet-minor-mode 1)
+   (require 'pet)
+   (add-hook 'python-mode-hook 'pet-minor-mode)
 
 
 Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
@@ -125,8 +124,7 @@ Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
    (use-package pet
      :quelpa (pet :fetcher github :repo "wyuenho/emacs-pet")
-     :config
-     (global-pet-minor-mode 1))
+     :hook (python-mode))
 
 
 This will setup the buffer local variables for all of the `Supported Emacs
@@ -204,12 +202,15 @@ Complete Example
                              python-shell-virtualenv-root (pet-virtualenv-root))
 
                  (pet-flycheck-setup)
+                 (flycheck-mode 1)
 
                  (setq-local lsp-jedi-executable-command
                              (pet-executable-find "jedi-language-server"))
 
                  (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter
                              lsp-pyright-venv-path python-shell-virtualenv-root)
+
+                 (lsp)
 
                  (setq-local dap-python-executable python-shell-interpreter)
 
@@ -230,17 +231,10 @@ FAQ
 How do I get ``pet`` to pick up the virtualenv created by ``direnv`` or similar tools?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Try `direnv.el <https://github.com/wbolster/emacs-direnv>`_, `envrc
-<https://github.com/purcell/envrc>`_ or `buffer-env
-<https://github.com/astoff/buffer-env>`_. You also need to make sure it is
-loaded and configured before any ``pet`` function is executed. This usually
-means the function you add to ``python-mode-hook`` must be the **last** to
-execute, which means the **first** to add to ``python-mode-hook`` in Emacs < 27,
-and has the largest *depth* in Emacs >= 27. Please see the documentation for
-``add-hook`` in your Emacs installation for details.
+Try `direnv.el <https://github.com/wbolster/emacs-direnv>`_.
 
-Once you have set up ``exec-path`` in your ``python-mode`` buffer using one of
-these packages, ``pet`` will automatically pick up the executables.
+Once you have set up ``exec-path`` in your ``python-mode`` buffer using
+``direnv.el``, ``pet`` will automatically pick up the executables.
 
 
 Why ``pet`` didn't set up the executable variables on a fresh Python project clone?
@@ -267,8 +261,9 @@ with projects that use ``pre-commit`` and ``direnv``. A typical ``pre-commit``
 configuration may include many "hooks", where each of them is isolated in its
 own virtualenv. While prepending many directories to ``exec-path`` is not
 problematic in itself, playing well with other Emacs packages that mutate
-``exec-path`` is non-trivial. Providing an absolute path to executable variables
-conveniently sidesteps this complexity, while being slightly more performant.
+``exec-path`` reliably is non-trivial. Providing an absolute path to executable
+variables conveniently sidesteps this complexity, while being slightly more
+performant.
 
 In addition, there are Emacs packages, most prominantly ``flycheck`` that by
 default require dev tools to be installed into the same virtualenv as the first
