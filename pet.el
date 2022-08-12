@@ -661,7 +661,7 @@ buffer local values."
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.
 
-Print all of the buffer local variable values `pet-minor-mode'
+Print all of the buffer local variable values `pet-mode'
 has assigned to."
   (interactive)
 
@@ -697,33 +697,13 @@ has assigned to."
   (select-window (get-buffer-window "*pet*")))
 
 ;;;###autoload
-(define-minor-mode pet-minor-mode
+(define-minor-mode pet-mode
   "Minor mode to setup buffer local variables for Python tools."
   :lighter "Pet"
   :group 'pet
-  (if pet-minor-mode
+  (if pet-mode
       (pet-buffer-local-vars-setup)
     (pet-buffer-local-vars-teardown)))
-
-(defun pet-minor-mode-on ()
-  "Whether `pet-minor-mode' should be enabled."
-  (when (derived-mode-p 'python-mode)
-    (pet-minor-mode 1)))
-
-;;;###autoload
-(define-globalized-minor-mode global-pet-minor-mode pet-minor-mode pet-minor-mode-on
-  :group 'pet)
-
-
-
-(add-to-list 'auto-mode-alist '("\\.pythonrc\\'"    . python-mode))
-(add-to-list 'auto-mode-alist '("\\.pylintrc\\'"    . conf-mode))
-(add-to-list 'auto-mode-alist '("\\.flake8\\'"      . conf-mode))
-(add-to-list 'auto-mode-alist '("\\poetry.lock\\'"  . conf-toml-mode))
-(add-to-list 'auto-mode-alist '("\\Pipfile\\'"      . conf-toml-mode))
-(add-to-list 'auto-mode-alist '("\\Pipfile.lock\\'" . conf-toml-mode))
-
-
 
 (defun pet-cleanup-watchers-and-caches ()
   "Clean up configuration file caches and watchers.
