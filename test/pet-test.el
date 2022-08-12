@@ -69,6 +69,10 @@
   (it "should create cache variable")
   (it "should create cache access function"))
 
+(describe "pet-use-conda-p"
+  (it "should return t if project uses `conda'")
+  (it "should return nil if project does not use `conda'"))
+
 (describe "pet-use-pre-commit-p"
   (it "should return t if project uses `pre-commit'")
   (it "should return nil if project does not use `pre-commit'"))
@@ -139,13 +143,9 @@
 (describe "pet-buffer-local-vars-teardown"
   (it "should reset all buffer local variables for supported packages to default"))
 
-(describe "pet-minor-mode"
-  (it "should set up all buffer local variables for supported packages if `pet-minor-mode' is t")
-  (it "should reset all buffer local variables for supported packages to default if `pet-minor-mode' is nil"))
-
-(describe "global-pet-minor-mode"
-  (it "should turn on `pet-minor-mode' if current buffer major mode is derived from `python-mode'")
-  (it "should turn of `pet-minor-mode' if current buffer major mode is not derived from `python-mode'"))
+(describe "pet-mode"
+  (it "should set up all buffer local variables for supported packages if `pet-mode' is t")
+  (it "should reset all buffer local variables for supported packages to default if `pet-mode' is nil"))
 
 (describe "pet-cleanup-watchers-and-caches"
   (describe "when the last Python buffer for a project is killed"
