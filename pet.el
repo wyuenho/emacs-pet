@@ -203,9 +203,10 @@ content into an alist."
 
 NAME is the name of the memorized function that will be created
 to return the content of the configuration file FILE-NAME.
-FILE-NAME is the name of the configuration file that will be
-searched in the project.  The content of the file will be parsed
-by PARSER and then cached in a variable called NAME-cache.
+FILE-NAME is the name or glob pattern of the configuration file
+that will be searched in the project.  The content of the file
+will be parsed by PARSER and then cached in a variable called
+NAME-cache.
 
 Changes to the file will automatically update the cached content
 See `pet-watch-config-file' for details."
@@ -245,7 +246,9 @@ See `pet-watch-config-file' for details."
                          :parser pet-parse-config-file)
 
 (defun pet-use-pre-commit-p ()
-  "Whether the current project is using `pre-commit'."
+  "Whether the current project is using `pre-commit'.
+
+Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
        (or (executable-find "pre-commit")
            (and (pet-use-poetry-p)
@@ -276,12 +279,16 @@ Returns the path to the `poetry' executable."
        (executable-find "poetry")))
 
 (defun pet-use-pyenv-p ()
-  "Whether the current project is using `pyenv'."
+  "Whether the current project is using `pyenv'.
+
+Returns the path to the `pyenv' executable."
   (and (pet-python-version)
        (executable-find "pyenv")))
 
 (defun pet-use-pipenv-p ()
-  "Whether the current project is using `pipenv'."
+  "Whether the current project is using `pipenv'.
+
+Returns the path to the `pipenv' executable."
   (and (pet-pipfile)
        (executable-find "pipenv")))
 
