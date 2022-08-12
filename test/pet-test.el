@@ -51,10 +51,32 @@
     (expect 'minibuffer-message :not :to-have-been-called)))
 
 (describe "pet-project-root"
-  (it "should find project root"))
+  (it "should find project root with `projectile'"
+    (spy-on 'projectile-project-root :and-return-value "/")
+    (expect (pet-project-root) :to-equal "/"))
+
+  (it "should find project root with `project.el'"
+    (spy-on 'projectile-project-root :and-return-value nil)
+    (spy-on 'project-current :and-return-value '(vc . "/"))
+    (expect (pet-project-root) :to-equal "/"))
+
+  (it "should return nil when Python file does not appear to be in a project"
+    (spy-on 'projectile-project-root :and-return-value nil)
+    (spy-on 'project-current :and-return-value nil)
+    (expect (pet-project-root) :to-be nil)))
 
 (describe "pet-find-file-from-project-root"
-  (it "should find file from project root"))
+  (it "should find file from project root"
+    (spy-on 'pet-project-root :and-return-value "/etc")
+    (expect (pet-find-file-from-project-root "\\`passwd\\'") :to-equal "/etc/passwd"))
+
+  (it "should return nil when file not found from project root"
+    (spy-on 'pet-project-root :and-return-value "/etc")
+    (expect (pet-find-file-from-project-root "idontexist") :to-be nil))
+
+  (it "should return nil when not under a project"
+    (spy-on 'pet-project-root :and-return-value nil)
+    (expect (pet-find-file-from-project-root "foo") :to-be nil)))
 
 (describe "pet-parse-json"
   (it "should parse a JSON string to alist"))

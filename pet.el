@@ -121,12 +121,15 @@ Otherwise, `project-root' is used."
                  (when-let ((root (car (project-roots project))))
                    (expand-file-name root)))))))
 
-(defun pet-find-file-from-project-root (file-name)
-  "Find FILE-NAME from project root.
+(defun pet-find-file-from-project-root (file)
+  "Find FILE from project root.
 
-Returns absolute path to FILE-NAME if found from in the root of
-the project, nil otherwise."
-  (car (directory-files (pet-project-root) t file-name)))
+FILE is a regular expression.
+
+Return absolute path to FILE if found from in the root of the
+project, nil otherwise."
+  (when-let ((root (pet-project-root)))
+    (car (directory-files root t file))))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
@@ -215,9 +218,9 @@ See `pet-watch-config-file' for details."
     `(progn
        (defvar ,cache-var nil)
        (defun ,name ()
-         (let* ((config-file (pet-find-file-from-project-root ,file-name))
-                (cache-kvp (and config-file
-                                (assoc config-file ,cache-var))))
+         (when-let* ((config-file (pet-find-file-from-project-root ,file-name))
+                     (cache-kvp (and config-file
+                                     (assoc config-file ,cache-var))))
            (if cache-kvp
                (cdr cache-kvp)
              (when config-file
@@ -423,7 +426,7 @@ Selects a virtualenv in the follow order:
 4. The `.venv' or `venv' directory in the project root if found.
 5. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
-  (let ((root (pet-project-root)))
+  (when-let ((root (pet-project-root)))
     (cond ((alist-get root pet-project-virtualenv-cache nil nil 'equal))
           ((getenv "VIRTUAL_ENV")
            (expand-file-name (getenv "VIRTUAL_ENV")))
@@ -714,7 +717,7 @@ Delete configuration file caches and watchers when all
 `python-mode' buffers of a project have been closed."
   (when (and (buffer-file-name)
              (derived-mode-p 'python-mode))
-    (let ((root (pet-project-root)))
+    (when-let ((root (pet-project-root)))
       (when (null (cl-loop for buf in (buffer-list)
                            if (and (not (equal buf (current-buffer)))
                                    (string-prefix-p root (buffer-file-name buf)))
