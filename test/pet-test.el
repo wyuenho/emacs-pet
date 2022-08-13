@@ -15,7 +15,11 @@
 
 (require 'pet)
 
-;; (setq pet-debug t)
+(setq pet-debug t)
+
+(message "%s" exec-path)
+
+(setq exec-path (cons "/usr/bin/" exec-path))
 
 (describe "pet-system-bin-dir"
   (describe "when called on Windows"
