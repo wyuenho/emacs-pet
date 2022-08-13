@@ -178,7 +178,7 @@ project, nil otherwise."
 
 (defvar pet-watched-config-files nil)
 (defun pet-watch-config-file (config-file cache-var parser)
-  "Keep cache fresh by watching for changes in the config file.
+  "Keep cache fresh by watching for change in the config file.
 
 CONFIG-FILE is the path to the configuration file to watch for
 changes.  CACHE-VAR is the symbol to the variable where the
