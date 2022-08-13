@@ -143,7 +143,7 @@ project, nil otherwise."
   (condition-case err
       (let* ((ext (downcase (or (file-name-extension file-path) "")))
              (file-name (file-name-nondirectory file-path))
-             (auto-mode-alist-matcher (lambda (a b) (not (null (string-match-p a b)))))
+             (auto-mode-alist-matcher (lambda (a b) (string-match-p a b)))
              (toml-p (or (equal ext "toml")
                          (eq 'conf-toml-mode
                              (alist-get
@@ -152,7 +152,7 @@ project, nil otherwise."
                               nil
                               nil
                               auto-mode-alist-matcher))))
-             (yaml-p (or (not (null (string-match-p "ya?ml" ext)))
+             (yaml-p (or (string-match-p "ya?ml" ext)
                          (eq 'yaml-mode
                              (alist-get
                               file-name
@@ -273,13 +273,11 @@ Returns the path to the `conda' variant found executable."
   "Whether the current project is using `poetry'.
 
 Returns the path to the `poetry' executable."
-  (and (not
-        (null
-         (string-match-p
-          "poetry"
-          (or (let-alist (pet-pyproject)
-                .build-system.build-backend)
-              ""))))
+  (and (string-match-p
+        "poetry"
+        (or (let-alist (pet-pyproject)
+              .build-system.build-backend)
+            ""))
        (executable-find "poetry")))
 
 (defun pet-use-pyenv-p ()
