@@ -268,7 +268,7 @@ Returns the path to the `conda' variant found executable."
   (and (pet-environment)
        (or (executable-find "conda")
            (executable-find "mamba")
-           (executable-find "minimamba"))))
+           (executable-find "micromamba"))))
 
 (defun pet-use-poetry-p ()
   "Whether the current project is using `poetry'.
