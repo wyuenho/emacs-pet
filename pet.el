@@ -219,9 +219,9 @@ See `pet-watch-config-file' for details."
     `(progn
        (defvar ,cache-var nil)
        (defun ,name ()
-         (when-let* ((config-file (pet-find-file-from-project-root ,file-name))
-                     (cache-kvp (and config-file
-                                     (assoc config-file ,cache-var))))
+         (let* ((config-file (pet-find-file-from-project-root ,file-name))
+                (cache-kvp (and config-file
+                                (assoc config-file ,cache-var))))
            (if cache-kvp
                (cdr cache-kvp)
              (when config-file
