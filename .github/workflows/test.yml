@@ -56,4 +56,6 @@ jobs:
           sudo add-apt-repository ppa:rmescandon/yq
           sudo apt update
           sudo apt-get -y install sqlite3 golang-github-pelletier-go-toml yq
+          which tomljson
+          which yq
       - run: make test
