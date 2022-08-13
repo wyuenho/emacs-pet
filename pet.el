@@ -162,16 +162,17 @@ project, nil otherwise."
                               auto-mode-alist-matcher)))))
         (with-temp-buffer
           (insert-file-contents file-path)
-          (apply 'call-process-region
-                 (point-min)
-                 (point-max)
-                 (cond (toml-p pet-toml-to-json-program)
-                       (yaml-p pet-yaml-to-json-program))
-                 t
-                 t
-                 nil
-                 (cond (toml-p pet-toml-to-json-program-arguments)
-                       (yaml-p pet-yaml-to-json-program-arguments)))
+          (when (or toml-p yaml-p)
+            (apply 'call-process-region
+                   (point-min)
+                   (point-max)
+                   (cond (toml-p pet-toml-to-json-program)
+                         (yaml-p pet-yaml-to-json-program))
+                   t
+                   t
+                   nil
+                   (cond (toml-p pet-toml-to-json-program-arguments)
+                         (yaml-p pet-yaml-to-json-program-arguments))))
           (pet-parse-json (buffer-string))))
     (error (pet-report-error err))))
 
