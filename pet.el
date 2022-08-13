@@ -206,29 +206,27 @@ content into an alist."
 (cl-defmacro pet-def-config-accessor (name &key file-name parser)
   "Create a function for reading the content of a config file.
 
-A memorized funcion named `pet-NAME' will be created to return
-the content of the configuration file FILE-NAME.  FILE-NAME is
-the name or glob pattern of the configuration file that will be
-searched in the project.  The content of the file will be parsed
-by PARSER and then cached in a variable called `pet-NAME-cache'.
+NAME will be used to create a memorized funcion named `pet-NAME'
+to return the content of the configuration file FILE-NAME.
+FILE-NAME is the name or glob pattern of the configuration file
+that will be searched in the project.  The content of the file
+will be parsed by PARSER and then cached in a variable called
+`pet-NAME-cache'.
 
 Changes to the file will automatically update the cached content
 See `pet-watch-config-file' for details."
-  (let* ((name (concat "pet-" (symbol-name name)))
-         (cache-var (intern (concat name "-cache"))))
+  (let* ((accessor-name (concat "pet-" (symbol-name name)))
+         (cache-var (intern (concat accessor-name "-cache"))))
     `(progn
        (defvar ,cache-var nil)
-       (defun ,(intern name) ()
-         (let* ((config-file (pet-find-file-from-project-root ,file-name))
-                (cache-kvp (and config-file
-                                (assoc config-file ,cache-var))))
-           (if cache-kvp
-               (cdr cache-kvp)
-             (when config-file
-               (pet-watch-config-file config-file ',cache-var ',parser)
-               (when-let ((content (funcall ',parser config-file)))
-                 (push (cons config-file content) ,cache-var)
-                 content))))))))
+       (defun ,(intern accessor-name) ()
+         (when-let ((config-file (pet-find-file-from-project-root ,file-name)))
+           (if-let ((cached-content (assoc-default config-file ,cache-var)))
+               cached-content
+             (pet-watch-config-file config-file ',cache-var ',parser)
+             (when-let ((content (funcall ',parser config-file)))
+               (push (cons config-file content) ,cache-var)
+               content)))))))
 
 (pet-def-config-accessor pre-commit-config
                          :file-name "\\`.pre-commit-config.yaml\\'"
