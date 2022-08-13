@@ -206,48 +206,48 @@ content into an alist."
 (cl-defmacro pet-def-config-accessor (name &key file-name parser)
   "Create a function for reading the content of a config file.
 
-NAME is the name of the memorized function that will be created
-to return the content of the configuration file FILE-NAME.
-FILE-NAME is the name or glob pattern of the configuration file
-that will be searched in the project.  The content of the file
-will be parsed by PARSER and then cached in a variable called
-NAME-cache.
+A memorized funcion named `pet-NAME' will be created to return
+the content of the configuration file FILE-NAME.  FILE-NAME is
+the name or glob pattern of the configuration file that will be
+searched in the project.  The content of the file will be parsed
+by PARSER and then cached in a variable called `pet-NAME-cache'.
 
 Changes to the file will automatically update the cached content
 See `pet-watch-config-file' for details."
-  (let ((cache-var (intern (concat (symbol-name name) "-cache"))))
+  (let* ((name (concat "pet-" (symbol-name name)))
+         (cache-var (intern (concat name "-cache"))))
     `(progn
        (defvar ,cache-var nil)
-       (defun ,name ()
+       (defun ,(intern name) ()
          (let* ((config-file (pet-find-file-from-project-root ,file-name))
                 (cache-kvp (and config-file
                                 (assoc config-file ,cache-var))))
            (if cache-kvp
                (cdr cache-kvp)
              (when config-file
-               (pet-watch-config-file config-file (quote ,cache-var) (quote ,parser))
-               (when-let ((content (funcall (quote ,parser) config-file)))
+               (pet-watch-config-file config-file ',cache-var ',parser)
+               (when-let ((content (funcall ',parser config-file)))
                  (push (cons config-file content) ,cache-var)
                  content))))))))
 
-(pet-def-config-accessor pet-pre-commit-config
-                         :file-name ".pre-commit-config.yaml"
+(pet-def-config-accessor pre-commit-config
+                         :file-name "\\`.pre-commit-config.yaml\\'"
                          :parser pet-parse-config-file)
 
-(pet-def-config-accessor pet-pyproject
-                         :file-name "pyproject.toml"
+(pet-def-config-accessor pyproject
+                         :file-name "\\`pyproject.toml\\'"
                          :parser pet-parse-config-file)
 
-(pet-def-config-accessor pet-python-version
-                         :file-name ".python-version"
+(pet-def-config-accessor python-version
+                         :file-name "\\`.python-version\\'"
                          :parser f-read-text)
 
-(pet-def-config-accessor pet-pipfile
-                         :file-name "Pipfile"
+(pet-def-config-accessor pipfile
+                         :file-name "\\`Pipfile\\'"
                          :parser pet-parse-config-file)
 
-(pet-def-config-accessor pet-environment
-                         :file-name "environment[a-zA-Z0-9-_]*.ya?ml"
+(pet-def-config-accessor environment
+                         :file-name "\\`environment[a-zA-Z0-9-_]*.ya?ml\\'"
                          :parser pet-parse-config-file)
 
 (defun pet-use-pre-commit-p ()
@@ -256,8 +256,7 @@ See `pet-watch-config-file' for details."
 Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
        (or (executable-find "pre-commit")
-           (and (pet-use-poetry-p)
-                (when-let* ((venv (pet-virtualenv-root))
+           (and (when-let* ((venv (pet-virtualenv-root))
                             (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
                   (executable-find "pre-commit"))))))
 
@@ -491,13 +490,15 @@ algorithm described at
                                      if dir
                                      return (concat dir f))))
              (expand-file-name path)))
-          ((getenv "PYLINTRC")
-           (expand-file-name (getenv "PYLINTRC")))
-          ((when-let ((config-dir
-                       (or (and (getenv "XDG_CONFIG_HOME")
-                                (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
-                           "~/.config/")))
-             (expand-file-name (concat config-dir "pylintrc"))))
+          ((when-let* ((ev (getenv "PYLINTRC"))
+                       (path (expand-file-name ev)))
+             (and (file-exists-p path) path)))
+          ((let* ((ev (getenv "XDG_CONFIG_HOME"))
+                  (config-dir
+                   (or (and ev (file-name-as-directory ev))
+                       "~/.config/"))
+                  (xdg-file-path (expand-file-name (concat config-dir "pylintrc"))))
+             (and (file-exists-p xdg-file-path) xdg-file-path)))
           ((let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
              (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc)))
           ((file-exists-p "/etc/pylintrc")

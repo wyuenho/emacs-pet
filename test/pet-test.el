@@ -5,20 +5,23 @@
 (require 'flycheck)
 (require 'lsp-jedi)
 (require 'lsp-pyright)
+(require 'project)
+(require 'projectile)
 (require 'python)
 (require 'python-black)
 (require 'python-isort)
 (require 'python-pytest)
-(require 'project)
-(require 'projectile)
 (require 'yapfify)
 
 (require 'pet)
+
+;; (setq pet-debug t)
 
 (describe "pet-system-bin-dir"
   (describe "when called on Windows"
     (before-each
       (setq-local system-type 'windows-nt))
+
     (after-each
       (kill-local-variable 'system-type))
 
@@ -28,6 +31,7 @@
   (describe "when called on non-Windows"
     (before-each
       (setq-local system-type 'gnu/linux))
+
     (after-each
       (kill-local-variable 'system-type))
 
@@ -38,11 +42,13 @@
   (describe "when `pet-debug' is t"
     (before-each
       (setq-local pet-debug t))
+
     (after-each
       (kill-local-variable 'pet-debug))
 
     (it "should call minibuffer-message"
-      (spy-on 'minibuffer-message :and-call-fake 'ignore)
+      (buttercup-suppress-warning-capture
+        (spy-on 'minibuffer-message :and-call-fake 'ignore))
       (pet-report-error '(error . ("error")))
       (expect 'minibuffer-message :to-have-been-called-with "error")))
 
@@ -56,13 +62,13 @@
     (expect (pet-project-root) :to-equal "/"))
 
   (it "should find project root with `project.el'"
-    (spy-on 'projectile-project-root :and-return-value nil)
-    (spy-on 'project-current :and-return-value '(vc . "/"))
+    (spy-on 'projectile-project-root)
+    (spy-on 'project-current :and-return-value (if (< emacs-major-version 29) '(vc . "/") '(vc Git "/")))
     (expect (pet-project-root) :to-equal "/"))
 
   (it "should return nil when Python file does not appear to be in a project"
-    (spy-on 'projectile-project-root :and-return-value nil)
-    (spy-on 'project-current :and-return-value nil)
+    (spy-on 'projectile-project-root)
+    (spy-on 'project-current)
     (expect (pet-project-root) :to-be nil)))
 
 (describe "pet-find-file-from-project-root"
@@ -75,41 +81,251 @@
     (expect (pet-find-file-from-project-root "idontexist") :to-be nil))
 
   (it "should return nil when not under a project"
-    (spy-on 'pet-project-root :and-return-value nil)
+    (spy-on 'pet-project-root)
     (expect (pet-find-file-from-project-root "foo") :to-be nil)))
 
 (describe "pet-parse-json"
-  (it "should parse a JSON string to alist"))
+  (it "should parse a JSON string to an alist"
+    (expect (pet-parse-json "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}") :to-equal '((foo . "bar") (baz "buz" 1)))))
 
 (describe "pet-parse-config-file"
-  (it "should parse config file content to alist"))
+  :var ((yaml-content "foo: bar\nbaz:\n  - buz\n  - 1\n")
+         (toml-content "foo = \"bar\"\nbaz = [\"buz\", 1]\n")
+         (json-content "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}"))
+
+  (before-each
+    (setq-local pet-toml-to-json-program "tomljson")
+    (setq-local pet-toml-to-json-program-arguments nil)
+    (setq-local pet-yaml-to-json-program "yq")
+    (setq-local pet-yaml-to-json-program '("--output-format" "json")))
+
+  (after-each
+    (kill-local-variable 'pet-toml-to-json-program)
+    (kill-local-variable 'pet-toml-to-json-program-arguments)
+    (kill-local-variable 'pet-yaml-to-json-program)
+    (kill-local-variable 'pet-yaml-to-json-program))
+
+  (it "should parse a YAML file content to alist"
+    (spy-on 'insert-file-contents :and-call-fake (lambda (&rest _) (insert yaml-content)))
+    (expect (pet-parse-config-file "foo.yaml") :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
+
+  (it "should parse a TOML file content to alist"
+    (spy-on 'insert-file-contents :and-call-fake (lambda (&rest _) (insert toml-content)))
+    (expect (pet-parse-config-file "foo.toml") :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
+
+  (it "should parse a JSON file content to alist"
+    (spy-on 'insert-file-contents :and-call-fake (lambda (&rest _) (insert json-content)))
+    (expect (pet-parse-config-file "foo.json") :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))))
 
 (describe "pet-watch-config-file"
   (it "should watch for changes in config file and update cache variable"))
 
 (describe "pet-def-config-accessor"
-  (it "should create cache variable")
-  (it "should create cache access function"))
+  (defun parser (&rest _) "content")
 
-(describe "pet-use-conda-p"
-  (it "should return t if project uses `conda'")
-  (it "should return nil if project does not use `conda'"))
+  (after-all
+    (unintern 'parser))
+
+  (before-each
+    (pet-def-config-accessor tox-ini :file-name "tox.ini" :parser parser))
+
+  (after-each
+    (unintern 'pet-tox-ini)
+    (unintern 'pet-tox-ini-cache))
+
+  (it "should create cache variable"
+    (expect (boundp 'pet-tox-ini-cache) :to-be t))
+
+  (it "should create cache access function"
+    (expect (fboundp 'pet-tox-ini) :to-be t))
+
+  (describe "the cache access function"
+    (before-each
+      (spy-on 'pet-find-file-from-project-root :and-return-value "/home/user/project/tox.ini")
+      (buttercup-suppress-warning-capture
+        (spy-on 'pet-watch-config-file :and-call-fake 'ignore))
+      (spy-on 'parser :and-call-through))
+
+    (after-each
+      (setq pet-tox-ini-cache nil))
+
+    (it "should return cached value if it exists"
+      (push (cons "/home/user/project/tox.ini" "cached content") pet-tox-ini-cache)
+      (expect (pet-tox-ini) :to-equal "cached content")
+      (expect 'pet-watch-config-file :not :to-have-been-called)
+      (expect 'parser :not :to-have-been-called))
+
+    (describe "when the config file content has not been cached"
+      (it "should return parsed file content"
+        (expect (pet-tox-ini) :to-equal "content"))
+
+      (it "should watch file"
+        (pet-tox-ini)
+        (expect 'pet-watch-config-file :to-have-been-called-with "/home/user/project/tox.ini" 'pet-tox-ini-cache 'parser))
+
+      (it "should cache config file content"
+        (pet-tox-ini)
+        (expect (alist-get "/home/user/project/tox.ini" pet-tox-ini-cache nil nil 'equal) :to-equal "content")))))
 
 (describe "pet-use-pre-commit-p"
-  (it "should return t if project uses `pre-commit'")
-  (it "should return nil if project does not use `pre-commit'"))
+  (describe "when the project has a `.pre-commit-config.yaml' file"
+    (before-each
+      (spy-on 'pet-pre-commit-config :and-return-value t))
+
+    (it "should return `pre-commit' path if `pre-commit' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pre-commit")
+      (expect (pet-use-pre-commit-p) :to-equal "/usr/bin/pre-commit")
+
+      (spy-on 'pet-virtualenv-root :and-return-value "/home/user/venv/test")
+      (let ((call-count 0))
+        (spy-on 'executable-find :and-call-fake (lambda (&rest _)
+                                                  (setq call-count (1+ call-count))
+                                                  (when (= call-count 2)
+                                                    "/home/user/venv/test/bin/pre-commit"))))
+
+      (expect (pet-use-pre-commit-p) :to-equal "/home/user/venv/test/bin/pre-commit"))
+
+    (it "should return nil if `pre-commit' is not found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pre-commit")
+      (expect (pet-use-pre-commit-p) :to-equal "/usr/bin/pre-commit")))
+
+  (describe "when the project does not have a `.pre-commit-config.yaml' file"
+    (before-each
+      (spy-on 'pet-pre-commit-config))
+
+    (it "should return nil if `pre-commit' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pre-commit")
+      (expect (pet-use-pre-commit-p) :to-be nil))
+
+    (it "should return nil if `pre-commit' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pre-commit-p) :to-be nil))))
+
+(describe "pet-use-conda-p"
+  (describe "when the project has an `environment[a-zA-Z0-9-_].yaml' file"
+    (before-each
+      (spy-on 'pet-environment :and-return-value t))
+
+    (it "should return `conda' path if `conda' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "conda") "/usr/bin/conda")))
+      (expect (pet-use-conda-p) :to-equal "/usr/bin/conda"))
+
+    (it "should return `mamba' path if `mamba' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "mamba") "/usr/bin/mamba")))
+      (expect (pet-use-conda-p) :to-equal "/usr/bin/mamba"))
+
+    (it "should return `micromamba' path if `micromamba' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "micromamba") "/usr/bin/micromamba")))
+      (expect (pet-use-conda-p) :to-equal "/usr/bin/micromamba"))
+
+    (it "should return nil if none of `conda' or `mamba' or `micromamba' is found"
+      (spy-on 'executable-find)
+      (expect (pet-use-conda-p) :to-be nil)))
+
+  (describe "when the project does not have a `environment[a-zA-Z0-9-_].yaml' file"
+    (before-each
+      (spy-on 'pet-environment))
+
+    (it "should return nil if `conda' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "conda") "/usr/bin/conda")))
+      (expect (pet-use-conda-p) :to-be nil))
+
+    (it "should return nil if `mamba' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "mamba") "/usr/bin/mamba")))
+      (expect (pet-use-conda-p) :to-be nil))
+
+    (it "should return nil if `microconda' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "microconda") "/usr/bin/microconda")))
+      (expect (pet-use-conda-p) :to-be nil))
+
+    (it "should return nil if none of `conda' or `mamba' or `micromamba' is found"
+      (spy-on 'executable-find)
+      (expect (pet-use-conda-p) :to-be nil))))
 
 (describe "pet-use-poetry-p"
-  (it "should return t if project uses `poetry'")
-  (it "should return nil if project does not use `poetry'"))
+  (describe "when the `pyproject.toml' file in the project declares `poetry' as the build system"
+    (before-each
+      (spy-on 'pet-pyproject :and-return-value '((build-system (build-backend . "poetry.core.masonry.api")))))
+
+    (it "should return `poetry' path if `poetry' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
+      (expect (pet-use-poetry-p) :to-equal "/usr/bin/poetry"))
+
+    (it "should return nil if `poetry' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-poetry-p) :to-be nil)))
+
+  (describe "when the `pyproject.toml' file in the project does not declare `poetry' as the build system"
+    (before-each
+      (spy-on 'pet-pyproject :and-return-value '((build-system (build-backend . "pdm")))))
+
+    (it "should return nil if `poetry' is found"
+      (expect (pet-use-poetry-p) :to-be nil))
+
+    (it "should return nil if `poetry' is not found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
+      (expect (pet-use-poetry-p) :to-be nil)))
+
+  (describe "when the project does not have a `pyproject.toml' file"
+    (before-each
+      (spy-on 'pet-pyproject))
+
+    (it "should return nil if `poetry' is found"
+      (expect (pet-use-poetry-p) :to-be nil))
+
+    (it "should return nil if `poetry' is not found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
+      (expect (pet-use-poetry-p) :to-be nil))))
 
 (describe "pet-use-pyenv-p"
-  (it "should return t if project uses `pyenv'")
-  (it "should return nil if project does not use `pyenv'"))
+  (describe "when the project has a `.python-version' file"
+    (before-each
+      (spy-on 'pet-python-version :and-return-value t))
+
+    (it "should return `pyenv' path if `pyenv' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pyenv")
+      (expect (pet-use-pyenv-p) :to-equal "/usr/bin/pyenv"))
+
+    (it "should return `pyenv' path if `pyenv' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pyenv-p) :to-be nil)))
+
+  (describe "when the project does not have a `.python-version' file"
+    (before-each
+      (spy-on 'pet-python-version))
+
+    (it "should return nil if `pyenv' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pyenv")
+      (expect (pet-use-pyenv-p) :to-be nil))
+
+    (it "should return nil if `pyenv' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pyenv-p) :to-be nil))))
 
 (describe "pet-use-pipenv-p"
-  (it "should return t if project uses `pipenv'")
-  (it "should return nil if project does not use `pipenv'"))
+  (describe "when the project has a `Pipfile' file"
+    (before-each
+      (spy-on 'pet-pipfile :and-return-value t))
+
+    (it "should return `pipenv' path if `pipenv' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pipenv")
+      (expect (pet-use-pipenv-p) :to-equal "/usr/bin/pipenv"))
+
+    (it "should return nil path if `pipenv' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pipenv-p) :to-be nil)))
+
+  (describe "when the project does not have a `Pipfile' file"
+    (before-each
+      (spy-on 'pet-pipfile))
+
+    (it "should return nil path if `pipenv' is found"
+      (spy-on 'executable-find :and-return-value "/usr/bin/pipenv")
+      (expect (pet-use-pipenv-p) :to-be nil))
+
+    (it "should return nil path if `pipenv' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pipenv-p) :to-be nil))))
 
 (describe "pet-pre-commit-config-has-hook-p"
   (it "should return t if `.pre-commit-config.yaml' has hook declared")
@@ -174,3 +390,7 @@
     (it "should clear all watched files")
     (it "should clear all config file caches")
     (it "should clean `pet-project-virtualenv-cache'")))
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:
