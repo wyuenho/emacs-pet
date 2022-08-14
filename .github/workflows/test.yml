@@ -56,7 +56,8 @@ jobs:
           sudo add-apt-repository ppa:rmescandon/yq
           sudo apt update
           sudo apt-get -y install ca-certificates sqlite3 golang-go yq
-          go install github.com/pelletier/go-toml/v2/cmd/tomljson
+          go env -w GO111MODULE=on
+          go get github.com/pelletier/go-toml/v2/cmd/tomljson
           export PATH="$(go env GOPATH)/bin:$PATH"
       - name: Run tests
         run: make test
