@@ -57,6 +57,6 @@ jobs:
           sudo apt update
           sudo apt-get -y install ca-certificates sqlite3 golang-go yq
           go install github.com/pelletier/go-toml/v2/cmd/tomljson@latest
-          export PATH="$(go env GOPATH):$PATH"
+          export PATH="$(go env GOPATH)/bin:$PATH"
       - name: Run tests
         run: make test
