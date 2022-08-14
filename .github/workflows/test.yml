@@ -57,7 +57,4 @@ jobs:
           sudo apt update
           sudo apt-get -y install sqlite3 golang-github-pelletier-go-toml yq
       - name: Run tests
-        run: |
-          which tomljson
-          which yq
-          make test
+        run: make test
