@@ -161,7 +161,7 @@ project, nil otherwise."
                                   (cond (toml-p pet-toml-to-json-program)
                                         (yaml-p pet-yaml-to-json-program))
                                   file-path
-                                  `(,output t)
+                                  output
                                   nil
                                   (cond (toml-p pet-toml-to-json-program-arguments)
                                         (yaml-p pet-yaml-to-json-program-arguments)))
