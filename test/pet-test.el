@@ -93,33 +93,38 @@
     (expect (pet-parse-json "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}") :to-equal '((foo . "bar") (baz "buz" 1)))))
 
 (describe "pet-parse-config-file"
-  :var ((yaml-content "foo: bar\nbaz:\n  - buz\n  - 1\n")
-         (toml-content "foo = \"bar\"\nbaz = [\"buz\", 1]\n")
-         (json-content "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}"))
+  :var* ((yaml-content "foo: bar\nbaz:\n  - buz\n  - 1\n")
+          (toml-content "foo = \"bar\"\nbaz = [\"buz\", 1]\n")
+          (json-content "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}")
+          (yaml-file (make-temp-file "pet-test" nil ".yaml" yaml-content))
+          (toml-file (make-temp-file "pet-test" nil ".toml" toml-content))
+          (json-file (make-temp-file "pet-test" nil ".json" json-content)))
+
+  (after-all
+    (delete-file yaml-file)
+    (delete-file toml-file)
+    (delete-file json-file))
 
   (before-each
     (setq-local pet-toml-to-json-program "tomljson")
     (setq-local pet-toml-to-json-program-arguments nil)
     (setq-local pet-yaml-to-json-program "yq")
-    (setq-local pet-yaml-to-json-program '("--output-format" "json")))
+    (setq-local pet-yaml-to-json-program-arguments '("--output-format" "json")))
 
   (after-each
     (kill-local-variable 'pet-toml-to-json-program)
     (kill-local-variable 'pet-toml-to-json-program-arguments)
     (kill-local-variable 'pet-yaml-to-json-program)
-    (kill-local-variable 'pet-yaml-to-json-program))
+    (kill-local-variable 'pet-yaml-to-json-program-arguments))
 
   (it "should parse a YAML file content to alist"
-    (spy-on 'insert-file-contents :and-call-fake (lambda (&rest _) (insert yaml-content)))
-    (expect (pet-parse-config-file "foo.yaml") :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
+    (expect (pet-parse-config-file yaml-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
 
   (it "should parse a TOML file content to alist"
-    (spy-on 'insert-file-contents :and-call-fake (lambda (&rest _) (insert toml-content)))
-    (expect (pet-parse-config-file "foo.toml") :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
+    (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
 
   (it "should parse a JSON file content to alist"
-    (spy-on 'insert-file-contents :and-call-fake (lambda (&rest _) (insert json-content)))
-    (expect (pet-parse-config-file "foo.json") :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))))
+    (expect (pet-parse-config-file json-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))))
 
 (describe "pet-watch-config-file"
   (it "should watch for changes in config file and update cache variable"))

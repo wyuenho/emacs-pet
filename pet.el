@@ -139,41 +139,45 @@ project, nil otherwise."
       (json-read-from-string str))))
 
 (defun pet-parse-config-file (file-path)
-  "Parse a configuration file at FILE-PATH into JSON."
+  "Parse a configuration file at FILE-PATH into JSON alist."
   (condition-case err
       (let* ((ext (downcase (or (file-name-extension file-path) "")))
              (file-name (file-name-nondirectory file-path))
              (auto-mode-alist-matcher (lambda (a b) (string-match-p a b)))
+             (json-p (equal ext "json"))
              (toml-p (or (equal ext "toml")
                          (eq 'conf-toml-mode
-                             (alist-get
-                              file-name
-                              auto-mode-alist
-                              nil
-                              nil
-                              auto-mode-alist-matcher))))
+                             (assoc-default file-name auto-mode-alist auto-mode-alist-matcher))))
              (yaml-p (or (string-match-p "ya?ml" ext)
                          (eq 'yaml-mode
-                             (alist-get
-                              file-name
-                              auto-mode-alist
-                              nil
-                              nil
-                              auto-mode-alist-matcher)))))
-        (with-temp-buffer
-          (insert-file-contents file-path)
-          (when (or toml-p yaml-p)
-            (apply 'call-process-region
-                   (point-min)
-                   (point-max)
-                   (cond (toml-p pet-toml-to-json-program)
-                         (yaml-p pet-yaml-to-json-program))
-                   t
-                   t
-                   nil
-                   (cond (toml-p pet-toml-to-json-program-arguments)
-                         (yaml-p pet-yaml-to-json-program-arguments))))
-          (pet-parse-json (buffer-string))))
+                             (assoc-default file-name auto-mode-alist auto-mode-alist-matcher)))))
+
+        (let ((output (get-buffer-create "*pet parser output*")))
+          (unwind-protect
+              (let ((exit-code
+                     (when (or toml-p yaml-p)
+                       (condition-case err
+                           (apply 'call-process
+                                  (cond (toml-p pet-toml-to-json-program)
+                                        (yaml-p pet-yaml-to-json-program))
+                                  file-path
+                                  `(,output t)
+                                  nil
+                                  (cond (toml-p pet-toml-to-json-program-arguments)
+                                        (yaml-p pet-yaml-to-json-program-arguments)))
+                         (error (error-message-string err))))))
+
+                (cond ((and (integerp exit-code) (zerop exit-code))
+                       (with-current-buffer output
+                         (pet-parse-json (buffer-string))))
+                      (json-p
+                       (with-temp-buffer
+                         (insert-file-contents file-path)
+                         (pet-parse-json (buffer-string))))
+                      (t
+                       (error exit-code))))
+            (kill-buffer output))))
+
     (error (pet-report-error err))))
 
 (defvar pet-watched-config-files nil)
