@@ -57,10 +57,8 @@ jobs:
           limit-access-to-users: wyuenho
       - name: Install packages
         run: |
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
-          sudo add-apt-repository ppa:rmescandon/yq
           sudo apt update
-          sudo apt-get -y install ca-certificates sqlite3 yq
+          sudo apt-get -y install ca-certificates
           go install github.com/pelletier/go-toml/v2/cmd/tomljson@latest
       - name: Run tests
         run: |
