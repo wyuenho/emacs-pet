@@ -62,4 +62,4 @@ jobs:
           go install github.com/pelletier/go-toml/v2/cmd/tomljson@latest
       - name: Run tests
         run: |
-          make -e PATH="$(go env GOPATH)/bin:$PATH" test
+          make test
