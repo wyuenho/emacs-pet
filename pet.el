@@ -220,10 +220,28 @@ will be parsed by PARSER and then cached in a variable called
 Changes to the file will automatically update the cached content
 See `pet-watch-config-file' for details."
   (let* ((accessor-name (concat "pet-" (symbol-name name)))
-         (cache-var (intern (concat accessor-name "-cache"))))
+         (cache-var (intern (concat accessor-name "-cache")))
+         (accessor-docstring
+          (format "Accessor for `%s' in the current Python project.
+
+If the file is found in the current Python project, cache its
+content in `%s' and return it.
+
+If the file content change, it is parsed again and the cache is
+refreshed automatically.  If it is renamed or deleted, the cache
+entry is deleted.
+"
+                  name (symbol-name cache-var)))
+         (cache-var-docstring
+          (format "Cache for `%s'.
+
+This variable is an alist where the key is the absolute path to a
+`%s' in some Python project and the value is the parsed content.
+" name name)))
     `(progn
-       (defvar ,cache-var nil)
+       (defvar ,cache-var nil ,cache-var-docstring)
        (defun ,(intern accessor-name) ()
+         ,accessor-docstring
          (when-let ((config-file (pet-find-file-from-project-root ,file-name)))
            (if-let ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
