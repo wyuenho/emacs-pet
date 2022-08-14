@@ -152,7 +152,7 @@ project, nil otherwise."
                          (eq 'yaml-mode
                              (assoc-default file-name auto-mode-alist auto-mode-alist-matcher)))))
 
-        (let ((output (get-buffer-create "*pet parser output*")))
+        (let ((output (get-buffer-create " *pet parser output*" t)))
           (unwind-protect
               (let ((exit-code
                      (when (or toml-p yaml-p)

@@ -116,13 +116,16 @@
     (kill-local-variable 'pet-yaml-to-json-program-arguments))
 
   (it "should parse a YAML file content to alist"
-    (expect (pet-parse-config-file yaml-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
+    (expect (pet-parse-config-file yaml-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))
+    (expect (get-buffer " *pet parser output*") :to-be nil))
 
   (it "should parse a TOML file content to alist"
-    (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1))))
+    (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))
+    (expect (get-buffer " *pet parser output*") :to-be nil))
 
   (it "should parse a JSON file content to alist"
-    (expect (pet-parse-config-file json-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))))
+    (expect (pet-parse-config-file json-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))
+    (expect (get-buffer " *pet parser output*") :to-be nil)))
 
 (describe "pet-watch-config-file"
   (it "should watch for changes in config file and update cache variable"))
