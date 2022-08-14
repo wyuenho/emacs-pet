@@ -175,7 +175,10 @@ project, nil otherwise."
                          (insert-file-contents file-path)
                          (pet-parse-json (buffer-string))))
                       (t
-                       (error exit-code))))
+                       (error (if (stringp exit-code)
+                                  exit-code
+                                (with-current-buffer output
+                                  (buffer-string)))))))
             (kill-buffer output))))
 
     (error (pet-report-error err))))
