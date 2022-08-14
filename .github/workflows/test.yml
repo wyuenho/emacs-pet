@@ -50,20 +50,12 @@ jobs:
       - uses: cask/setup-cask@master
         with:
           version: snapshot
-      # - name: Debugging with ssh
-      #   uses: lhotari/action-upterm@v1
-      #   with:
-      #     limit-access-to-actor: true
-      #     limit-access-to-users: wyuenho
-      # - name: Install packages
-      #   run: |
-      #     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
-      #     sudo add-apt-repository ppa:rmescandon/yq
-      #     sudo apt update
-      #     sudo apt-get -y install ca-certificates sqlite3 yq
-      #     go install github.com/pelletier/go-toml/v2/cmd/tomljson@latest
-      #     export PATH="$(go env GOPATH)/bin:$PATH"
-      - name: Run tests
+      - name: Debugging with ssh
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-actor: true
+          limit-access-to-users: wyuenho
+      - name: Install packages
         run: |
           sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
           sudo add-apt-repository ppa:rmescandon/yq
@@ -71,4 +63,9 @@ jobs:
           sudo apt-get -y install ca-certificates sqlite3 yq
           go install github.com/pelletier/go-toml/v2/cmd/tomljson@latest
           export PATH="$(go env GOPATH)/bin:$PATH"
+      - name: Run tests
+        run: |
+          which yq
+          yq --version
+          echo $PATH
           make test
