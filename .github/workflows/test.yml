@@ -50,6 +50,11 @@ jobs:
       - uses: cask/setup-cask@master
         with:
           version: snapshot
+      - name: Debugging with ssh
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-actor: true
+          limit-access-to-users: wyuenho
       - name: Install packages
         run: |
           sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
