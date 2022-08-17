@@ -520,7 +520,8 @@ algorithm described at
                     do (setq path (concat default-directory f))
                     if (file-exists-p path)
                     return path))
-          ((file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py"))
+          ((and (buffer-file-name)
+                (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py")))
            (when-let ((path (cl-loop for f in pylintrc
                                      with dir = nil
                                      do (setq dir (locate-dominating-file default-directory f))

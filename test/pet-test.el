@@ -453,6 +453,8 @@
   (it "should return the absolute path of the virtualenv for a project using `pyenv'"))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
+  (it "should not error when run inside a non-file buffer"
+    (expect (with-temp-buffer (pet-flycheck-python-pylint-find-pylintrc)) :not :to-throw))
   (it "should return the absolute path to `pylintrc' from the project root")
   (it "should return the absolute path to `pylintrc' from `default-directory'")
   (it "should return the absolute path to `pylintrc' from a python package directory hierarchy")
