@@ -15,10 +15,6 @@
 
 (require 'pet)
 
-(setq pet-debug t)
-
-(message "%s" exec-path)
-
 (describe "pet-system-bin-dir"
   (describe "when called on Windows"
     (before-each
@@ -127,20 +123,117 @@
     (expect (pet-parse-config-file json-file) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))
     (expect (get-buffer " *pet parser output*") :to-be nil)))
 
+(describe "pet-make-config-file-change-callback"
+  (it "should return a function"
+    (expect (functionp (pet-make-config-file-change-callback 'cache 'parser)) :to-be-truthy))
+
+  (describe "when received deleted event"
+    :var* ((descriptor 1)
+            (file "/home/usr/project/tox.ini")
+            (event `((,file . ,descriptor))))
+
+    (before-each
+      (spy-on 'file-notify-rm-watch)
+      (setq-local pet-watched-config-files event)
+      (defvar cache `((,file . "content")))
+      (defvar callback (pet-make-config-file-change-callback 'cache nil))
+      (funcall callback `(,descriptor deleted ,file)))
+
+    (after-each
+      (kill-local-variable 'pet-watched-config-files)
+      (makunbound 'cache)
+      (unintern 'cache)
+      (makunbound 'callback)
+      (unintern 'callback))
+
+    (it "should remove file watcher"
+      (expect 'file-notify-rm-watch :to-have-been-called-with descriptor))
+
+    (it "should remove entry from cache"
+      (expect (assoc-default file cache) :not :to-be-truthy))
+
+    (it "should remove entry from `pet-watched-config-files'"
+      (expect (assoc-default file pet-watched-config-files) :not :to-be-truthy)))
+
+  (describe "when received changed event"
+    :var ((file "/home/usr/project/tox.ini"))
+
+    (before-each
+      (defvar cache nil)
+      (defun parser (file)
+        "content")
+
+      (spy-on 'parser :and-call-through)
+
+      (defvar callback (pet-make-config-file-change-callback 'cache 'parser))
+      (funcall callback `(1 changed ,file)))
+
+    (after-each
+      (makunbound 'cache)
+      (unintern 'cache)
+      (fmakunbound 'parser)
+      (unintern 'parser)
+      (makunbound 'callback)
+      (unintern 'callback))
+
+    (it "parse the file again"
+      (expect 'parser :to-have-been-called-with file)
+      (expect (spy-context-return-value (spy-calls-most-recent 'parser)) :to-equal "content"))
+
+    (it "should set parsed value to cache"
+      (expect (assoc-default file cache) :to-equal "content"))))
+
 (describe "pet-watch-config-file"
-  (it "should watch for changes in config file and update cache variable"))
+  :var ((file "/home/usr/project/tox.ini"))
+
+  (describe "when the file is being watched"
+    (before-each
+      (spy-on 'file-notify-add-watch)
+      (setq-local pet-watched-config-files `((,file . 1))))
+
+    (after-each
+      (kill-local-variable 'pet-watched-config-files))
+
+    (it "should do nothing"
+      (expect (pet-watch-config-file file nil nil) :to-be nil)
+      (expect 'file-notify-add-watch :not :to-have-been-called)))
+
+  (describe "when the file isn't being watched"
+    :var ((callback (lambda ())))
+
+    (before-each
+      (spy-on 'file-notify-add-watch :and-return-value 1)
+      (spy-on 'pet-make-config-file-change-callback :and-return-value callback)
+      (defvar pet-tox-ini-cache nil)
+      (defun parser (file) "content"))
+
+    (after-each
+      (makunbound 'pet-tox-ini-cache)
+      (unintern 'pet-tox-ini-cache)
+      (fmakunbound 'parser)
+      (unintern 'parser))
+
+    (it "should add an entry to the watched files cache"
+      (pet-watch-config-file file 'pet-tox-ini-cache 'parser)
+      (expect 'file-notify-add-watch :to-have-been-called-with file '(change) callback)
+      (expect 'pet-make-config-file-change-callback :to-have-been-called-with 'pet-tox-ini-cache 'parser)
+      (expect (assoc-default file pet-watched-config-files) :to-equal 1))))
 
 (describe "pet-def-config-accessor"
-  (defun parser (&rest _) "content")
+  (before-each
+    (defun parser (file) "content"))
 
   (after-all
+    (fmakunbound 'parser)
     (unintern 'parser))
 
   (before-each
     (pet-def-config-accessor tox-ini :file-name "tox.ini" :parser parser))
 
   (after-each
+    (fmakunbound 'pet-tox-ini)
     (unintern 'pet-tox-ini)
+    (makunbound 'pet-tox-ini-cache)
     (unintern 'pet-tox-ini-cache))
 
   (it "should create cache variable"

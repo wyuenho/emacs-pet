@@ -184,6 +184,30 @@ project, nil otherwise."
     (error (pet-report-error err))))
 
 (defvar pet-watched-config-files nil)
+
+(defun pet-make-config-file-change-callback (cache-var parser)
+  "Make callback for `file-notify-add-watch'.
+
+Return a callback with CACHE-VAR and PARSER captured in
+itsenvironment.  CACHE-VAR is the symbol to the cache variable to
+update.  PARSER is the symbol to the parser to parse the file.
+
+When invoked, the callback returned will parse the file with
+PARSER and cache the result in CACHE-VAR if the file was changed.
+If the file was deleted or renamed, remove the file's watcher,
+and delete the file entry from CACHE-VAR and
+`pet-watched-config-files'."
+  (lambda (event)
+    (pcase-let ((`(,_ ,action ,file ,@_) event))
+      (pcase action
+        ((or 'deleted 'renamed)
+         (file-notify-rm-watch (assoc-default file pet-watched-config-files))
+         (setf (alist-get file (symbol-value cache-var) nil t 'equal) nil)
+         (setf (alist-get file pet-watched-config-files nil t 'equal) nil))
+        ('changed
+         (setf (alist-get file (symbol-value cache-var) nil nil 'equal)
+               (funcall parser file)))))))
+
 (defun pet-watch-config-file (config-file cache-var parser)
   "Keep cache fresh by watching for change in the config file.
 
@@ -197,17 +221,7 @@ content into an alist."
                 (file-notify-add-watch
                  config-file
                  '(change)
-                 (lambda (event)
-                   (pcase-let ((`(,_ ,action ,file ,@_)
-                                event))
-                     (pcase action
-                       ((or 'deleted 'renamed)
-                        (file-notify-rm-watch (assoc-default file pet-watched-config-files))
-                        (setf (alist-get file (symbol-value cache-var) nil t 'equal) nil)
-                        (setf (alist-get file pet-watched-config-files nil t 'equal) nil))
-                       ('changed
-                        (setf (alist-get file (symbol-value cache-var) nil t 'equal)
-                              (funcall parser file))))))))
+                 (pet-make-config-file-change-callback cache-var parser)))
           pet-watched-config-files)))
 
 (cl-defmacro pet-def-config-accessor (name &key file-name parser)
