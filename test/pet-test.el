@@ -129,7 +129,7 @@
 
   (describe "when received deleted event"
     :var* ((descriptor 1)
-            (file "/home/usr/project/tox.ini")
+            (file "/home/user/project/tox.ini")
             (event `((,file . ,descriptor))))
 
     (before-each
@@ -156,7 +156,7 @@
       (expect (assoc-default file pet-watched-config-files) :not :to-be-truthy)))
 
   (describe "when received changed event"
-    :var ((file "/home/usr/project/tox.ini"))
+    :var ((file "/home/user/project/tox.ini"))
 
     (before-each
       (defvar cache nil)
@@ -184,7 +184,7 @@
       (expect (assoc-default file cache) :to-equal "content"))))
 
 (describe "pet-watch-config-file"
-  :var ((file "/home/usr/project/tox.ini"))
+  :var ((file "/home/user/project/tox.ini"))
 
   (describe "when the file is being watched"
     (before-each
@@ -453,15 +453,57 @@
   (it "should return the absolute path of the virtualenv for a project using `pyenv'"))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
+  :var ((old-default-directory default-directory)
+         (home (getenv "HOME")))
+
+  (before-all
+    (setq-local default-directory "~/project/src/")
+    (setenv "HOME" "/home/user/"))
+
+  (after-all
+    (setq-local default-directory old-default-directory)
+    (setenv "HOME" home))
+
   (it "should not error when run inside a non-file buffer"
     (expect (with-temp-buffer (pet-flycheck-python-pylint-find-pylintrc)) :not :to-throw))
-  (it "should return the absolute path to `pylintrc' from the project root")
-  (it "should return the absolute path to `pylintrc' from `default-directory'")
-  (it "should return the absolute path to `pylintrc' from a python package directory hierarchy")
-  (it "should return the absolute path to `pylintrc' from `PYLINTRC'")
-  (it "should return the absolute path to `pylintrc' from `XDG_CONFIG_HOME'")
-  (it "should return the absolute path to `pylintrc' from `HOME'")
-  (it "should return the absolute path to `pylintrc' from `/etc'"))
+
+  (it "should return the absolute path to `pylintrc' from `default-directory'"
+    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "~/project/src/.pylintrc")))
+    (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/project/src/.pylintrc"))
+
+  (it "should return the absolute path to `pylintrc' from a python package directory hierarchy"
+    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
+    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/project/src/__init__.py")))
+    (spy-on 'locate-dominating-file :and-call-fake (lambda (file name)
+                                                     (when (equal name ".pylintrc")
+                                                       "/home/user/project/src/")))
+    (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/project/src/.pylintrc"))
+
+  (it "should return the absolute path to `pylintrc' from `PYLINTRC'"
+    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
+    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/project/pyproject.toml")))
+    (spy-on 'getenv :and-call-fake (lambda (name)
+                                     (when (equal name "PYLINTRC")
+                                       "/home/user/project/pyproject.toml")))
+
+    (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/project/pyproject.toml"))
+
+  (it "should return the absolute path to `pylintrc' from `XDG_CONFIG_HOME'"
+    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
+    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/.config/pylintrc")))
+    (spy-on 'getenv :and-call-fake (lambda (name)
+                                     (when (equal name "XDG_CONFIG_HOME")
+                                       "/home/user/.config")))
+
+    (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/.config/pylintrc"))
+
+  (it "should return the absolute path to `pylintrc' from `HOME'"
+    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/.pylintrc")))
+    (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/.pylintrc"))
+
+  (it "should return the absolute path to `pylintrc' from `/etc'"
+    (spy-on 'file-exists-p :and-return-value nil)
+    (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/etc/pylintrc")))
 
 (describe "pet-flycheck-checker-get-advice"
   (it "should delegate `python-mypy' checker property to `pet-flycheck-checker-props'"))

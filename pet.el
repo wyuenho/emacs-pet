@@ -514,33 +514,34 @@ Selects a virtualenv in the follow order:
 Find the correct `pylint' configuration file according to the
 algorithm described at
 `https://pylint.pycqa.org/en/latest/user_guide/usage/run.html'."
-  (let ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg")))
-    (cond ((cl-loop for f in pylintrc
-                    with path = nil
-                    do (setq path (concat default-directory f))
-                    if (file-exists-p path)
-                    return path))
-          ((and (buffer-file-name)
-                (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py")))
-           (when-let ((path (cl-loop for f in pylintrc
-                                     with dir = nil
-                                     do (setq dir (locate-dominating-file default-directory f))
-                                     if dir
-                                     return (concat dir f))))
-             (expand-file-name path)))
-          ((when-let* ((ev (getenv "PYLINTRC"))
-                       (path (expand-file-name ev)))
-             (and (file-exists-p path) path)))
-          ((let* ((ev (getenv "XDG_CONFIG_HOME"))
-                  (config-dir
-                   (or (and ev (file-name-as-directory ev))
-                       "~/.config/"))
-                  (xdg-file-path (expand-file-name (concat config-dir "pylintrc"))))
-             (and (file-exists-p xdg-file-path) xdg-file-path)))
-          ((let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
-             (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc)))
-          ((file-exists-p "/etc/pylintrc")
-           "/etc/pylintrc"))))
+  (let* ((pylintrc '("pylintrc" ".pylintrc" "pyproject.toml" "setup.cfg"))
+         (found     (cond ((cl-loop for f in pylintrc
+                                    with path = nil
+                                    do (setq path (concat default-directory f))
+                                    if (file-exists-p path)
+                                    return (expand-file-name path)))
+                          ((and (buffer-file-name)
+                                (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py")))
+                           (when-let ((path (cl-loop for f in pylintrc
+                                                     with dir = nil
+                                                     do (setq dir (locate-dominating-file default-directory f))
+                                                     if dir
+                                                     return (concat dir f))))
+                             (expand-file-name path))))))
+    (if found
+        found
+      (cond ((when-let* ((ev (getenv "PYLINTRC"))
+                         (path (expand-file-name ev)))
+               (and (file-exists-p path) path)))
+            ((let* ((ev (getenv "XDG_CONFIG_HOME"))
+                    (config-dir
+                     (or (and ev (file-name-as-directory ev))
+                         "~/.config/"))
+                    (xdg-file-path (expand-file-name (concat config-dir "pylintrc"))))
+               (and (file-exists-p xdg-file-path) xdg-file-path)))
+            ((let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
+               (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc)))
+            (t "/etc/pylintrc")))))
 
 (defvar flycheck-mode)
 (defvar flycheck-flake8rc)
