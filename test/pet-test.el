@@ -15,6 +15,8 @@
 
 (require 'pet)
 
+;; (setq pet-debug t)
+
 (describe "pet-system-bin-dir"
   (describe "when called on Windows"
     (before-each
@@ -445,7 +447,10 @@
     (expect (pet-pre-commit-config-has-hook-p "isort") :not :to-be-truthy)))
 
 (describe "pet-parse-pre-commit-db"
-  (it "should parse `pre-commit' database to alist"))
+  (it "should parse `pre-commit' database to alist"
+    (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert "{\"foo\": 1}")))
+    (expect (pet-parse-pre-commit-db "some.db") :to-equal '((foo . 1)))
+    (expect (spy-calls-args-for 'call-process 0) :to-equal '("sqlite3" nil t nil "-json" "some.db" "select * from repos"))))
 
 (describe "pet-pre-commit-virtualenv-path"
   (it "should return absolute path to the virtualenv of a `pre-commit' hook defined in a project"))
