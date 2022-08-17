@@ -17,4 +17,4 @@ compile: cask
 
 .PHONY: test
 test: compile
-	cask exec buttercup --traceback pretty -L . test
+	cask exec buttercup --traceback full -L . test
