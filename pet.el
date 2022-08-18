@@ -475,36 +475,40 @@ Selects a virtualenv in the follow order:
                                (let-alist (pet-parse-json output) .active_prefix))
                        (user-error (buffer-string)))))
                (error (pet-report-error err)))))
-          ((pet-use-poetry-p)
-           (condition-case err
-               (with-temp-buffer
-                 (let ((exit-code (call-process "poetry" nil t nil "env" "info" "--no-ansi" "--path"))
-                       (output (string-trim (buffer-string))))
-                   (if (zerop exit-code)
-                       (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
-                     (user-error (buffer-string)))))
-             (error (pet-report-error err))))
-          ((pet-use-pipenv-p)
-           (condition-case err
-               (with-temp-buffer
-                 (let ((exit-code (call-process "pipenv" nil t nil "--venv"))
-                       (output (string-trim (buffer-string))))
-                   (if (zerop exit-code)
-                       (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
-                     (user-error (buffer-string)))))
-             (error (pet-report-error err))))
+          ((when-let (program (pet-use-poetry-p))
+             (condition-case err
+                 (with-temp-buffer
+                   (let ((exit-code (call-process program nil t nil "env" "info" "--no-ansi" "--path"))
+                         (output (string-trim (buffer-string))))
+                     (if (zerop exit-code)
+                         (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
+                       (user-error (buffer-string)))))
+               (error (pet-report-error err)))))
+          ((when-let (program (pet-use-pipenv-p))
+             (condition-case err
+                 (with-temp-buffer
+                   (let ((exit-code (call-process program nil t nil "--venv"))
+                         (output (string-trim (buffer-string))))
+                     (if (zerop exit-code)
+                         (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
+                       (user-error (buffer-string)))))
+               (error (pet-report-error err)))))
           ((cl-loop for d in (mapcar (apply-partially 'concat root) '(".venv" "venv"))
+                    with path = nil
                     if (file-exists-p d)
-                    return d))
-          ((pet-use-pyenv-p)
-           (condition-case err
-               (with-temp-buffer
-                 (let ((exit-code (call-process "pyenv" nil t nil "prefix"))
-                       (output (string-trim (buffer-string))))
-                   (if (zerop exit-code)
-                       (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
-                     (user-error (buffer-string)))))
-             (error (pet-report-error err)))))))
+                    do
+                    (setf path (expand-file-name (file-name-as-directory d)))
+                    (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) path)
+                    return path))
+          ((when-let (program (pet-use-pyenv-p))
+             (condition-case err
+                 (with-temp-buffer
+                   (let ((exit-code (call-process program nil t nil "prefix"))
+                         (output (string-trim (buffer-string))))
+                     (if (zerop exit-code)
+                         (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) (file-truename output))
+                       (user-error (buffer-string)))))
+               (error (pet-report-error err))))))))
 
 
 

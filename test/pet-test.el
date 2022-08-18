@@ -450,7 +450,7 @@
   (it "should parse `pre-commit' database to alist"
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert "{\"foo\": 1}")))
     (expect (pet-parse-pre-commit-db "some.db") :to-equal '((foo . 1)))
-    (expect (spy-calls-args-for 'call-process 0) :to-equal '("sqlite3" nil t nil "-json" "some.db" "select * from repos"))))
+    (expect 'call-process :to-have-been-called-with "sqlite3" nil t nil "-json" "some.db" "select * from repos")))
 
 (describe "pet-pre-commit-virtualenv-path"
   (it "should return absolute path to the virtualenv of a `pre-commit' hook defined in a project"))
@@ -461,11 +461,84 @@
   (it "should return the absolute path the executable for a project from `exec-path'"))
 
 (describe "pet-virtualenv-root"
-  (it "should return the absolute path of the virtualenv for a project using `poetry'")
-  (it "should return the absolute path of the virtualenv for a project using `pipenv'")
-  (it "should return the absolute path of the virtualenv for a project from `VIRTUAL_ENV'")
-  (it "should return the absolute path of the `.venv' or `venv' directory in a project")
-  (it "should return the absolute path of the virtualenv for a project using `pyenv'"))
+  :var ((project-root "/home/users/project/")
+         (conda-path "/usr/bin/conda")
+         (conda-virtualenv "/home/users/.conda/envs/project/")
+         (poetry-path "/usr/bin/poetry")
+         (poetry-virtualenv "/home/users/.cache/pypoetry/virtualenvs/project/")
+         (pipenv-path "/usr/bin/pipenv")
+         (pipenv-virtualenv "/home/users/.local/share/virtualenvs/project/")
+         (venv-virtualenv "/home/users/project/.venv/")
+         (pyenv-path "/usr/bin/pyenv")
+         (pyenv-virtualenv "/home/users/.pyenv/versions/project/")
+         (pyenv-virtualenv-truename "/home/users/.pyenv/versions/3.8/envs/project/"))
+
+  (before-each
+    (spy-on 'pet-project-root :and-return-value project-root)
+    (setq pet-project-virtualenv-cache nil))
+
+  (after-each
+    (setq pet-project-virtualenv-cache nil))
+
+  (it "should return the absolute path of the virtualenv for a project from `VIRTUAL_ENV'"
+    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "VIRTUAL_ENV") "/home/users/.venvs/project")))
+    (expect (pet-virtualenv-root) :to-equal "/home/users/.venvs/project"))
+
+  (it "should return the absolute path of the virtualenv for a project using `conda'"
+    (spy-on 'pet-use-conda-p :and-return-value conda-path)
+    (spy-on 'call-process :and-call-fake (lambda (&rest _)
+                                           (insert (format "{\"active_prefix\": \"%s\"}" conda-virtualenv))
+                                           0))
+    (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv)
+    (expect 'call-process :to-have-been-called-with conda-path nil t nil "info" "--envs" "--json"))
+
+  (it "should return the absolute path of the virtualenv for a project using `poetry'"
+    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-poetry-p :and-return-value poetry-path)
+    (spy-on 'call-process :and-call-fake (lambda (&rest _)
+                                           (insert poetry-virtualenv)
+                                           0))
+    (expect (pet-virtualenv-root) :to-equal poetry-virtualenv)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal poetry-virtualenv)
+    (expect 'call-process :to-have-been-called-with poetry-path nil t nil "env" "info" "--no-ansi" "--path"))
+
+  (it "should return the absolute path of the virtualenv for a project using `pipenv'"
+    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-poetry-p :and-return-value nil)
+    (spy-on 'pet-use-pipenv-p :and-return-value pipenv-path)
+    (spy-on 'call-process :and-call-fake (lambda (&rest _)
+                                           (insert pipenv-virtualenv)
+                                           0))
+    (expect (pet-virtualenv-root) :to-equal pipenv-virtualenv)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pipenv-virtualenv)
+    (expect 'call-process :to-have-been-called-with pipenv-path nil t nil "--venv"))
+
+  (it "should return the absolute path of the `.venv' or `venv' directory in a project"
+    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-poetry-p :and-return-value nil)
+    (spy-on 'pet-use-pipenv-p :and-return-value nil)
+    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/users/project/.venv")))
+    (expect (pet-virtualenv-root) :to-equal venv-virtualenv)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal venv-virtualenv))
+
+  (it "should return the absolute path of the virtualenv for a project using `pyenv'"
+    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-poetry-p :and-return-value nil)
+    (spy-on 'pet-use-pipenv-p :and-return-value nil)
+    (spy-on 'file-exists-p :and-return-value nil)
+    (spy-on 'pet-use-pyenv-p :and-return-value pyenv-path)
+    (spy-on 'call-process :and-call-fake (lambda (&rest _)
+                                           (insert pyenv-virtualenv)
+                                           0))
+    (spy-on 'file-truename :and-call-fake (lambda (name) (when (equal name pyenv-virtualenv) pyenv-virtualenv-truename)))
+    (expect (pet-virtualenv-root) :to-equal pyenv-virtualenv-truename)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pyenv-virtualenv-truename)
+    (expect 'call-process :to-have-been-called-with pyenv-path nil t nil "prefix"))
+
+  (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
+    (setq pet-project-virtualenv-cache `((,project-root . "/home/users/.venvs/env/")))
+    (expect (pet-virtualenv-root) :to-equal "/home/users/.venvs/env/")))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
