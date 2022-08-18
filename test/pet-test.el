@@ -456,9 +456,62 @@
   (it "should return absolute path to the virtualenv of a `pre-commit' hook defined in a project"))
 
 (describe "pet-executable-find"
-  (it "should return the absolute path to the executable for a project using `pre-commit'")
-  (it "should return the absolute path the executable for a project if its virtualenv is found")
-  (it "should return the absolute path the executable for a project from `exec-path'"))
+
+  (describe "when using `pre-commit'"
+
+    (before-each
+      (spy-on 'pet-use-pre-commit-p :and-return-value "/usr/bin/pre-commit"))
+
+    (it "should return the absolute path to the executable if hook and hook repo are found and the executable is found in hook repo"
+      (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
+      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value "/home/users/.cache/pre-commit/repoblack")
+      (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/users/.cache/pre-commit/repoblack/bin/black")))
+      (expect (pet-executable-find "black") :to-equal "/home/users/.cache/pre-commit/repoblack/bin/black"))
+
+    (it "should return nil if the hook is not found in config"
+      (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value nil)
+      (expect (pet-executable-find "black") :to-be nil))
+
+    (it "should return nil if the hook repo is not found"
+      (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
+      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value nil)
+      (expect (pet-executable-find "black") :to-be nil))
+
+    (it "should return nil if the executable is not found in hook repo"
+      (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
+      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value "/home/users/.cache/pre-commit/repoblack")
+      (spy-on 'file-exists-p :and-call-fake (lambda (path) (not (equal path "/home/users/.cache/pre-commit/repoblack/bin/black"))))
+      (expect (pet-executable-find "black") :to-be nil)))
+
+  (it "should return the absolute path the executable for a project if its virtualenv is found"
+    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+    (spy-on 'pet-virtualenv-root :and-return-value "/home/users/project/.venv/")
+    (spy-on 'executable-find :and-return-value "/home/users/project/.venv/bin/python")
+    (expect (pet-executable-find "python") :to-equal "/home/users/project/.venv/bin/python"))
+
+  (it "should return the absolute path the executable for a project from `exec-path'"
+    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+    (spy-on 'pet-virtualenv-root :and-return-value nil)
+    (spy-on 'executable-find :and-call-fake (lambda (executable)
+                                              (pcase executable
+                                                ("black"
+                                                  "/home/users/project/.venv/bin/black")
+                                                ("pyenv"
+                                                  "/usr/bin/pyenv"))))
+    (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/.shims/python"))
+    (expect (pet-executable-find "black") :to-equal "/home/users/project/.venv/bin/black"))
+
+  (it "should return nil if the executable found is a `pyenv' shim"
+    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+    (spy-on 'pet-virtualenv-root :and-return-value nil)
+    (spy-on 'executable-find :and-call-fake (lambda (executable)
+                                              (pcase executable
+                                                ("python"
+                                                  "/home/user/.pyenv/.shims/python")
+                                                ("pyenv"
+                                                  "/usr/bin/pyenv"))))
+    (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/.shims/python"))
+    (expect (pet-executable-find "python") :to-be nil)))
 
 (describe "pet-virtualenv-root"
   :var ((project-root "/home/users/project/")
