@@ -511,7 +511,8 @@ Selects a virtualenv in the follow order:
                          (output (string-trim (buffer-string))))
                      (if (zerop exit-code)
                          (let ((output (file-truename output)))
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output))
+                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
+                           output)
                        (user-error (buffer-string)))))
                (error (pet-report-error err))))))))
 
