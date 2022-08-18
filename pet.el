@@ -610,6 +610,7 @@ default otherwise."
     (kill-local-variable 'flycheck-python-flake8-executable)
     (kill-local-variable 'flycheck-python-pylint-executable)
     (kill-local-variable 'flycheck-python-mypy-executable)
+    (kill-local-variable 'flycheck-python-mypy-python-executable)
     (kill-local-variable 'flycheck-python-pyright-executable)
     (kill-local-variable 'flycheck-python-pycompile-executable)))
 

@@ -642,8 +642,47 @@
   (it "should delegate `python-mypy' checker property to `pet-flycheck-checker-props'"))
 
 (describe "pet-flycheck-toggle-local-vars"
-  (it "should set `flycheck' Python checkers variables to buffer-local when `flycheck-mode-on' is t")
-  (it "should reset `flycheck' Python checkers variables to default when `flycheck-mode-on' is nil"))
+  (it "should set `flycheck' Python checkers variables to buffer-local when `flycheck-mode' is t"
+    (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
+    (spy-on 'pet-executable-find :and-call-fake (lambda (name)
+                                                  (pcase name
+                                                    ("flake8" "/home/user/project/.venv/bin/flake8")
+                                                    ("pylint" "/home/user/project/.venv/bin/pylint")
+                                                    ("mypy" "/home/user/project/.venv/bin/mypy")
+                                                    ("python" "/home/user/project/.venv/bin/python")
+                                                    ("pyright" "/home/user/project/.venv/bin/pyright"))))
+    (spy-on 'derived-mode-p :and-return-value t)
+    (let ((flycheck-mode t))
+      (pet-flycheck-toggle-local-vars)
+      (expect flycheck-pylintrc :to-equal "/etc/pylintrc")
+      (expect flycheck-python-flake8-executable :to-equal "/home/user/project/.venv/bin/flake8")
+      (expect flycheck-python-pylint-executable :to-equal "/home/user/project/.venv/bin/pylint")
+      (expect flycheck-python-mypy-executable :to-equal "/home/user/project/.venv/bin/mypy")
+      (expect flycheck-python-mypy-python-executable :to-equal "/home/user/project/.venv/bin/python")
+      (expect flycheck-python-pyright-executable :to-equal "/home/user/project/.venv/bin/pyright")
+      (expect flycheck-python-pycompile-executable :to-equal python-shell-interpreter)))
+
+  (it "should reset `flycheck' Python checkers variables to default when `flycheck-mode' is nil"
+    (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
+    (spy-on 'pet-executable-find :and-call-fake (lambda (name)
+                                                  (pcase name
+                                                    ("flake8" "/home/user/project/.venv/bin/flake8")
+                                                    ("pylint" "/home/user/project/.venv/bin/pylint")
+                                                    ("mypy" "/home/user/project/.venv/bin/mypy")
+                                                    ("python" "/home/user/project/.venv/bin/python")
+                                                    ("pyright" "/home/user/project/.venv/bin/pyright"))))
+    (spy-on 'derived-mode-p :and-return-value t)
+    (let ((flycheck-mode t))
+      (pet-flycheck-toggle-local-vars))
+
+    (pet-flycheck-toggle-local-vars)
+    (expect (local-variable-p 'flycheck-pylintrc) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-flake8-executable) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-pylint-executable) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-mypy-executable) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-mypy-python-executable) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-pyright-executable) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-pycompile-executable) :to-be nil)))
 
 (describe "pet-flycheck-setup"
   (it "should set up `flycheck' python checker configuration file names")
