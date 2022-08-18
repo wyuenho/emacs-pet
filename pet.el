@@ -463,7 +463,7 @@ Selects a virtualenv in the follow order:
 5. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
   (when-let ((root (pet-project-root)))
-    (cond ((alist-get root pet-project-virtualenv-cache nil nil 'equal))
+    (cond ((assoc-default root pet-project-virtualenv-cache))
           ((getenv "VIRTUAL_ENV")
            (expand-file-name (getenv "VIRTUAL_ENV")))
           ((when-let (program (pet-use-conda-p))
