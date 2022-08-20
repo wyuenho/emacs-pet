@@ -590,12 +590,12 @@
          (home (getenv "HOME")))
 
   (before-all
-    (setq-local default-directory "~/project/src/")
-    (setenv "HOME" "/home/user/"))
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "~/project/src/"))
 
   (after-all
-    (setq-local default-directory old-default-directory)
-    (setenv "HOME" home))
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
 
   (it "should not error when run inside a non-file buffer"
     (expect (with-temp-buffer (pet-flycheck-python-pylint-find-pylintrc)) :not :to-throw))
