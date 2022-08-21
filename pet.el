@@ -722,13 +722,12 @@ has assigned to."
   (unless (derived-mode-p 'python-mode)
     (user-error "You are not in python-mode!"))
 
-  (with-output-to-temp-buffer "*pet*"
+  (with-current-buffer-window "*pet info*" nil nil
     (mapc (lambda (var)
-            (princ (format "%-40s" (concat (symbol-name var) ":")))
-            (prin1 (symbol-value var))
-            (terpri))
-          '(exec-path
-            python-shell-interpreter
+            (insert (concat (propertize (format "%-40s" (concat (symbol-name var) ":")) 'face 'font-lock-variable-name-face) "\t"))
+            (insert (format "%s" (if (boundp var) (symbol-value var) 'unbound)))
+            (insert "\n"))
+          '(python-shell-interpreter
             python-shell-virtualenv-root
             flycheck-flake8rc
             flycheck-python-flake8-executable
@@ -747,9 +746,10 @@ has assigned to."
             python-black-command
             blacken-executable
             python-isort-command
-            yapfify-executable)))
-
-  (select-window (get-buffer-window "*pet*")))
+            yapfify-executable))
+    (insert (propertize (concat (symbol-name 'exec-path) ":") 'face 'font-lock-variable-name-face))
+    (cl-prettyprint exec-path)
+    (special-mode)))
 
 ;;;###autoload
 (define-minor-mode pet-mode
