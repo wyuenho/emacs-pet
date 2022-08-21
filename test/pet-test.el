@@ -762,10 +762,71 @@
   (it "should reset `flycheck' Python checkers variables to default"))
 
 (describe "pet-buffer-local-vars-setup"
-  (it "should set up all buffer local variables for supported packages"))
+  (it "should set up all buffer local variables for supported packages"
+    (spy-on 'pet-executable-find :and-call-fake
+      (lambda (exec)
+        (pcase exec
+          ("python"
+            "/usr/bin/python")
+          ("jedi-language-server"
+            "/usr/bin/jedi-language-server")
+          ("pytest"
+            "/usr/bin/pytest")
+          ("black"
+            "/usr/bin/black")
+          ("isort"
+            "/usr/bin/isort")
+          ("yapf"
+            "/usr/bin/yapf")
+          )))
+    (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
+    (spy-on 'pet-flycheck-setup)
+
+    (pet-buffer-local-vars-setup)
+
+    (expect 'pet-flycheck-setup :to-have-been-called)
+
+    (expect (local-variable-p 'python-shell-interpreter) :to-be-truthy)
+    (expect (local-variable-p 'python-shell-virtualenv-root) :to-be-truthy)
+    (expect (local-variable-p 'lsp-jedi-executable-command) :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyright-venv-path) :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :to-be-truthy)
+    (expect (local-variable-p 'dap-python-executable) :to-be-truthy)
+    (expect (local-variable-p 'python-pytest-executable) :to-be-truthy)
+    (expect (local-variable-p 'python-black-command) :to-be-truthy)
+    (expect (local-variable-p 'python-isort-command) :to-be-truthy)
+    (expect (local-variable-p 'blacken-executable) :to-be-truthy)
+    (expect (local-variable-p 'yapfify-executable) :to-be-truthy)
+
+    (expect python-shell-interpreter :to-equal "/usr/bin/python")
+    (expect python-shell-virtualenv-root :to-equal "/home/user/project/.venv/")
+    (expect lsp-jedi-executable-command :to-equal "/usr/bin/jedi-language-server")
+    (expect lsp-pyright-venv-path :to-equal "/home/user/project/.venv/")
+    (expect lsp-pyright-python-executable-cmd :to-equal "/usr/bin/python")
+    (expect dap-python-executable :to-equal "/usr/bin/python")
+    (expect python-pytest-executable :to-equal "/usr/bin/pytest")
+    (expect python-black-command :to-equal "/usr/bin/black")
+    (expect python-isort-command :to-equal "/usr/bin/isort")
+    (expect blacken-executable :to-equal "/usr/bin/black")
+    (expect yapfify-executable :to-equal "/usr/bin/yapf")))
 
 (describe "pet-buffer-local-vars-teardown"
-  (it "should reset all buffer local variables for supported packages to default"))
+  (it "should reset all buffer local variables for supported packages to default"
+    (spy-on 'pet-flycheck-teardown)
+
+    (pet-buffer-local-vars-teardown)
+
+    (expect (local-variable-p 'python-shell-interpreter) :not :to-be-truthy)
+    (expect (local-variable-p 'python-shell-virtualenv-root) :not :to-be-truthy)
+    (expect (local-variable-p 'lsp-jedi-executable-command) :not :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyright-venv-path) :not :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :not :to-be-truthy)
+    (expect (local-variable-p 'dap-python-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'python-pytest-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'python-black-command) :not :to-be-truthy)
+    (expect (local-variable-p 'python-isort-command) :not :to-be-truthy)
+    (expect (local-variable-p 'blacken-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
 
 (describe "pet-mode"
   (it "should set up all buffer local variables for supported packages if `pet-mode' is t")
