@@ -722,34 +722,46 @@ has assigned to."
   (unless (derived-mode-p 'python-mode)
     (user-error "You are not in python-mode!"))
 
-  (with-current-buffer-window "*pet info*" nil nil
-    (mapc (lambda (var)
-            (insert (concat (propertize (format "%-40s" (concat (symbol-name var) ":")) 'face 'font-lock-variable-name-face) "\t"))
-            (insert (format "%s" (if (boundp var) (symbol-value var) 'unbound)))
-            (insert "\n"))
-          '(python-shell-interpreter
-            python-shell-virtualenv-root
-            flycheck-flake8rc
-            flycheck-python-flake8-executable
-            flycheck-pylintrc
-            flycheck-python-pylint-executable
-            flycheck-python-mypy-executable
-            flycheck-python-mypy-config
-            flycheck-python-mypy-python-executable
-            flycheck-python-pyright-executable
-            flycheck-python-pycompile-executable
-            lsp-jedi-executable-command
-            lsp-pyright-python-executable-cmd
-            lsp-pyright-venv-path
-            dap-python-executable
-            python-pytest-executable
-            python-black-command
-            blacken-executable
-            python-isort-command
-            yapfify-executable))
-    (insert (propertize (concat (symbol-name 'exec-path) ":") 'face 'font-lock-variable-name-face))
-    (cl-prettyprint exec-path)
-    (special-mode)))
+  (let ((kvp (mapcar (lambda (sym)
+                       (cons sym
+                             (if (boundp sym)
+                                 (let ((val (symbol-value sym)))
+                                   (if (listp val)
+                                       (apply 'string-join
+                                              (mapcar (apply-partially 'format "%s") val)
+                                              (list ", "))
+                                     val))
+                               'unbound)))
+                     '(python-shell-interpreter
+                       python-shell-virtualenv-root
+                       flycheck-flake8rc
+                       flycheck-python-flake8-executable
+                       flycheck-pylintrc
+                       flycheck-python-pylint-executable
+                       flycheck-python-mypy-executable
+                       flycheck-python-mypy-config
+                       flycheck-python-mypy-python-executable
+                       flycheck-python-pyright-executable
+                       flycheck-python-pycompile-executable
+                       lsp-jedi-executable-command
+                       lsp-pyright-python-executable-cmd
+                       lsp-pyright-venv-path
+                       dap-python-executable
+                       python-pytest-executable
+                       python-black-command
+                       blacken-executable
+                       python-isort-command
+                       yapfify-executable))))
+
+    (with-current-buffer-window "*pet info*" nil nil
+      (mapc (pcase-lambda (`(,key . ,value))
+              (insert (concat (propertize (format "%-40s" (concat (symbol-name key) ":")) 'face 'font-lock-variable-name-face) "\t"))
+              (insert (format "%s" value))
+              (insert "\n"))
+            kvp)
+      (insert (propertize (concat (symbol-name 'exec-path) ":") 'face 'font-lock-variable-name-face))
+      (cl-prettyprint exec-path)
+      (special-mode))))
 
 ;;;###autoload
 (define-minor-mode pet-mode
