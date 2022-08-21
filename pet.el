@@ -369,7 +369,8 @@ must both be installed into the current project first."
                   (or (getenv "PRE_COMMIT_HOME")
                       (getenv "XDG_CACHE_HOME")
                       "~/.cache/")))
-                "pre-commit/db.db"))
+                (unless (getenv "PRE_COMMIT_HOME") "pre-commit/")
+                "db.db"))
 
               (db
                (or (assoc-default db-file pet-pre-commit-database-cache)
@@ -395,7 +396,7 @@ must both be installed into the current project first."
                           .additional_dependencies))))
                  (concat (let-alist repo-config .repo)
                          (if additional-deps
-                             (concat ":" (string-join (sort additional-deps 'string<) ","))))))
+                             (concat ":" (string-join (sort (copy-sequence additional-deps) 'string<) ","))))))
 
               (repo-dir
                (let-alist (seq-find
