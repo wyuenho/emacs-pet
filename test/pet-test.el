@@ -762,6 +762,19 @@
   (it "should reset `flycheck' Python checkers variables to default"))
 
 (describe "pet-buffer-local-vars-setup"
+  (after-each
+    (kill-local-variable 'python-shell-interpreter)
+    (kill-local-variable 'python-shell-virtualenv-root)
+    (kill-local-variable 'lsp-jedi-executable-command)
+    (kill-local-variable 'lsp-pyright-venv-path)
+    (kill-local-variable 'lsp-pyright-python-executable-cmd)
+    (kill-local-variable 'dap-python-executable)
+    (kill-local-variable 'python-pytest-executable)
+    (kill-local-variable 'python-black-command)
+    (kill-local-variable 'python-isort-command)
+    (kill-local-variable 'blacken-executable)
+    (kill-local-variable 'yapfify-executable))
+
   (it "should set up all buffer local variables for supported packages"
     (spy-on 'pet-executable-find :and-call-fake
       (lambda (exec)
@@ -811,6 +824,19 @@
     (expect yapfify-executable :to-equal "/usr/bin/yapf")))
 
 (describe "pet-buffer-local-vars-teardown"
+  (before-each
+    (setq-local python-shell-interpreter "buffer-local-value")
+    (setq-local python-shell-virtualenv-root "buffer-local-value")
+    (setq-local lsp-jedi-executable-command "buffer-local-value")
+    (setq-local lsp-pyright-venv-path "buffer-local-value")
+    (setq-local lsp-pyright-python-executable-cmd "buffer-local-value")
+    (setq-local dap-python-executable "buffer-local-value")
+    (setq-local python-pytest-executable "buffer-local-value")
+    (setq-local python-black-command "buffer-local-value")
+    (setq-local python-isort-command "buffer-local-value")
+    (setq-local blacken-executable "buffer-local-value")
+    (setq-local yapfify-executable "buffer-local-value"))
+
   (it "should reset all buffer local variables for supported packages to default"
     (spy-on 'pet-flycheck-teardown)
 
