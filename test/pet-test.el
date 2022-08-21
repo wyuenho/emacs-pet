@@ -639,7 +639,15 @@
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/etc/pylintrc")))
 
 (describe "pet-flycheck-checker-get-advice"
-  (it "should delegate `python-mypy' checker property to `pet-flycheck-checker-props'"))
+  (before-each
+    (advice-add 'flycheck-checker-get :around #'pet-flycheck-checker-get-advice))
+
+  (after-each
+    (advice-remove 'flycheck-checker-get 'pet-flycheck-checker-get-advice))
+
+  (it "should delegate `python-mypy' checker property to `pet-flycheck-checker-props'"
+    (expect (flycheck-checker-get 'python-mypy 'command) :to-equal
+      (assoc-default 'command (assoc-default 'python-mypy pet-flycheck-checker-props)))))
 
 (describe "pet-flycheck-toggle-local-vars"
   (it "should set `flycheck' Python checkers variables to buffer-local when `flycheck-mode' is t"
