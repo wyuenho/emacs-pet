@@ -43,6 +43,9 @@
 (require 'seq)
 (require 'subr-x)
 
+(eval-when-compile
+  (require 'flycheck))
+
 (when (< emacs-major-version 27)
   (require 'json))
 
@@ -518,6 +521,8 @@ Selects a virtualenv in the follow order:
                (error (pet-report-error err))))))))
 
 
+;; https://github.com/flycheck/flycheck/pull/1955
+(defvar flycheck-python-mypy-python-executable)
 
 (defun pet-flycheck-python-pylint-find-pylintrc ()
   "Polyfill `flycheck-pylintrc'.
@@ -553,20 +558,6 @@ algorithm described at
             ((let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
                (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc)))
             (t "/etc/pylintrc")))))
-
-(defvar flycheck-mode)
-(defvar flycheck-flake8rc)
-(defvar flycheck-python-mypy-config)
-(defvar flycheck-pylintrc)
-(defvar flycheck-python-flake8-executable)
-(defvar flycheck-python-pylint-executable)
-(defvar flycheck-python-mypy-executable)
-(defvar flycheck-python-mypy-python-executable)
-(defvar flycheck-python-pyright-executable)
-(defvar flycheck-python-pycompile-executable)
-(declare-function flycheck-checker-get "ext:flycheck")
-(declare-function flycheck-string-or-nil-p "ext:flycheck")
-(declare-function flycheck-register-option-var "ext:flycheck")
 
 ;; https://github.com/flycheck/flycheck/pull/1955
 (defvar pet-flycheck-checker-props
@@ -630,19 +621,12 @@ default otherwise."
                                                "mypy/config")))
 
   ;; https://github.com/flycheck/flycheck/pull/1955
-  (defcustom flycheck-python-mypy-python-executable nil
-    "Python executable to find the installed PEP 561 packages.
-
-This variable is an option for the following syntax checkers:
-
-  - `python-mypy'"
-    :group 'flycheck-options
-    :type '(choice (const :tag "Same as mypy's" nil)
-                   (string :tag "Path"))
-    :safe 'flycheck-string-or-nil-p)
-
   (when (functionp 'flycheck-register-option-var)
-    (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy))
+    (flycheck-def-option-var flycheck-python-mypy-python-executable nil python-mypy
+      "Python executable to find the installed PEP 561 packages."
+      :type '(choice (const :tag "Same as mypy's" nil)
+                     (string :tag "Path"))
+      :safe 'flycheck-string-or-nil-p))
 
   (when (functionp 'flycheck-checker-get)
     (advice-add 'flycheck-checker-get :around #'pet-flycheck-checker-get-advice))

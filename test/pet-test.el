@@ -1,18 +1,5 @@
 ;; -*- lisp-indent-offset: 2; lexical-binding: t; -*-
 
-(require 'blacken)
-(require 'dap-python)
-(require 'flycheck)
-(require 'lsp-jedi)
-(require 'lsp-pyright)
-(require 'project)
-(require 'projectile)
-(require 'python)
-(require 'python-black)
-(require 'python-isort)
-(require 'python-pytest)
-(require 'yapfify)
-
 (require 'pet)
 
 ;; (setq pet-debug t)
@@ -752,9 +739,34 @@
     (expect (local-variable-p 'flycheck-python-pycompile-executable) :to-be nil)))
 
 (describe "pet-flycheck-setup"
-  (it "should set up `flycheck' python checker configuration file names")
-  (it "should advice `flycheck-checker-get' with `pet-flycheck-checker-get-advice'")
-  (it "should add `pet-flycheck-toggle-local-vars' to `flycheck-mode-hook'"))
+  :var ((old-default-directory default-directory)
+         (home (getenv "HOME")))
+
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "/home/user/"))
+
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
+
+  (it "should set up `python-flake8' checker config file names"
+    (pet-flycheck-setup)
+    (expect flycheck-flake8rc :to-have-same-items-as '(".flake8" "setup.cfg" "tox.ini")))
+
+  (it "should set up `python-mypy' checker config and variables"
+    (spy-on 'getenv)
+    (pet-flycheck-setup)
+    (expect flycheck-python-mypy-config :to-have-same-items-as `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config"))
+    (expect (custom-variable-p 'flycheck-python-mypy-python-executable) :to-be-truthy))
+
+  (it "should advice `flycheck-checker-get' with `pet-flycheck-checker-get-advice'"
+    (pet-flycheck-setup)
+    (expect (advice-member-p 'pet-flycheck-checker-get-advice 'flycheck-checker-get) :to-be-truthy))
+
+  (it "should add `pet-flycheck-toggle-local-vars' to `flycheck-mode-hook'"
+    (pet-flycheck-setup)
+    (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :to-be-truthy)))
 
 (describe "pet-flycheck-teardown"
   (before-each
