@@ -468,8 +468,8 @@ Selects a virtualenv in the follow order:
    directory by looking up the prefix from `.python-version'."
   (when-let ((root (pet-project-root)))
     (cond ((assoc-default root pet-project-virtualenv-cache))
-          ((getenv "VIRTUAL_ENV")
-           (expand-file-name (getenv "VIRTUAL_ENV")))
+          ((when-let (ev (getenv "VIRTUAL_ENV"))
+             (expand-file-name ev)))
           ((when-let (program (pet-use-conda-p))
              (condition-case err
                  (with-temp-buffer
@@ -615,8 +615,8 @@ default otherwise."
 
   (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
                                       ,(concat (expand-file-name
-                                                (or (and (getenv "XDG_CONFIG_HOME")
-                                                         (file-name-as-directory (getenv "XDG_CONFIG_HOME")))
+                                                (or (when-let (xdg-config-home (getenv "XDG_CONFIG_HOME") )
+                                                      (file-name-as-directory xdg-config-home))
                                                     "~/.config/"))
                                                "mypy/config")))
 
