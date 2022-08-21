@@ -726,11 +726,12 @@ has assigned to."
                        (cons sym
                              (if (boundp sym)
                                  (let ((val (symbol-value sym)))
-                                   (if (listp val)
+                                   (if (and (listp val) (not (null val)))
                                        (apply 'string-join
-                                              (mapcar (apply-partially 'format "%s") val)
+                                              (mapcar (apply-partially 'abbreviate-file-name)
+                                                      (mapcar (apply-partially 'format "%s") val))
                                               (list ", "))
-                                     val))
+                                     (abbreviate-file-name (format "%s" val))))
                                'unbound)))
                      '(python-shell-interpreter
                        python-shell-virtualenv-root
@@ -755,12 +756,12 @@ has assigned to."
 
     (with-current-buffer-window "*pet info*" nil nil
       (mapc (pcase-lambda (`(,key . ,value))
-              (insert (concat (propertize (format "%-40s" (concat (symbol-name key) ":")) 'face 'font-lock-variable-name-face) "\t"))
+              (insert (concat (propertize (format "%-40s" (concat (symbol-name key) ":")) 'face 'font-lock-variable-name-face)))
               (insert (format "%s" value))
               (insert "\n"))
             kvp)
-      (insert (propertize (concat (symbol-name 'exec-path) ":") 'face 'font-lock-variable-name-face))
-      (cl-prettyprint exec-path)
+      (insert (propertize (format "%-40s" (concat (symbol-name 'exec-path) ":")) 'face 'font-lock-variable-name-face) "\n")
+      (mapc (lambda (dir) (insert (abbreviate-file-name (format "%s" dir)) "\n")) exec-path)
       (special-mode))))
 
 ;;;###autoload
