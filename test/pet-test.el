@@ -757,9 +757,23 @@
   (it "should add `pet-flycheck-toggle-local-vars' to `flycheck-mode-hook'"))
 
 (describe "pet-flycheck-teardown"
-  (it "should remove advice `pet-flycheck-checker-get-advice' from `flycheck-checker-get'")
-  (it "should remove `pet-flycheck-toggle-local-vars' from `flycheck-mode-hook'")
-  (it "should reset `flycheck' Python checkers variables to default"))
+  (before-each
+    (pet-flycheck-setup)
+    (pet-flycheck-teardown))
+
+  (it "should remove advice `pet-flycheck-checker-get-advice' from `flycheck-checker-get'"
+    (expect (advice-member-p 'pet-flycheck-checker-get-advice 'flycheck-checker-get) :not :to-be-truthy))
+
+  (it "should remove `pet-flycheck-toggle-local-vars' from `flycheck-mode-hook'"
+    (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :not :to-be-truthy))
+
+  (it "should reset `flycheck' Python checkers variables to default"
+    (expect (local-variable-p 'flycheck-pylintrc) :not :to-be-truthy)
+    (expect (local-variable-p 'flycheck-python-flake8-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'flycheck-python-pylint-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'flycheck-python-mypy-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'flycheck-python-pyright-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'flycheck-python-pycompile-executable) :not :to-be-truthy)))
 
 (describe "pet-buffer-local-vars-setup"
   (after-each
