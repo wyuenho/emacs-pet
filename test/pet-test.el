@@ -457,13 +457,14 @@
                                           (repo . "https://github.com/psf/black")
                                           (rev . "22.6.0")))))
          (old-default-directory default-directory)
-         (default-directory "~/project/src/")
          (home (getenv "HOME")))
 
   (before-all
+    (setq-local default-directory "~/project/src/")
     (setenv "HOME" "/home/user/"))
 
   (after-all
+    (setq-local default-directory old-default-directory)
     (setenv "HOME" home))
 
   (describe "when `pre-commit' database content is not cached"
@@ -636,12 +637,12 @@
          (home (getenv "HOME")))
 
   (before-all
-    (setenv "HOME" "/home/user/")
-    (setq-local default-directory "~/project/src/"))
+    (setq-local default-directory "~/project/src/")
+    (setenv "HOME" "/home/user/"))
 
   (after-all
-    (setenv "HOME" home)
-    (setq-local default-directory old-default-directory))
+    (setq-local default-directory old-default-directory)
+    (setenv "HOME" home))
 
   (it "should not error when run inside a non-file buffer"
     (expect (with-temp-buffer (pet-flycheck-python-pylint-find-pylintrc)) :not :to-throw))
@@ -742,13 +743,13 @@
   :var ((old-default-directory default-directory)
          (home (getenv "HOME")))
 
-  (before-each
-    (setenv "HOME" "/home/user/")
-    (setq-local default-directory "/home/user/"))
+  (before-all
+    (setq-local default-directory "/home/user/")
+    (setenv "HOME" "/home/user/"))
 
-  (after-each
-    (setenv "HOME" home)
-    (setq-local default-directory old-default-directory))
+  (after-all
+    (setq-local default-directory old-default-directory)
+    (setenv "HOME" home))
 
   (it "should set up `python-flake8' checker config file names"
     (pet-flycheck-setup)
