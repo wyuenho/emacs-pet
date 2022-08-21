@@ -854,6 +854,10 @@
     (expect (local-variable-p 'blacken-executable) :not :to-be-truthy)
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
 
+(describe "pet-verify-setup"
+  (it "should display unbound values")
+  (it "should display bound values"))
+
 (describe "pet-mode"
   (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
     (spy-on 'pet-buffer-local-vars-setup)
