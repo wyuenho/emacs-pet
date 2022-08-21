@@ -829,8 +829,15 @@
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
 
 (describe "pet-mode"
-  (it "should set up all buffer local variables for supported packages if `pet-mode' is t")
-  (it "should reset all buffer local variables for supported packages to default if `pet-mode' is nil"))
+  (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
+    (spy-on 'pet-buffer-local-vars-setup)
+    (pet-mode 1)
+    (expect 'pet-buffer-local-vars-setup :to-have-been-called))
+
+  (it "should reset all buffer local variables for supported packages to default if `pet-mode' is nil"
+    (spy-on 'pet-buffer-local-vars-teardown)
+    (pet-mode -1)
+    (expect 'pet-buffer-local-vars-teardown :to-have-been-called)))
 
 (describe "pet-cleanup-watchers-and-caches"
   (describe "when the last Python buffer for a project is killed"
