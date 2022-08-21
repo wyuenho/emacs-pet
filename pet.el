@@ -641,7 +641,8 @@ This variable is an option for the following syntax checkers:
                    (string :tag "Path"))
     :safe 'flycheck-string-or-nil-p)
 
-  (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy)
+  (when (functionp 'flycheck-register-option-var)
+    (flycheck-register-option-var 'flycheck-python-mypy-python-executable 'python-mypy))
 
   (when (functionp 'flycheck-checker-get)
     (advice-add 'flycheck-checker-get :around #'pet-flycheck-checker-get-advice))
