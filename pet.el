@@ -160,7 +160,7 @@ project, nil otherwise."
               (let ((exit-code
                      (when (or toml-p yaml-p)
                        (condition-case err
-                           (apply 'call-process
+                           (apply #'call-process
                                   (cond (toml-p pet-toml-to-json-program)
                                         (yaml-p pet-yaml-to-json-program))
                                   file-path
@@ -266,7 +266,7 @@ This variable is an alist where the key is the absolute path to a
            (if-let ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
              (pet-watch-config-file config-file ',cache-var ',parser)
-             (when-let ((content (funcall ',parser config-file)))
+             (when-let ((content (funcall #',parser config-file)))
                (push (cons config-file content) ,cache-var)
                content)))))))
 
@@ -501,7 +501,7 @@ Selects a virtualenv in the follow order:
                            (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output))
                        (user-error (buffer-string)))))
                (error (pet-report-error err)))))
-          ((cl-loop for d in (mapcar (apply-partially 'concat root) '(".venv" "venv"))
+          ((cl-loop for d in (mapcar (apply-partially #'concat root) '(".venv" "venv"))
                     with path = nil
                     if (file-exists-p d)
                     do
@@ -713,9 +713,9 @@ has assigned to."
                              (if (boundp sym)
                                  (let ((val (symbol-value sym)))
                                    (if (and (listp val) (not (null val)))
-                                       (apply 'string-join
-                                              (mapcar (apply-partially 'abbreviate-file-name)
-                                                      (mapcar (apply-partially 'format "%s") val))
+                                       (apply #'string-join
+                                              (mapcar (apply-partially #'abbreviate-file-name)
+                                                      (mapcar (apply-partially #'format "%s") val))
                                               (list ", "))
                                      (abbreviate-file-name (format "%s" val))))
                                'unbound)))
