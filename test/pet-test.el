@@ -944,7 +944,6 @@
                         (set-visited-file-name file)
                         (python-mode)
                         (set-buffer-modified-p nil)
-                        (message "var buffer major modes: %s" major-mode)
                         (current-buffer)))
                     '("/home/user/foo.py" "/home/user/project2/src/bar.py"))))
 
