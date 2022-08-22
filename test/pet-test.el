@@ -883,8 +883,42 @@
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
 
 (describe "pet-verify-setup"
-  (it "should display unbound values")
-  (it "should display bound values"))
+  (before-all
+    (setq python-indent-guess-indent-offset nil))
+
+  (it "should error when not in python mode"
+    (expect (pet-verify-setup) :to-throw 'user-error))
+
+  (it "should display unbound values"
+    (with-temp-buffer
+      (python-mode)
+      (pet-verify-setup))
+    (expect
+      (with-current-buffer "*pet info*"
+        (re-search-forward "lsp-jedi-executable-command:\s+\\(.+\\)")
+        (match-string 1))
+      :to-equal "unbound"))
+
+  (it "should display bound values"
+    (with-temp-buffer
+      (python-mode)
+      (pet-verify-setup))
+    (expect
+      (with-current-buffer "*pet info*"
+        (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
+        (match-string 1))
+      :to-equal "python3"))
+
+  (it "should display list as comma-separated values"
+    (with-temp-buffer
+      (python-mode)
+      (pet-verify-setup))
+    (expect
+      (split-string (with-current-buffer "*pet info*"
+                      (re-search-forward "flycheck-flake8rc:\s+\\(.+\\)")
+                      (match-string 1))
+        "," t split-string-default-separators)
+      :to-have-same-items-as '(".flake8" "setup.cfg" "tox.ini"))))
 
 (describe "pet-mode"
   (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
