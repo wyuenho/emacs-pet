@@ -615,7 +615,7 @@ default otherwise."
 
   (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
                                       ,(concat (expand-file-name
-                                                (or (when-let (xdg-config-home (getenv "XDG_CONFIG_HOME") )
+                                                (or (when-let (xdg-config-home (getenv "XDG_CONFIG_HOME"))
                                                       (file-name-as-directory xdg-config-home))
                                                     "~/.config/"))
                                                "mypy/config")))
