@@ -4,6 +4,8 @@
 
 ;; (setq pet-debug t)
 
+(setq python-indent-guess-indent-offset nil)
+
 (describe "pet-system-bin-dir"
   (describe "when called on Windows"
     (before-each
@@ -889,9 +891,6 @@
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
 
 (describe "pet-verify-setup"
-  (before-all
-    (setq python-indent-guess-indent-offset nil))
-
   (it "should error when not in python mode"
     (expect (pet-verify-setup) :to-throw 'user-error))
 
@@ -938,10 +937,121 @@
     (expect 'pet-buffer-local-vars-teardown :to-have-been-called)))
 
 (describe "pet-cleanup-watchers-and-caches"
+  :var ((last-project-buf-file-name "/home/user/project/src/__init__.py")
+         (buffers (mapcar
+                    (lambda (file)
+                      (with-current-buffer (create-file-buffer file)
+                        (set-visited-file-name file)
+                        (python-mode)
+                        (set-buffer-modified-p nil)
+                        (message "var buffer major modes: %s" major-mode)
+                        (current-buffer)))
+                    '("/home/user/foo.py" "/home/user/project2/src/bar.py"))))
+
+  (after-all
+    (dolist (buf buffers)
+      (kill-buffer buf)))
+
+  (before-each
+    (setq pet-project-virtualenv-cache '(("/home/user/project/" . "/home/user/project/.venv/")))
+    (setq pet-pre-commit-config-cache '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
+    (setq pet-pyproject-cache '(("/home/user/project/pyproject.toml" . "whatever")))
+    (setq pet-pipfile-cache '(("/home/user/project/Pipfile" . "whatever")))
+    (setq pet-python-version-cache '(("/home/user/project/.python-verion" . "whatever")))
+    (setq pet-environment-cache '(("/home/user/project/environment.yml" . "whatever")))
+    (setq pet-watched-config-files '(("/home/user/.cache/pre-commit/db.db" . 1)
+                                      ("/home/user/project/.pre-commit-config.yaml" . 2)
+                                      ("/home/user/project/pyproject.toml" . 3)
+                                      ("/home/user/project/Pipfile" . 4)
+                                      ("/home/user/project/.python-verion" . 5)
+                                      ("/home/user/project/environment.yml" . 6)))
+
+    (spy-on 'pet-project-root :and-return-value "/home/user/project/")
+    (spy-on 'buffer-list :and-return-value buffers)
+    (spy-on 'file-notify-rm-watch))
+
+  (describe "when a buffer is killed"
+    (it "should do nothing if it's not a file visiting buffer"
+      (kill-buffer (with-current-buffer (get-buffer-create "*pet test*")
+                     (python-mode)
+                     (current-buffer)))
+
+      (expect pet-project-virtualenv-cache :to-equal '(("/home/user/project/" . "/home/user/project/.venv/")))
+      (expect pet-pre-commit-config-cache :to-equal '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
+      (expect pet-pyproject-cache :to-equal '(("/home/user/project/pyproject.toml" . "whatever")))
+      (expect pet-pipfile-cache :to-equal '(("/home/user/project/Pipfile" . "whatever")))
+      (expect pet-python-version-cache :to-equal '(("/home/user/project/.python-verion" . "whatever")))
+      (expect pet-environment-cache :to-equal '(("/home/user/project/environment.yml" . "whatever")))
+      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1)
+                                                    ("/home/user/project/.pre-commit-config.yaml" . 2)
+                                                    ("/home/user/project/pyproject.toml" . 3)
+                                                    ("/home/user/project/Pipfile" . 4)
+                                                    ("/home/user/project/.python-verion" . 5)
+                                                    ("/home/user/project/environment.yml" . 6))))
+
+    (it "should do nothing if it's not a python mode buffer"
+      (kill-buffer (with-current-buffer (create-file-buffer "/home/user/.emacs")
+                     (emacs-lisp-mode)
+                     (set-buffer-modified-p nil)
+                     (current-buffer)))
+
+      (expect pet-project-virtualenv-cache :to-equal '(("/home/user/project/" . "/home/user/project/.venv/")))
+      (expect pet-pre-commit-config-cache :to-equal '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
+      (expect pet-pyproject-cache :to-equal '(("/home/user/project/pyproject.toml" . "whatever")))
+      (expect pet-pipfile-cache :to-equal '(("/home/user/project/Pipfile" . "whatever")))
+      (expect pet-python-version-cache :to-equal '(("/home/user/project/.python-verion" . "whatever")))
+      (expect pet-environment-cache :to-equal '(("/home/user/project/environment.yml" . "whatever")))
+      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1)
+                                                    ("/home/user/project/.pre-commit-config.yaml" . 2)
+                                                    ("/home/user/project/pyproject.toml" . 3)
+                                                    ("/home/user/project/Pipfile" . 4)
+                                                    ("/home/user/project/.python-verion" . 5)
+                                                    ("/home/user/project/environment.yml" . 6))))
+
+    (it "should do nothing if it does not belong in a project"
+      (spy-calls-reset 'pet-project-root)
+      (spy-on 'pet-project-root)
+
+      (kill-buffer (with-current-buffer (create-file-buffer "/home/user/baz.py")
+                     (set-visited-file-name "/home/user/baz.py")
+                     (python-mode)
+                     (set-buffer-modified-p nil)
+                     (current-buffer)))
+
+      (expect pet-project-virtualenv-cache :to-equal '(("/home/user/project/" . "/home/user/project/.venv/")))
+      (expect pet-pre-commit-config-cache :to-equal '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
+      (expect pet-pyproject-cache :to-equal '(("/home/user/project/pyproject.toml" . "whatever")))
+      (expect pet-pipfile-cache :to-equal '(("/home/user/project/Pipfile" . "whatever")))
+      (expect pet-python-version-cache :to-equal '(("/home/user/project/.python-verion" . "whatever")))
+      (expect pet-environment-cache :to-equal '(("/home/user/project/environment.yml" . "whatever")))
+      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1)
+                                                    ("/home/user/project/.pre-commit-config.yaml" . 2)
+                                                    ("/home/user/project/pyproject.toml" . 3)
+                                                    ("/home/user/project/Pipfile" . 4)
+                                                    ("/home/user/project/.python-verion" . 5)
+                                                    ("/home/user/project/environment.yml" . 6)))))
+
   (describe "when the last Python buffer for a project is killed"
-    (it "should clear all watched files")
-    (it "should clear all config file caches")
-    (it "should clean `pet-project-virtualenv-cache'")))
+    (before-each
+      (kill-buffer (with-current-buffer (create-file-buffer last-project-buf-file-name)
+                     (set-visited-file-name last-project-buf-file-name)
+                     (python-mode)
+                     (set-buffer-modified-p nil)
+                     (current-buffer))))
+
+    (it "should clean `pet-project-virtualenv-cache'"
+      (expect (assoc-default "/home/user/project/" pet-project-virtualenv-cache) :to-be nil))
+
+    (it "should clear all watched files except `pre-commit' db"
+      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1))))
+
+    (it "should clear all config file caches"
+      (expect pet-project-virtualenv-cache :to-be nil)
+      (expect pet-pre-commit-config-cache :to-be nil)
+      (expect pet-pyproject-cache :to-be nil)
+      (expect pet-pipfile-cache :to-be nil)
+      (expect pet-python-version-cache :to-be nil)
+      (expect pet-environment-cache :to-be nil))))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)
