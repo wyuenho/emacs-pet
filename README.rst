@@ -231,13 +231,14 @@ FAQ
 How do I get ``pet`` to pick up the virtualenv created by ``direnv`` or similar tools?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Try `direnv.el <https://github.com/wbolster/emacs-direnv>`_.
+Try `direnv.el <https://github.com/wbolster/emacs-direnv>`_, specifically, `this
+PR <https://github.com/wbolster/emacs-direnv/pull/80>`_.
 
 Once you have set up ``exec-path`` in your ``python-mode`` buffer using
 ``direnv.el``, ``pet`` will automatically pick up the executables.
 
 
-Why ``pet`` didn't set up the executable variables on a fresh Python project clone?
+Why didn't ``pet`` set up the executable variables on a fresh Python project clone?
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ``Pet`` does not automatically create virtualenvs for you. If you have a fresh
@@ -250,7 +251,7 @@ To find out how to do it, please find the virtualenv tool in question from
 details.
 
 
-Why ``pet`` doesn't simply set a buffer-local ``exec-path``?
+Why doesn't ``pet`` simply set a buffer-local ``exec-path``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 The reason is mainly due to the fact that many Python projects use development
