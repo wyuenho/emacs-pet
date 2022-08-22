@@ -457,7 +457,8 @@
                                           (repo . "https://github.com/psf/black")
                                           (rev . "22.6.0")))))
          (old-default-directory default-directory)
-         (home (getenv "HOME")))
+         (home (getenv "HOME"))
+         (orig-getenv (symbol-function 'getenv)))
 
   (before-all
     (setq-local default-directory "~/project/src/")
@@ -467,13 +468,18 @@
     (setq-local default-directory old-default-directory)
     (setenv "HOME" home))
 
+  (before-each
+    (spy-on 'getenv :and-call-fake
+      (lambda (name)
+        (unless (member name '("PRE_COMMIT_HOME" "XDG_CACHE_HOME"))
+          (funcall orig-getenv name))))
+    (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
+
   (describe "when `pre-commit' database content is not cached"
     (before-each
-      (spy-on 'getenv)
       (spy-on 'file-exists-p :and-call-fake (lambda (name) (equal name "/home/user/.cache/pre-commit/db.db")))
       (spy-on 'pet-watch-config-file)
-      (spy-on 'pet-parse-pre-commit-db :and-return-value pre-commit-db-content)
-      (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
+      (spy-on 'pet-parse-pre-commit-db :and-return-value pre-commit-db-content))
 
     (it "should return absolute path to the virtualenv of a `pre-commit' hook with additional dependencies"
       (spy-on 'file-expand-wildcards :and-return-value '("/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.9"
@@ -486,9 +492,7 @@
 
   (describe "when `pre-commit' database content is cached"
     (before-each
-      (setq-local pet-pre-commit-database-cache `(("/home/user/.cache/pre-commit/db.db" ,@pre-commit-db-content)))
-      (spy-on 'getenv)
-      (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
+      (setq-local pet-pre-commit-database-cache `(("/home/user/.cache/pre-commit/db.db" ,@pre-commit-db-content))))
 
     (after-each
       (kill-local-variable 'pet-pre-commit-database-cache))
@@ -505,7 +509,6 @@
 (describe "pet-executable-find"
 
   (describe "when using `pre-commit'"
-
     (before-each
       (spy-on 'pet-use-pre-commit-p :and-return-value "/usr/bin/pre-commit"))
 
@@ -634,7 +637,8 @@
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME")))
+         (home (getenv "HOME"))
+         (orig-getenv (symbol-function 'getenv)))
 
   (before-all
     (setq-local default-directory "~/project/src/")
@@ -663,8 +667,9 @@
     (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
     (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/project/pyproject.toml")))
     (spy-on 'getenv :and-call-fake (lambda (name)
-                                     (when (equal name "PYLINTRC")
-                                       "/home/user/project/pyproject.toml")))
+                                     (if (equal name "PYLINTRC")
+                                       "/home/user/project/pyproject.toml"
+                                       (funcall orig-getenv name))))
 
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/project/pyproject.toml"))
 
@@ -672,8 +677,9 @@
     (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
     (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/.config/pylintrc")))
     (spy-on 'getenv :and-call-fake (lambda (name)
-                                     (when (equal name "XDG_CONFIG_HOME")
-                                       "/home/user/.config")))
+                                     (if (equal name "XDG_CONFIG_HOME")
+                                       "/home/user/.config"
+                                       (funcall orig-getenv name))))
 
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/.config/pylintrc"))
 
