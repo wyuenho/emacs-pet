@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "26.1") (f "0.6.0"))
+;; Package-Requires: ((emacs "25.1") (f "0.6.0"))
 ;; Homepage: https://github.com/wyuenho/emacs-pet/
 ;; Keywords: tools
 
@@ -296,9 +296,9 @@ This variable is an alist where the key is the absolute path to a
 Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
        (or (executable-find "pre-commit")
-           (and (when-let* ((venv (pet-virtualenv-root))
-                            (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
-                  (executable-find "pre-commit"))))))
+           (and (when-let ((venv (pet-virtualenv-root)))
+                  (when-let ((exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
+                    (executable-find "pre-commit")))))))
 
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
@@ -365,56 +365,51 @@ up a virtualenv for the hook from the pre-commit database.
 
 In order to find the hook virtualenv, `pre-commit' and the hooks
 must both be installed into the current project first."
-  (when-let* ((db-file
-               (concat
-                (expand-file-name
-                 (file-name-as-directory
-                  (or (getenv "PRE_COMMIT_HOME")
-                      (getenv "XDG_CACHE_HOME")
-                      "~/.cache/")))
-                (unless (getenv "PRE_COMMIT_HOME") "pre-commit/")
-                "db.db"))
-
-              (db
-               (or (assoc-default db-file pet-pre-commit-database-cache)
-                   (when (file-exists-p db-file)
-                     (pet-watch-config-file db-file 'pet-pre-commit-database-cache 'pet-parse-pre-commit-db)
-                     (when-let ((content (pet-parse-pre-commit-db db-file)))
-                       (push (cons db-file content) pet-pre-commit-database-cache)
-                       content))))
-
-              (repo-config
-               (seq-find
-                (lambda (repo)
+  (when-let ((db-file
+              (concat
+               (expand-file-name
+                (file-name-as-directory
+                 (or (getenv "PRE_COMMIT_HOME")
+                     (getenv "XDG_CACHE_HOME")
+                     "~/.cache/")))
+               (unless (getenv "PRE_COMMIT_HOME") "pre-commit/")
+               "db.db")))
+    (when-let ((db
+                (or (assoc-default db-file pet-pre-commit-database-cache)
+                    (when (file-exists-p db-file)
+                      (pet-watch-config-file db-file 'pet-pre-commit-database-cache 'pet-parse-pre-commit-db)
+                      (when-let ((content (pet-parse-pre-commit-db db-file)))
+                        (push (cons db-file content) pet-pre-commit-database-cache)
+                        content)))))
+      (when-let ((repo-config
                   (seq-find
-                   (lambda (hook)
-                     (equal (let-alist hook .id) hook-id))
-                   (let-alist repo .hooks)))
-                (let-alist (pet-pre-commit-config) .repos)))
-
-              (repo-url
-               (let ((additional-deps
-                      (let-alist repo-config
-                        (let-alist (seq-find (lambda (hook) (let-alist hook (equal .id hook-id))) .hooks)
-                          .additional_dependencies))))
-                 (concat (let-alist repo-config .repo)
-                         (if additional-deps
-                             (concat ":" (string-join (sort (copy-sequence additional-deps) 'string<) ","))))))
-
-              (repo-dir
-               (let-alist (seq-find
-                           (lambda (row)
-                             (let-alist row
-                               (and (equal .repo repo-url)
-                                    (equal .ref (let-alist repo-config .rev)))))
-                           db)
-                 .path)))
-
-    (car
-     (last
-      (file-expand-wildcards
-       (concat (file-name-as-directory repo-dir) "py_env-*")
-       t)))))
+                   (lambda (repo)
+                     (seq-find
+                      (lambda (hook)
+                        (equal (let-alist hook .id) hook-id))
+                      (let-alist repo .hooks)))
+                   (let-alist (pet-pre-commit-config) .repos))))
+        (when-let ((repo-url
+                    (let ((additional-deps
+                           (let-alist repo-config
+                             (let-alist (seq-find (lambda (hook) (let-alist hook (equal .id hook-id))) .hooks)
+                               .additional_dependencies))))
+                      (concat (let-alist repo-config .repo)
+                              (if additional-deps
+                                  (concat ":" (string-join (sort (copy-sequence additional-deps) 'string<) ",")))))))
+          (when-let ((repo-dir
+                      (let-alist (seq-find
+                                  (lambda (row)
+                                    (let-alist row
+                                      (and (equal .repo repo-url)
+                                           (equal .ref (let-alist repo-config .rev)))))
+                                  db)
+                        .path)))
+            (car
+             (last
+              (file-expand-wildcards
+               (concat (file-name-as-directory repo-dir) "py_env-*")
+               t)))))))))
 
 
 
@@ -440,9 +435,9 @@ use it."
                           bin-path
                         (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-path))))
                 (error (pet-report-error err)))))
-        ((when-let* ((venv (pet-virtualenv-root))
-                     (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
-           (executable-find executable)))
+        ((when-let ((venv (pet-virtualenv-root)))
+           (when-let ((exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
+             (executable-find executable))))
         ((when-let ((path (executable-find executable)))
            (condition-case nil
                (if (and (executable-find "pyenv")
@@ -546,9 +541,9 @@ algorithm described at
                              (expand-file-name path))))))
     (if found
         found
-      (cond ((when-let* ((ev (getenv "PYLINTRC"))
-                         (path (expand-file-name ev)))
-               (and (file-exists-p path) path)))
+      (cond ((when-let ((ev (getenv "PYLINTRC")))
+               (when-let ((path (expand-file-name ev)))
+                 (and (file-exists-p path) path))))
             ((let* ((ev (getenv "XDG_CONFIG_HOME"))
                     (config-dir
                      (or (and ev (file-name-as-directory ev))
