@@ -1,6 +1,6 @@
 ;; -*- lisp-indent-offset: 2; lexical-binding: t; -*-
 
-(unless (version< emacs-version "27")
+(unless (< emacs-major-version 27)
   (load-file "test/undercover-init.el"))
 (require 'pet)
 
@@ -914,7 +914,7 @@
       (with-current-buffer "*pet info*"
         (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
         (match-string 1))
-      :to-equal (if (version< emacs-version "28") "python" "python3")))
+      :to-equal (if (< emacs-major-version 28) "python" "python3")))
 
   (it "should display list as comma-separated values"
     (with-temp-buffer
