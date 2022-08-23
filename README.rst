@@ -123,7 +123,6 @@ Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 .. code-block:: elisp
 
    (use-package pet
-     :quelpa (pet :fetcher github :repo "wyuenho/emacs-pet")
      :hook (python-mode))
 
 
@@ -167,8 +166,6 @@ Complete Example
 
 .. code-block:: elisp
 
-   (require 'quelpa-use-package)
-
    (use-package exec-path-from-shell
      :if (memq (window-system) '(mac ns))
      :config (exec-path-from-shell-initialize))
@@ -193,7 +190,6 @@ Complete Example
    (use-package python-isort)
 
    (use-package pet
-     :quelpa (pet :fetcher github :repo "wyuenho/emacs-pet")
      :ensure-system-package (dasel sqlite3)
      :config
      (add-hook 'python-mode-hook

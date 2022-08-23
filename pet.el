@@ -2,7 +2,7 @@
 
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
-;; Version: 0.1
+;; Version: 1.0.0
 ;; Package-Requires: ((emacs "26.1") (f "0.6.0"))
 ;; Homepage: https://github.com/wyuenho/emacs-pet/
 ;; Keywords: tools
@@ -26,9 +26,9 @@
 
 ;;; Commentary:
 
-;; TODO:
-;; Support updating buffer local variables when config change
-;; Support guix/nix-env?
+;; __P__ython __E__xecutable __T__racker.  Tracks downs the correct Python executables
+;; from the various virtualenv management tools and assign them to buffer local
+;; variables.  The package to end all Emacs virtualenv packages.
 
 ;;; Code:
 
