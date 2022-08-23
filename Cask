@@ -5,6 +5,7 @@
 
 (development
  (depends-on "buttercup")
- (depends-on "flycheck"))
+ (depends-on "flycheck")
+ (depends-on "undercover"))
 
 (package-file "pet.el")

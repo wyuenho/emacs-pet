@@ -18,3 +18,8 @@ compile: cask
 .PHONY: test
 test: compile
 	cask exec buttercup --traceback full -L . test
+
+.PHONY: coverage
+coverage:
+	mkdir -p coverage
+	make -e UNDERCOVER_FORCE=true test
