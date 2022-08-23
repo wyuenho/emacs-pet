@@ -1,6 +1,7 @@
 ;; -*- lisp-indent-offset: 2; lexical-binding: t; -*-
 
-(load-file "test/undercover-init.el")
+(unless (version< emacs-version "27")
+  (load-file "test/undercover-init.el"))
 (require 'pet)
 
 ;; (setq pet-debug t)
