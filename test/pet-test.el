@@ -462,22 +462,21 @@
                                           (rev . "22.6.0")))))
          (old-default-directory default-directory)
          (home (getenv "HOME"))
-         (orig-getenv (symbol-function 'getenv)))
-
-  (before-all
-    (setq-local default-directory "~/project/src/")
-    (setenv "HOME" "/home/user/"))
-
-  (after-all
-    (setq-local default-directory old-default-directory)
-    (setenv "HOME" home))
+         (orig-getenv (symbol-function 'getenv))
+         (process-environment (copy-sequence process-environment)))
 
   (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "~/project/src/")
     (spy-on 'getenv :and-call-fake
       (lambda (name)
         (unless (member name '("PRE_COMMIT_HOME" "XDG_CACHE_HOME"))
           (funcall orig-getenv name))))
     (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
+
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
 
   (describe "when `pre-commit' database content is not cached"
     (before-each
@@ -642,15 +641,16 @@
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
          (home (getenv "HOME"))
-         (orig-getenv (symbol-function 'getenv)))
+         (orig-getenv (symbol-function 'getenv))
+         (process-environment (copy-sequence process-environment)))
 
-  (before-all
-    (setq-local default-directory "~/project/src/")
-    (setenv "HOME" "/home/user/"))
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "~/project/src/"))
 
-  (after-all
-    (setq-local default-directory old-default-directory)
-    (setenv "HOME" home))
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
 
   (it "should not error when run inside a non-file buffer"
     (expect (with-temp-buffer (pet-flycheck-python-pylint-find-pylintrc)) :not :to-throw))
@@ -751,15 +751,16 @@
 
 (describe "pet-flycheck-setup"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME")))
+         (home (getenv "HOME"))
+         (process-environment (copy-sequence process-environment)))
 
-  (before-all
-    (setq-local default-directory "/home/user/")
-    (setenv "HOME" "/home/user/"))
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "/home/user/"))
 
-  (after-all
-    (setq-local default-directory old-default-directory)
-    (setenv "HOME" home))
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
 
   (it "should set up `python-flake8' checker config file names"
     (pet-flycheck-setup)
