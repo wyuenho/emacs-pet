@@ -468,9 +468,9 @@ Selects a virtualenv in the follow order:
    directory by looking up the prefix from `.python-version'."
   (when-let ((root (pet-project-root)))
     (cond ((assoc-default root pet-project-virtualenv-cache))
-          ((when-let (ev (getenv "VIRTUAL_ENV"))
+          ((when-let ((ev (getenv "VIRTUAL_ENV")))
              (expand-file-name ev)))
-          ((when-let (program (pet-use-conda-p))
+          ((when-let ((program (pet-use-conda-p)))
              (condition-case err
                  (with-temp-buffer
                    (let ((exit-code (call-process program nil t nil "info" "--envs" "--json"))
@@ -481,7 +481,7 @@ Selects a virtualenv in the follow order:
                            output)
                        (user-error (buffer-string)))))
                (error (pet-report-error err)))))
-          ((when-let (program (pet-use-poetry-p))
+          ((when-let ((program (pet-use-poetry-p)))
              (condition-case err
                  (with-temp-buffer
                    (let ((exit-code (call-process program nil t nil "env" "info" "--no-ansi" "--path"))
@@ -491,7 +491,7 @@ Selects a virtualenv in the follow order:
                            (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output))
                        (user-error (buffer-string)))))
                (error (pet-report-error err)))))
-          ((when-let (program (pet-use-pipenv-p))
+          ((when-let ((program (pet-use-pipenv-p)))
              (condition-case err
                  (with-temp-buffer
                    (let ((exit-code (call-process program nil t nil "--venv"))
@@ -508,7 +508,7 @@ Selects a virtualenv in the follow order:
                     (setf path (expand-file-name (file-name-as-directory d)))
                     (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) path)
                     return path))
-          ((when-let (program (pet-use-pyenv-p))
+          ((when-let ((program (pet-use-pyenv-p)))
              (condition-case err
                  (with-temp-buffer
                    (let ((exit-code (call-process program nil t nil "prefix"))
@@ -615,7 +615,7 @@ default otherwise."
 
   (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
                                       ,(concat (expand-file-name
-                                                (or (when-let (xdg-config-home (getenv "XDG_CONFIG_HOME"))
+                                                (or (when-let ((xdg-config-home (getenv "XDG_CONFIG_HOME")))
                                                       (file-name-as-directory xdg-config-home))
                                                     "~/.config/"))
                                                "mypy/config")))
