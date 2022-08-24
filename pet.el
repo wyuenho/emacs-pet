@@ -132,7 +132,7 @@ FILE is a regular expression.
 Return absolute path to FILE if found from in the root of the
 project, nil otherwise."
   (when-let ((root (pet-project-root)))
-    (car (directory-files root t file))))
+    (car (file-expand-wildcards (concat (file-name-as-directory root) file) t))))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
@@ -271,23 +271,23 @@ This variable is an alist where the key is the absolute path to a
                content)))))))
 
 (pet-def-config-accessor pre-commit-config
-                         :file-name "\\`.pre-commit-config.yaml\\'"
+                         :file-name ".pre-commit-config.yaml"
                          :parser pet-parse-config-file)
 
 (pet-def-config-accessor pyproject
-                         :file-name "\\`pyproject.toml\\'"
+                         :file-name "pyproject.toml"
                          :parser pet-parse-config-file)
 
 (pet-def-config-accessor python-version
-                         :file-name "\\`.python-version\\'"
+                         :file-name ".python-version"
                          :parser f-read-text)
 
 (pet-def-config-accessor pipfile
-                         :file-name "\\`Pipfile\\'"
+                         :file-name "Pipfile"
                          :parser pet-parse-config-file)
 
 (pet-def-config-accessor environment
-                         :file-name "\\`environment[a-zA-Z0-9-_]*.ya?ml\\'"
+                         :file-name "environment*.y*ml"
                          :parser pet-parse-config-file)
 
 (defun pet-use-pre-commit-p ()
