@@ -265,7 +265,7 @@ This variable is an alist where the key is the absolute path to a
          (when-let ((config-file (pet-find-file-from-project-root ,file-name)))
            (if-let ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
-             (pet-watch-config-file config-file ',cache-var ',parser)
+             (pet-watch-config-file config-file ',cache-var #',parser)
              (when-let ((content (funcall #',parser config-file)))
                (push (cons config-file content) ,cache-var)
                content)))))))
