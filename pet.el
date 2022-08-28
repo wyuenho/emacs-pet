@@ -44,7 +44,7 @@
 (require 'subr-x)
 
 (eval-when-compile
-  (require 'flycheck))
+  (require 'flycheck nil t))
 
 (when (< emacs-major-version 27)
   (require 'json))
@@ -712,7 +712,7 @@ has assigned to."
                        (cons sym
                              (if (boundp sym)
                                  (let ((val (symbol-value sym)))
-                                   (if (and (listp val) (not (null val)))
+                                   (if (consp val)
                                        (apply #'string-join
                                               (mapcar (apply-partially #'abbreviate-file-name)
                                                       (mapcar (apply-partially #'format "%s") val))
@@ -742,7 +742,7 @@ has assigned to."
 
     (with-current-buffer-window "*pet info*" nil nil
       (mapc (pcase-lambda (`(,key . ,value))
-              (insert (concat (propertize (format "%-40s" (concat (symbol-name key) ":")) 'face 'font-lock-variable-name-face)))
+              (insert (propertize (format "%-40s" (concat (symbol-name key) ":")) 'face 'font-lock-variable-name-face))
               (insert (format "%s" value))
               (insert "\n"))
             kvp)
@@ -753,7 +753,7 @@ has assigned to."
 ;;;###autoload
 (define-minor-mode pet-mode
   "Minor mode to setup buffer local variables for Python tools."
-  :lighter "Pet"
+  :lighter " Pet"
   :group 'pet
   (if pet-mode
       (pet-buffer-local-vars-setup)
