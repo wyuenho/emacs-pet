@@ -756,8 +756,11 @@ has assigned to."
   :lighter " Pet"
   :group 'pet
   (if pet-mode
-      (pet-buffer-local-vars-setup)
-    (pet-buffer-local-vars-teardown)))
+      (progn
+        (pet-buffer-local-vars-setup)
+        (add-hook 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))
+    (pet-buffer-local-vars-teardown)
+    (remove-hook 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t)))
 
 (defun pet-cleanup-watchers-and-caches ()
   "Clean up configuration file caches and watchers.
@@ -787,8 +790,6 @@ Delete configuration file caches and watchers when all
           (pcase-dolist (`(,key . ,_) (symbol-value cache))
             (when (string-prefix-p root key)
               (setf (alist-get key (symbol-value cache) nil t 'equal) nil))))))))
-
-(add-hook 'kill-buffer-hook #'pet-cleanup-watchers-and-caches)
 
 (provide 'pet)
 
