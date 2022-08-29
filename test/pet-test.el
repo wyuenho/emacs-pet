@@ -2,6 +2,9 @@
 
 (unless (< emacs-major-version 27)
   (load-file "test/undercover-init.el"))
+
+(require 'flycheck)
+
 (require 'pet)
 
 ;; (setq pet-debug t)
