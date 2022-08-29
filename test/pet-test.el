@@ -240,7 +240,7 @@
 
   (describe "the cache access function"
     (before-each
-      (spy-on 'pet-find-file-from-project-root :and-return-value "/home/user/project/tox.ini")
+      (spy-on 'pet-find-file-from-project :and-return-value "/home/user/project/tox.ini")
       (buttercup-suppress-warning-capture
         (spy-on 'pet-watch-config-file :and-call-fake 'ignore))
       (spy-on 'parser :and-call-through))

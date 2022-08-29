@@ -95,6 +95,20 @@ program by adjusting `pet-yaml-to-json-program-arguments'"
   :group 'pet
   :type '(repeat string))
 
+(defcustom pet-find-file-functions '(pet-find-file-from-project-root
+                                     pet-locate-dominating-file
+                                     pet-find-file-from-project-root-recursively)
+  "Order in which `pet-find-file-from-project' should search for a config file.
+
+Each function should take a file name as its sole argument and
+return an absolute path to the file found in the current project
+and nil otherwise."
+  :group 'pet
+  :type '(repeat (choice (const pet-find-file-from-project-root)
+                         (const pet-locate-dominating-file)
+                         (const pet-find-file-from-project-root-recursively)
+                         function)))
+
 
 
 (defun pet-system-bin-dir ()
@@ -125,14 +139,58 @@ Otherwise, `project-root' is used."
                    (expand-file-name root)))))))
 
 (defun pet-find-file-from-project-root (file)
-  "Find FILE from project root.
+  "Find FILE from the current project's root.
 
-FILE is a regular expression.
+FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found from in the root of the
 project, nil otherwise."
   (when-let ((root (pet-project-root)))
     (car (file-expand-wildcards (concat (file-name-as-directory root) file) t))))
+
+(defun pet-locate-dominating-file (file)
+  "Find FILE by walking up `default-directory' until the current project's root.
+
+FILE is a file name or a wildcard.
+
+Return absolute path to FILE if found, nil otherwise."
+  (when-let* ((root (pet-project-root))
+              (dir (locate-dominating-file
+                    default-directory
+                    (lambda (dir)
+                      (car (file-expand-wildcards
+                            (concat (file-name-as-directory dir) file)
+                            t)))))
+              (dir (expand-file-name dir)))
+    (when (string-prefix-p root dir)
+      (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t)))))
+
+(defun pet-find-file-from-project-root-recursively (file)
+  "Find FILE by recursively searching down from the current project's root.
+
+FILE is a file name or a wildcard.
+
+Return absolute path to FILE if found, nil otherwise."
+  (when-let ((root (pet-project-root))
+             (fileset
+              (cond ((functionp 'projectile-dir-files)
+                     (mapcar (apply-partially 'concat root)
+                             (projectile-dir-files (pet-project-root))))
+                    ((functionp 'project-files)
+                     (project-files (project-current))))))
+    (seq-find (lambda (f)
+                (string-match-p
+                 (wildcard-to-regexp file)
+                 (file-name-nondirectory f)))
+              fileset)))
+
+(defun pet-find-file-from-project (file)
+  "Find FILE from the current project.
+
+Try each function in `pet-find-file-functions' in order and
+return the absolute path found by the first function, nil
+otherwise."
+  (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
@@ -262,7 +320,7 @@ This variable is an alist where the key is the absolute path to a
        (defvar ,cache-var nil ,cache-var-docstring)
        (defun ,(intern accessor-name) ()
          ,accessor-docstring
-         (when-let ((config-file (pet-find-file-from-project-root ,file-name)))
+         (when-let ((config-file (pet-find-file-from-project ,file-name)))
            (if-let ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
              (pet-watch-config-file config-file ',cache-var #',parser)
