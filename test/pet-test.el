@@ -689,29 +689,23 @@
     (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
     (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python"))
 
+  (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
+    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+    (spy-on 'pet-virtualenv-root :and-return-value nil)
+    (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
+                                              (when (equal executable "pyenv")
+                                                "/usr/bin/pyenv")))
+    (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
+    (expect (pet-executable-find "python") :to-equal "/home/user/.pyenv/versions/3.10.5/bin/python")
+    (expect 'process-lines :to-have-been-called-with "pyenv" "which" "python"))
+
   (it "should return the absolute path the executable for a project from `exec-path'"
     (spy-on 'pet-use-pre-commit-p :and-return-value nil)
     (spy-on 'pet-virtualenv-root :and-return-value nil)
     (spy-on 'executable-find :and-call-fake (lambda (executable)
-                                              (pcase executable
-                                                ("black"
-                                                  "/home/user/project/.venv/bin/black")
-                                                ("pyenv"
-                                                  "/usr/bin/pyenv"))))
-    (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/.shims/python"))
-    (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black"))
-
-  (it "should return nil if the executable found is a `pyenv' shim"
-    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-    (spy-on 'pet-virtualenv-root :and-return-value nil)
-    (spy-on 'executable-find :and-call-fake (lambda (executable)
-                                              (pcase executable
-                                                ("python"
-                                                  "/home/user/.pyenv/.shims/python")
-                                                ("pyenv"
-                                                  "/usr/bin/pyenv"))))
-    (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/.shims/python"))
-    (expect (pet-executable-find "python") :to-be nil)))
+                                              (when (equal executable "black")
+                                                "/home/user/project/.venv/bin/black")))
+    (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black")))
 
 (describe "pet-virtualenv-root"
   :var ((project-root "/home/user/project/")

@@ -521,13 +521,11 @@ use it."
         ((when-let* ((venv (pet-virtualenv-root))
                      (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
            (executable-find executable)))
-        ((when-let ((path (executable-find executable)))
-           (condition-case nil
-               (if (and (executable-find "pyenv")
-                        (member path (process-lines "pyenv" "shims")))
-                   nil
-                 path)
-             (error nil))))))
+        ((executable-find "pyenv")
+         (condition-case nil
+             (car (process-lines "pyenv" "which" executable))
+           (error nil)))
+        (t (executable-find executable))))
 
 (defvar pet-project-virtualenv-cache nil)
 
