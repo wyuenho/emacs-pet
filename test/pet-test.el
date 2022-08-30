@@ -664,9 +664,9 @@
 
     (it "should return the absolute path to the executable if hook and hook repo are found and the executable is found in hook repo"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
-      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value "/home/users/.cache/pre-commit/repoblack")
-      (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/users/.cache/pre-commit/repoblack/bin/black")))
-      (expect (pet-executable-find "black") :to-equal "/home/users/.cache/pre-commit/repoblack/bin/black"))
+      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value "/home/user/.cache/pre-commit/repoblack")
+      (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/.cache/pre-commit/repoblack/bin/black")))
+      (expect (pet-executable-find "black") :to-equal "/home/user/.cache/pre-commit/repoblack/bin/black"))
 
     (it "should return nil if the hook is not found in config"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value nil)
@@ -679,15 +679,15 @@
 
     (it "should return nil if the executable is not found in hook repo"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
-      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value "/home/users/.cache/pre-commit/repoblack")
-      (spy-on 'file-exists-p :and-call-fake (lambda (path) (not (equal path "/home/users/.cache/pre-commit/repoblack/bin/black"))))
+      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value "/home/user/.cache/pre-commit/repoblack")
+      (spy-on 'file-exists-p :and-call-fake (lambda (path) (not (equal path "/home/user/.cache/pre-commit/repoblack/bin/black"))))
       (expect (pet-executable-find "black") :to-be nil)))
 
   (it "should return the absolute path the executable for a project if its virtualenv is found"
     (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-    (spy-on 'pet-virtualenv-root :and-return-value "/home/users/project/.venv/")
-    (spy-on 'executable-find :and-return-value "/home/users/project/.venv/bin/python")
-    (expect (pet-executable-find "python") :to-equal "/home/users/project/.venv/bin/python"))
+    (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
+    (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
+    (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python"))
 
   (it "should return the absolute path the executable for a project from `exec-path'"
     (spy-on 'pet-use-pre-commit-p :and-return-value nil)
@@ -695,11 +695,11 @@
     (spy-on 'executable-find :and-call-fake (lambda (executable)
                                               (pcase executable
                                                 ("black"
-                                                  "/home/users/project/.venv/bin/black")
+                                                  "/home/user/project/.venv/bin/black")
                                                 ("pyenv"
                                                   "/usr/bin/pyenv"))))
     (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/.shims/python"))
-    (expect (pet-executable-find "black") :to-equal "/home/users/project/.venv/bin/black"))
+    (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black"))
 
   (it "should return nil if the executable found is a `pyenv' shim"
     (spy-on 'pet-use-pre-commit-p :and-return-value nil)
@@ -793,8 +793,8 @@
     (expect 'call-process :to-have-been-called-with pyenv-path nil t nil "prefix"))
 
   (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
-    (setq pet-project-virtualenv-cache `((,project-root . "/home/users/.venvs/env/")))
-    (expect (pet-virtualenv-root) :to-equal "/home/users/.venvs/env/")))
+    (setq pet-project-virtualenv-cache `((,project-root . "/home/user/.venvs/env/")))
+    (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/")))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
