@@ -206,15 +206,18 @@ otherwise."
   "Parse a configuration file at FILE-PATH into JSON alist."
   (condition-case err
       (let* ((ext (downcase (or (file-name-extension file-path) "")))
-             (file-name (file-name-nondirectory file-path))
-             (auto-mode-alist-matcher (lambda (a b) (string-match-p a b)))
-             (json-p (equal ext "json"))
+             (auto-mode-alist-matcher (lambda (entry)
+                                        (pcase-let ((`(,pat . ,mode) entry))
+                                          (when (string-match-p pat file-path)
+                                            mode))))
+             (mode (seq-some auto-mode-alist-matcher auto-mode-alist))
+             (json-p (or (equal ext "json")
+                         (eq 'json-mode mode)
+                         (eq 'jsonian-mode mode)))
              (toml-p (or (equal ext "toml")
-                         (eq 'conf-toml-mode
-                             (assoc-default file-name auto-mode-alist auto-mode-alist-matcher))))
+                         (eq 'conf-toml-mode mode)))
              (yaml-p (or (string-match-p "ya?ml" ext)
-                         (eq 'yaml-mode
-                             (assoc-default file-name auto-mode-alist auto-mode-alist-matcher)))))
+                         (eq 'yaml-mode mode))))
 
         (let ((output (get-buffer-create " *pet parser output*")))
           (unwind-protect
@@ -346,6 +349,9 @@ This variable is an alist where the key is the absolute path to a
 (pet-def-config-accessor pipfile
                          :file-name "Pipfile"
                          :parser pet-parse-config-file)
+
+;; So `pet-parse-config-file' knows Pipfile can be parsed with `pet-toml-to-json-program'.
+(add-to-list 'auto-mode-alist '("/Pipfile\\'" . conf-toml-mode))
 
 (pet-def-config-accessor environment
                          :file-name "environment*.y*ml"
