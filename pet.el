@@ -177,12 +177,15 @@ Return absolute path to FILE if found, nil otherwise."
                      (mapcar (apply-partially 'concat root)
                              (projectile-dir-files (pet-project-root))))
                     ((functionp 'project-files)
-                     (project-files (project-current))))))
+                     (project-files (project-current)))
+                    (t (directory-files-recursively
+                        (pet-project-root)
+                        (wildcard-to-regexp file))))))
     (seq-find (lambda (f)
                 (string-match-p
                  (wildcard-to-regexp file)
                  (file-name-nondirectory f)))
-              fileset)))
+              (sort fileset 'string<))))
 
 (defun pet-find-file-from-project (file)
   "Find FILE from the current project.

@@ -78,6 +78,121 @@
     (spy-on 'pet-project-root)
     (expect (pet-find-file-from-project-root "foo") :to-be nil)))
 
+(describe "pet-locate-dominating-file"
+  :var ((old-default-directory default-directory)
+         (home (getenv "HOME"))
+         (process-environment (copy-sequence process-environment)))
+
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "~/project/src/")
+    (spy-on 'pet-project-root :and-return-value "/home/user/project/"))
+
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
+
+  (it "should find file from `default-directory'"
+    (spy-on 'locate-dominating-file :and-return-value "~/project/src/package")
+    (spy-on 'file-expand-wildcards :and-call-fake
+      (lambda (pattern &optional full)
+        (cond
+          ((and full (equal pattern "/home/user/project/src/package/.pylintrc"))
+            (list (expand-file-name pattern)))
+          ((and (not full) (equal pattern "~/project/src/package/.pylintrc"))
+            (list pattern)))))
+    (expect (pet-locate-dominating-file ".pylintrc") :to-equal "/home/user/project/src/package/.pylintrc"))
+
+  (it "should find file from parent directory"
+    (spy-on 'locate-dominating-file :and-return-value "~/project/src/")
+    (spy-on 'file-expand-wildcards :and-call-fake
+      (lambda (pattern &optional full)
+        (cond
+          ((and full (equal pattern "/home/user/project/src/.pylintrc"))
+            (list (expand-file-name pattern)))
+          ((and (not full) (equal pattern "~/project/src/.pylintrc"))
+            (list pattern)))))
+    (expect (pet-locate-dominating-file ".pylintrc") :to-equal "/home/user/project/src/.pylintrc"))
+
+  (it "should return `nil' if found file is outside of project root"
+    (spy-on 'file-expand-wildcards :and-call-fake
+      (lambda (dir)
+        (when (equal dir "~/")
+          (list "~/"))))
+    (expect (pet-locate-dominating-file ".pylintrc") :to-be nil)))
+
+(describe "pet-find-file-from-project-root-recursively"
+  :var ((old-default-directory default-directory)
+         (home (getenv "HOME"))
+         (process-environment (copy-sequence process-environment)))
+
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "~/project/src/")
+    (spy-on 'pet-project-root :and-return-value "/home/user/project/"))
+
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
+
+  (describe "when using projectile"
+    (it "should return the absolute path of the first file in a project that matches the file wildcard"
+      (spy-on 'projectile-dir-files :and-return-value '("environment-dev.yaml"))
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
+
+    (it "should return `nil' if the project is empty"
+      (spy-on 'projectile-dir-files :and-return-value nil)
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
+
+    (it "should return `nil' if no file in the project matches the file wildcard"
+      (spy-on 'projectile-dir-files :and-return-value '("setup.py"))
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil)))
+
+  (describe "when using project.el"
+    :var ((projectile-dir-files-def (symbol-function 'projectile-dir-files)))
+
+    (before-each
+      (fset 'projectile-dir-files nil))
+
+    (after-each
+      (fset 'projectile-dir-files projectile-dir-files-def))
+
+    (it "should return the absolute path of the first file in a project that matches the file wildcard"
+      (spy-on 'project-files :and-return-value '("/home/user/project/environment-dev.yaml"))
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
+
+    (it "should return `nil' if the project is empty"
+      (spy-on 'project-files :and-return-value nil)
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
+
+    (it "should return `nil' if no file in the project matches the file wildcard"
+      (spy-on 'project-files :and-return-value '("setup.py"))
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil)))
+
+  (describe "when using `directory-files-recursively'"
+    :var ((projectile-dir-files-def (symbol-function 'projectile-dir-files))
+           (project-files-def (symbol-function 'project-files)))
+
+    (before-each
+      (fset 'projectile-dir-files nil)
+      (fset 'project-files nil))
+
+    (after-each
+      (fset 'projectile-dir-files projectile-dir-files-def)
+      (fset 'project-files project-files-def))
+
+    (it "should return the absolute path of the first file in a project that matches the file wildcard"
+      (spy-on 'directory-files-recursively :and-return-value '("/home/user/project/environment-dev.yaml"))
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
+
+    (it "should return `nil' if the project is empty"
+      (spy-on 'directory-files-recursively :and-return-value nil)
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
+
+    (it "should return `nil' if no file in the project matches the file wildcard"
+      (spy-on 'directory-files-recursively :and-return-value '("setup.py"))
+      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))))
+
 (describe "pet-parse-json"
   (it "should parse a JSON string to an alist"
     (expect (pet-parse-json "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}") :to-equal '((foo . "bar") (baz "buz" 1)))))
