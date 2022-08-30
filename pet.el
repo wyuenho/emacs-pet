@@ -171,21 +171,23 @@ Return absolute path to FILE if found, nil otherwise."
 FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
-  (when-let ((root (pet-project-root))
-             (fileset
-              (cond ((functionp 'projectile-dir-files)
-                     (mapcar (apply-partially 'concat root)
-                             (projectile-dir-files (pet-project-root))))
-                    ((functionp 'project-files)
-                     (project-files (project-current)))
-                    (t (directory-files-recursively
-                        (pet-project-root)
-                        (wildcard-to-regexp file))))))
-    (seq-find (lambda (f)
-                (string-match-p
-                 (wildcard-to-regexp file)
-                 (file-name-nondirectory f)))
-              (sort fileset 'string<))))
+  (condition-case err
+      (when-let ((root (pet-project-root))
+                 (fileset
+                  (cond ((functionp 'projectile-dir-files)
+                         (mapcar (apply-partially 'concat root)
+                                 (projectile-dir-files (pet-project-root))))
+                        ((functionp 'project-files)
+                         (project-files (project-current)))
+                        (t (directory-files-recursively
+                            (pet-project-root)
+                            (wildcard-to-regexp file))))))
+        (seq-find (lambda (f)
+                    (string-match-p
+                     (wildcard-to-regexp file)
+                     (file-name-nondirectory f)))
+                  (sort fileset 'string<)))
+    (error (pet-report-error err))))
 
 (defun pet-find-file-from-project (file)
   "Find FILE from the current project.
