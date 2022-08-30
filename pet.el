@@ -592,7 +592,8 @@ Selects a virtualenv in the follow order:
                                     (file-truename output)
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err))))))))
-          (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path)))))
+          (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path)
+          venv-path))))
 
 
 ;; https://github.com/flycheck/flycheck/pull/1955
