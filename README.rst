@@ -269,6 +269,14 @@ setting the corresponding ``flycheck`` checker executable variable to the
 intended absolute path.
 
 
+``pet`` can't find my virtualenvs, how do I debug it?
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+You can turn on ``pet-debug`` and watch what comes out in the ``*Messages*``
+buffer.  In addition, you can use ``M-x pet-verify-setup`` in your Python
+buffers to find out what was detected.
+
+
 Do I still need any of the 11+ virtualenv Emacs packages?
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
