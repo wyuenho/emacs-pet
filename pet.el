@@ -158,9 +158,9 @@ Return absolute path to FILE if found, nil otherwise."
               (dir (locate-dominating-file
                     default-directory
                     (lambda (dir)
-                      (car (file-expand-wildcards
-                            (concat (file-name-as-directory dir) file)
-                            t)))))
+                      (car
+                       (file-expand-wildcards
+                        (concat (file-name-as-directory dir) file))))))
               (dir (expand-file-name dir)))
     (when (string-prefix-p root dir)
       (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t)))))
