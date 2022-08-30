@@ -116,7 +116,7 @@
 
   (it "should return `nil' if found file is outside of project root"
     (spy-on 'file-expand-wildcards :and-call-fake
-      (lambda (dir)
+      (lambda (dir &optional _)
         (when (equal dir "~/")
           (list "~/"))))
     (expect (pet-locate-dominating-file ".pylintrc") :to-be nil)))
