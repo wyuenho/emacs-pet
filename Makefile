@@ -8,15 +8,18 @@ $(CASK_DIR): Cask
 .PHONY: cask
 cask: $(CASK_DIR)
 
+clean:
+	cask clean-elc
+
 .PHONY: compile
-compile: cask
+compile: cask clean
 	cask build
 
 .PHONY: test
-test: compile
+test:
 	cask exec buttercup --traceback full -L . test
 
 .PHONY: coverage
-coverage:
+coverage: clean
 	mkdir -p coverage
-	cask exec buttercup --traceback full -L . test
+	UNDERCOVER_FORCE=true cask exec buttercup --traceback full -L . test
