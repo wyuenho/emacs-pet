@@ -714,31 +714,39 @@
     (expect (pet-executable-find "python") :to-be nil)))
 
 (describe "pet-virtualenv-root"
-  :var ((project-root "/home/users/project/")
+  :var ((project-root "/home/user/project/")
          (conda-path "/usr/bin/conda")
-         (conda-virtualenv "/home/users/.conda/envs/project/")
+         (conda-virtualenv "/home/user/.conda/envs/project/")
          (poetry-path "/usr/bin/poetry")
-         (poetry-virtualenv "/home/users/.cache/pypoetry/virtualenvs/project/")
+         (poetry-virtualenv "/home/user/.cache/pypoetry/virtualenvs/project/")
          (pipenv-path "/usr/bin/pipenv")
-         (pipenv-virtualenv "/home/users/.local/share/virtualenvs/project/")
-         (venv-virtualenv "/home/users/project/.venv/")
+         (pipenv-virtualenv "/home/user/.local/share/virtualenvs/project/")
+         (venv-virtualenv "/home/user/project/.venv/")
          (pyenv-path "/usr/bin/pyenv")
-         (pyenv-virtualenv "/home/users/.pyenv/versions/project/")
-         (pyenv-virtualenv-truename "/home/users/.pyenv/versions/3.8/envs/project/"))
+         (pyenv-virtualenv "/home/user/.pyenv/versions/project/")
+         (pyenv-virtualenv-truename "/home/user/.pyenv/versions/3.8/envs/project/")
+         (old-default-directory default-directory)
+         (home (getenv "HOME"))
+         (process-environment (copy-sequence process-environment)))
 
   (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "/home/user/project")
     (spy-on 'pet-project-root :and-return-value project-root)
     (setq pet-project-virtualenv-cache nil))
 
   (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory)
     (setq pet-project-virtualenv-cache nil))
 
   (it "should return the absolute path of the virtualenv for a project from `VIRTUAL_ENV'"
-    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "VIRTUAL_ENV") "/home/users/.venvs/project")))
-    (expect (pet-virtualenv-root) :to-equal "/home/users/.venvs/project"))
+    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "VIRTUAL_ENV") "/home/user/.venvs/project")))
+    (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/project"))
 
   (it "should return the absolute path of the virtualenv for a project using `conda'"
     (spy-on 'pet-use-conda-p :and-return-value conda-path)
+    (spy-on 'pet-environment-path :and-return-value "/home/user/project/environment.yml")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert (format "{\"active_prefix\": \"%s\"}" conda-virtualenv)) 0))
     (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv)
@@ -747,6 +755,7 @@
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
     (spy-on 'pet-use-conda-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value poetry-path)
+    (spy-on 'pet-pyproject-path :and-return-value "/home/user/project/pyproject.toml")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert poetry-virtualenv) 0))
     (expect (pet-virtualenv-root) :to-equal poetry-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal poetry-virtualenv)
@@ -756,6 +765,7 @@
     (spy-on 'pet-use-conda-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value nil)
     (spy-on 'pet-use-pipenv-p :and-return-value pipenv-path)
+    (spy-on 'pet-pipfile-path :and-return-value "/home/user/project/Pipfile")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pipenv-virtualenv) 0))
     (expect (pet-virtualenv-root) :to-equal pipenv-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pipenv-virtualenv)
@@ -765,7 +775,7 @@
     (spy-on 'pet-use-conda-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value nil)
     (spy-on 'pet-use-pipenv-p :and-return-value nil)
-    (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/users/project/.venv")))
+    (spy-on 'locate-dominating-file :and-return-value project-root)
     (expect (pet-virtualenv-root) :to-equal venv-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal venv-virtualenv))
 
@@ -773,8 +783,9 @@
     (spy-on 'pet-use-conda-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value nil)
     (spy-on 'pet-use-pipenv-p :and-return-value nil)
-    (spy-on 'file-exists-p :and-return-value nil)
+    (spy-on 'locate-dominating-file :and-return-value nil)
     (spy-on 'pet-use-pyenv-p :and-return-value pyenv-path)
+    (spy-on 'pet-python-version-path :and-return-value "/home/user/project/.python-version")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pyenv-virtualenv) 0))
     (spy-on 'file-truename :and-call-fake (lambda (name) (when (equal name pyenv-virtualenv) pyenv-virtualenv-truename)))
     (expect (pet-virtualenv-root) :to-equal pyenv-virtualenv-truename)

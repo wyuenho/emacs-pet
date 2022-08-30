@@ -304,6 +304,7 @@ will be parsed by PARSER and then cached in a variable called
 Changes to the file will automatically update the cached content
 See `pet-watch-config-file' for details."
   (let* ((accessor-name (concat "pet-" (symbol-name name)))
+         (path-accessor-name (concat accessor-name "-path"))
          (cache-var (intern (concat accessor-name "-cache")))
          (accessor-docstring
           (format "Accessor for `%s' in the current Python project.
@@ -316,6 +317,9 @@ refreshed automatically.  If it is renamed or deleted, the cache
 entry is deleted.
 "
                   name (symbol-name cache-var)))
+         (path-accessor-docstring (format "Path of `%s' in the current Python project.
+
+Return nil if the file is not found." file-name))
          (cache-var-docstring
           (format "Cache for `%s'.
 
@@ -324,9 +328,14 @@ This variable is an alist where the key is the absolute path to a
 " name name)))
     `(progn
        (defvar ,cache-var nil ,cache-var-docstring)
+
+       (defun ,(intern path-accessor-name) ()
+         ,path-accessor-docstring
+         (pet-find-file-from-project ,file-name))
+
        (defun ,(intern accessor-name) ()
          ,accessor-docstring
-         (when-let ((config-file (pet-find-file-from-project ,file-name)))
+         (when-let ((config-file (,(intern path-accessor-name))))
            (if-let ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
              (pet-watch-config-file config-file ',cache-var #',parser)
@@ -533,59 +542,57 @@ Selects a virtualenv in the follow order:
 4. The `.venv' or `venv' directory in the project root if found.
 5. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
-  (when-let ((root (pet-project-root)))
-    (cond ((assoc-default root pet-project-virtualenv-cache))
-          ((when-let ((ev (getenv "VIRTUAL_ENV")))
-             (expand-file-name ev)))
-          ((when-let ((program (pet-use-conda-p)))
-             (condition-case err
-                 (with-temp-buffer
-                   (let ((exit-code (call-process program nil t nil "info" "--envs" "--json"))
-                         (output (string-trim (buffer-string))))
-                     (if (zerop exit-code)
-                         (let ((output (let-alist (pet-parse-json output) .active_prefix)))
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
-                           output)
-                       (user-error (buffer-string)))))
-               (error (pet-report-error err)))))
-          ((when-let ((program (pet-use-poetry-p)))
-             (condition-case err
-                 (with-temp-buffer
-                   (let ((exit-code (call-process program nil t nil "env" "info" "--no-ansi" "--path"))
-                         (output (string-trim (buffer-string))))
-                     (if (zerop exit-code)
-                         (prog1 output
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output))
-                       (user-error (buffer-string)))))
-               (error (pet-report-error err)))))
-          ((when-let ((program (pet-use-pipenv-p)))
-             (condition-case err
-                 (with-temp-buffer
-                   (let ((exit-code (call-process program nil t nil "--venv"))
-                         (output (string-trim (buffer-string))))
-                     (if (zerop exit-code)
-                         (prog1 output
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output))
-                       (user-error (buffer-string)))))
-               (error (pet-report-error err)))))
-          ((cl-loop for d in (mapcar (apply-partially #'concat root) '(".venv" "venv"))
-                    with path = nil
-                    if (file-exists-p d)
-                    do
-                    (setf path (expand-file-name (file-name-as-directory d)))
-                    (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) path)
-                    return path))
-          ((when-let ((program (pet-use-pyenv-p)))
-             (condition-case err
-                 (with-temp-buffer
-                   (let ((exit-code (call-process program nil t nil "prefix"))
-                         (output (string-trim (buffer-string))))
-                     (if (zerop exit-code)
-                         (let ((output (file-truename output)))
-                           (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) output)
-                           output)
-                       (user-error (buffer-string)))))
-               (error (pet-report-error err))))))))
+  (let ((root (pet-project-root)))
+    (or (assoc-default root pet-project-virtualenv-cache)
+        (when-let ((ev (getenv "VIRTUAL_ENV")))
+          (expand-file-name ev))
+        (let ((venv-path
+               (cond ((when-let ((program (pet-use-conda-p))
+                                 (default-directory (file-name-directory (pet-environment-path))))
+                        (condition-case err
+                            (with-temp-buffer
+                              (let ((exit-code (call-process program nil t nil "info" "--envs" "--json"))
+                                    (output (string-trim (buffer-string))))
+                                (if (zerop exit-code)
+                                    (let-alist (pet-parse-json output) .active_prefix)
+                                  (user-error (buffer-string)))))
+                          (error (pet-report-error err)))))
+                     ((when-let ((program (pet-use-poetry-p))
+                                 (default-directory (file-name-directory (pet-pyproject-path))))
+                        (condition-case err
+                            (with-temp-buffer
+                              (let ((exit-code (call-process program nil t nil "env" "info" "--no-ansi" "--path"))
+                                    (output (string-trim (buffer-string))))
+                                (if (zerop exit-code)
+                                    output
+                                  (user-error (buffer-string)))))
+                          (error (pet-report-error err)))))
+                     ((when-let ((program (pet-use-pipenv-p))
+                                 (default-directory (file-name-directory (pet-pipfile-path))))
+                        (condition-case err
+                            (with-temp-buffer
+                              (let ((exit-code (call-process program nil t nil "--venv"))
+                                    (output (string-trim (buffer-string))))
+                                (if (zerop exit-code)
+                                    output
+                                  (user-error (buffer-string)))))
+                          (error (pet-report-error err)))))
+                     ((when-let ((dir (cl-loop for name in '(".venv" "venv")
+                                               with dir = nil
+                                               if (setq dir (locate-dominating-file default-directory name))
+                                               return (file-name-as-directory (concat dir name)))))
+                        (expand-file-name dir)))
+                     ((when-let ((program (pet-use-pyenv-p))
+                                 (default-directory (file-name-directory (pet-python-version-path))))
+                        (condition-case err
+                            (with-temp-buffer
+                              (let ((exit-code (call-process program nil t nil "prefix"))
+                                    (output (string-trim (buffer-string))))
+                                (if (zerop exit-code)
+                                    (file-truename output)
+                                  (user-error (buffer-string)))))
+                          (error (pet-report-error err))))))))
+          (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path)))))
 
 
 ;; https://github.com/flycheck/flycheck/pull/1955
