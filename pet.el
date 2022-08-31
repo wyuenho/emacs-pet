@@ -522,9 +522,9 @@ use it."
                      (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
            (executable-find executable)))
         ((executable-find "pyenv")
-         (condition-case nil
+         (condition-case err
              (car (process-lines "pyenv" "which" executable))
-           (error nil)))
+           (error (pet-report-error err))))
         (t (executable-find executable))))
 
 (defvar pet-project-virtualenv-cache nil)
