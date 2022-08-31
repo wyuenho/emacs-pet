@@ -175,7 +175,7 @@ Return absolute path to FILE if found, nil otherwise."
       (when-let ((root (pet-project-root))
                  (fileset
                   (cond ((functionp 'projectile-dir-files)
-                         (mapcar (apply-partially 'concat root)
+                         (mapcar (apply-partially #'concat root)
                                  (projectile-dir-files (pet-project-root))))
                         ((functionp 'project-files)
                          (project-files (project-current)))
