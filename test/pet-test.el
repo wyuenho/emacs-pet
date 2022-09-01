@@ -12,7 +12,11 @@
 (describe "pet-system-bin-dir"
   (describe "when called on Windows"
     (before-each
-      (setq-local system-type 'windows-nt))
+      (setq-local system-type 'windows-nt)
+      ;; Github actions triggers some weird Emacs 26 code path that calls
+      ;; `file-truename' after setting `system-type' and when `flycheck' is not
+      ;; in the `load-path'. WTF indeed.
+      (spy-on 'w32-long-file-name))
 
     (after-each
       (kill-local-variable 'system-type))
