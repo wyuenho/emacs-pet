@@ -16,8 +16,8 @@ compile: cask clean
 	cask build
 
 .PHONY: test
-test: cask
-	cask exec buttercup --traceback full -L . test
+test: cask clean
+	cask --debug --verbose exec buttercup --traceback full -L . test
 
 .PHONY: coverage
 coverage: cask clean
