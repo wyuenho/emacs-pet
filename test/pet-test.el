@@ -3,8 +3,6 @@
 (unless (< emacs-major-version 27)
   (load-file "test/undercover-init.el"))
 
-(require 'flycheck)
-
 (require 'pet)
 
 ;; (setq pet-debug t)
@@ -849,16 +847,39 @@
 
 (describe "pet-flycheck-checker-get-advice"
   (before-each
+    (defun flycheck-checker-get (checker property))
     (advice-add 'flycheck-checker-get :around #'pet-flycheck-checker-get-advice))
 
   (after-each
-    (advice-remove 'flycheck-checker-get 'pet-flycheck-checker-get-advice))
+    (advice-remove 'flycheck-checker-get 'pet-flycheck-checker-get-advice)
+    (fmakunbound 'flycheck-checker-get)
+    (unintern 'flycheck-checker-get))
 
   (it "should delegate `python-mypy' checker property to `pet-flycheck-checker-props'"
     (expect (flycheck-checker-get 'python-mypy 'command) :to-equal
       (assoc-default 'command (assoc-default 'python-mypy pet-flycheck-checker-props)))))
 
 (describe "pet-flycheck-toggle-local-vars"
+  :var ((old-default-directory default-directory)
+         (home (getenv "HOME"))
+         (orig-getenv (symbol-function 'getenv))
+         (process-environment (copy-sequence process-environment)))
+
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "/home/user/")
+    (defvar flycheck-mode t)
+    (spy-on 'getenv :and-call-fake
+      (lambda (name)
+        (unless (member name '("XDG_CONFIG_HOME"))
+          (funcall orig-getenv name)))))
+
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory)
+    (makunbound 'flycheck-mode)
+    (unintern 'flycheck-mode))
+
   (it "should set `flycheck' Python checkers variables to buffer-local when `flycheck-mode' is t"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
     (spy-on 'pet-executable-find :and-call-fake (lambda (name)
@@ -869,15 +890,15 @@
                                                     ("python" "/home/user/project/.venv/bin/python")
                                                     ("pyright" "/home/user/project/.venv/bin/pyright"))))
     (spy-on 'derived-mode-p :and-return-value t)
-    (let ((flycheck-mode t))
-      (pet-flycheck-toggle-local-vars)
-      (expect flycheck-pylintrc :to-equal "/etc/pylintrc")
-      (expect flycheck-python-flake8-executable :to-equal "/home/user/project/.venv/bin/flake8")
-      (expect flycheck-python-pylint-executable :to-equal "/home/user/project/.venv/bin/pylint")
-      (expect flycheck-python-mypy-executable :to-equal "/home/user/project/.venv/bin/mypy")
-      (expect flycheck-python-mypy-python-executable :to-equal "/home/user/project/.venv/bin/python")
-      (expect flycheck-python-pyright-executable :to-equal "/home/user/project/.venv/bin/pyright")
-      (expect flycheck-python-pycompile-executable :to-equal python-shell-interpreter)))
+    (pet-flycheck-toggle-local-vars)
+    (expect flycheck-python-mypy-config :to-equal `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config"))
+    (expect flycheck-pylintrc :to-equal "/etc/pylintrc")
+    (expect flycheck-python-flake8-executable :to-equal "/home/user/project/.venv/bin/flake8")
+    (expect flycheck-python-pylint-executable :to-equal "/home/user/project/.venv/bin/pylint")
+    (expect flycheck-python-mypy-executable :to-equal "/home/user/project/.venv/bin/mypy")
+    (expect flycheck-python-mypy-python-executable :to-equal "/home/user/project/.venv/bin/python")
+    (expect flycheck-python-pyright-executable :to-equal "/home/user/project/.venv/bin/pyright")
+    (expect flycheck-python-pycompile-executable :to-equal python-shell-interpreter))
 
   (it "should reset `flycheck' Python checkers variables to default when `flycheck-mode' is nil"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
@@ -889,8 +910,8 @@
                                                     ("python" "/home/user/project/.venv/bin/python")
                                                     ("pyright" "/home/user/project/.venv/bin/pyright"))))
     (spy-on 'derived-mode-p :and-return-value t)
-    (let ((flycheck-mode t))
-      (pet-flycheck-toggle-local-vars))
+    (pet-flycheck-toggle-local-vars)
+    (setq-local flycheck-mode nil)
 
     (pet-flycheck-toggle-local-vars)
     (expect (local-variable-p 'flycheck-pylintrc) :to-be nil)
@@ -899,7 +920,9 @@
     (expect (local-variable-p 'flycheck-python-mypy-executable) :to-be nil)
     (expect (local-variable-p 'flycheck-python-mypy-python-executable) :to-be nil)
     (expect (local-variable-p 'flycheck-python-pyright-executable) :to-be nil)
-    (expect (local-variable-p 'flycheck-python-pycompile-executable) :to-be nil)))
+    (expect (local-variable-p 'flycheck-python-pycompile-executable) :to-be nil)
+
+    (kill-local-variable 'flycheck-mode)))
 
 (describe "pet-flycheck-setup"
   :var ((old-default-directory default-directory)
@@ -908,21 +931,14 @@
 
   (before-each
     (setenv "HOME" "/home/user/")
-    (setq-local default-directory "/home/user/"))
+    (setq-local default-directory "/home/user/")
+    (defun flycheck-checker-get (checker property)))
 
   (after-each
     (setenv "HOME" home)
-    (setq-local default-directory old-default-directory))
-
-  (it "should set up `python-flake8' checker config file names"
-    (pet-flycheck-setup)
-    (expect flycheck-flake8rc :to-have-same-items-as '(".flake8" "setup.cfg" "tox.ini")))
-
-  (it "should set up `python-mypy' checker config and variables"
-    (spy-on 'getenv)
-    (pet-flycheck-setup)
-    (expect flycheck-python-mypy-config :to-have-same-items-as `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config"))
-    (expect (custom-variable-p 'flycheck-python-mypy-python-executable) :to-be-truthy))
+    (setq-local default-directory old-default-directory)
+    (fmakunbound 'flycheck-checker-get)
+    (unintern 'flycheck-checker-get))
 
   (it "should advice `flycheck-checker-get' with `pet-flycheck-checker-get-advice'"
     (pet-flycheck-setup)
@@ -935,7 +951,12 @@
 (describe "pet-flycheck-teardown"
   (before-each
     (pet-flycheck-setup)
-    (pet-flycheck-teardown))
+    (pet-flycheck-teardown)
+    (defun flycheck-checker-get (checker property)))
+
+  (after-each
+    (fmakunbound 'flycheck-checker-get)
+    (unintern 'flycheck-checker-get))
 
   (it "should remove advice `pet-flycheck-checker-get-advice' from `flycheck-checker-get'"
     (expect (advice-member-p 'pet-flycheck-checker-get-advice 'flycheck-checker-get) :not :to-be-truthy))
@@ -1046,39 +1067,59 @@
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
 
 (describe "pet-verify-setup"
+  :var ((old-default-directory default-directory)
+         (home (getenv "HOME"))
+         (orig-getenv (symbol-function 'getenv))
+         (process-environment (copy-sequence process-environment)))
+
+  (before-each
+    (setenv "HOME" "/home/user/")
+    (setq-local default-directory "~/project/"))
+
+  (after-each
+    (setenv "HOME" home)
+    (setq-local default-directory old-default-directory))
+
   (it "should error when not in python mode"
     (expect (pet-verify-setup) :to-throw 'user-error))
 
   (it "should display unbound values"
     (with-temp-buffer
       (python-mode)
-      (pet-verify-setup))
-    (expect
-      (with-current-buffer "*pet info*"
-        (re-search-forward "lsp-jedi-executable-command:\s+\\(.+\\)")
-        (match-string 1))
-      :to-equal "unbound"))
+      (pet-verify-setup)
+      (expect
+        (with-current-buffer "*pet info*"
+          (re-search-forward "lsp-jedi-executable-command:\s+\\(.+\\)")
+          (match-string 1))
+        :to-equal "unbound")))
 
   (it "should display bound values"
     (with-temp-buffer
       (python-mode)
-      (pet-verify-setup))
-    (expect
-      (with-current-buffer "*pet info*"
-        (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
-        (match-string 1))
-      :to-equal (if (< emacs-major-version 28) "python" "python3")))
+      (pet-verify-setup)
+      (expect
+        (with-current-buffer "*pet info*"
+          (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
+          (match-string 1))
+        :to-equal (if (< emacs-major-version 28) "python" "python3"))))
 
   (it "should display list as comma-separated values"
+    (spy-on 'pet-flycheck-python-pylint-find-pylintrc)
+    (spy-on 'pet-executable-find)
+    (spy-on 'getenv :and-call-fake (lambda (name)
+                                     (unless (equal name "XDG_CONFIG_HOME")
+                                       (funcall orig-getenv name))))
     (with-temp-buffer
       (python-mode)
-      (pet-verify-setup))
-    (expect
-      (split-string (with-current-buffer "*pet info*"
-                      (re-search-forward "flycheck-flake8rc:\s+\\(.+\\)")
-                      (match-string 1))
-        "," t split-string-default-separators)
-      :to-have-same-items-as '(".flake8" "setup.cfg" "tox.ini"))))
+      (setq-local flycheck-mode t)
+      (pet-flycheck-toggle-local-vars)
+      (pet-verify-setup)
+      (expect
+        (split-string (with-current-buffer "*pet info*"
+                        (re-search-forward "flycheck-python-mypy-config:\s+\\(.+\\)")
+                        (match-string 1))
+          "," t split-string-default-separators)
+        :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config")))))
 
 (describe "pet-mode"
   (it "should set up all buffer local variables for supported packages if `pet-mode' is t"

@@ -596,6 +596,20 @@ Selects a virtualenv in the follow order:
           venv-path))))
 
 
+
+(defvar flycheck-mode)
+(defvar flycheck-python-mypy-config)
+(defvar flycheck-pylintrc)
+(defvar flycheck-python-flake8-executable)
+(defvar flycheck-python-pylint-executable)
+(defvar flycheck-python-mypy-executable)
+(defvar flycheck-python-mypy-python-executable)
+(defvar flycheck-python-pyright-executable)
+(defvar flycheck-python-pycompile-executable)
+(declare-function flycheck-string-or-nil-p "ext:flycheck")
+(declare-function flycheck-register-option-var "ext:flycheck")
+(declare-function flycheck-checker-get "ext:flycheck")
+
 ;; https://github.com/flycheck/flycheck/pull/1955
 (defvar flycheck-python-mypy-python-executable)
 
@@ -663,9 +677,16 @@ checker symbol, and PROPERTY is the checker property.  See
 When `flycheck-mode' is non-nil, set up all supported Python
 checker executable variables buffer-locally.  Reset them to
 default otherwise."
-  (if flycheck-mode
+  (if (bound-and-true-p flycheck-mode)
       (progn
         (when (derived-mode-p 'python-mode)
+          (setq-local flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
+                                                    ,(expand-file-name
+                                                      (concat
+                                                       (or (when-let ((xdg-config-home (getenv "XDG_CONFIG_HOME")))
+                                                             (file-name-as-directory xdg-config-home))
+                                                           "~/.config/")
+                                                       "mypy/config"))))
           (setq-local flycheck-pylintrc (pet-flycheck-python-pylint-find-pylintrc))
           (setq-local flycheck-python-flake8-executable (pet-executable-find "flake8"))
           (setq-local flycheck-python-pylint-executable (pet-executable-find "pylint"))
@@ -673,6 +694,7 @@ default otherwise."
           (setq-local flycheck-python-mypy-python-executable (pet-executable-find "python"))
           (setq-local flycheck-python-pyright-executable (pet-executable-find "pyright"))
           (setq-local flycheck-python-pycompile-executable python-shell-interpreter)))
+    (kill-local-variable 'flycheck-python-mypy-config)
     (kill-local-variable 'flycheck-pylintrc)
     (kill-local-variable 'flycheck-python-flake8-executable)
     (kill-local-variable 'flycheck-python-pylint-executable)
@@ -685,18 +707,14 @@ default otherwise."
 (defun pet-flycheck-setup ()
   "Setup all `flycheck' Python checker configuration."
 
-  ;; https://github.com/flycheck/flycheck/pull/1956
-  (setq flycheck-flake8rc `(".flake8" "setup.cfg" "tox.ini"))
-
-  (setq flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
-                                      ,(concat (expand-file-name
-                                                (or (when-let ((xdg-config-home (getenv "XDG_CONFIG_HOME")))
-                                                      (file-name-as-directory xdg-config-home))
-                                                    "~/.config/"))
-                                               "mypy/config")))
-
   ;; https://github.com/flycheck/flycheck/pull/1955
-  (when (functionp 'flycheck-register-option-var)
+  (when (and (macrop 'flycheck-def-option-var)
+             (functionp 'flycheck-string-or-nil-p)
+             (functionp 'flycheck-register-option-var)
+             (not (boundp 'flycheck-python-mypy-python-executable))
+             (functionp 'flycheck-checker-get)
+             (not (memq 'flycheck-python-mypy-python-executable
+                        (flycheck-checker-get 'python-mypy 'option-vars))))
     (flycheck-def-option-var flycheck-python-mypy-python-executable nil python-mypy
       "Python executable to find the installed PEP 561 packages."
       :type '(choice (const :tag "Same as mypy's" nil)
@@ -796,7 +814,6 @@ has assigned to."
                                'unbound)))
                      '(python-shell-interpreter
                        python-shell-virtualenv-root
-                       flycheck-flake8rc
                        flycheck-python-flake8-executable
                        flycheck-pylintrc
                        flycheck-python-pylint-executable
