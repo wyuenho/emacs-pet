@@ -742,6 +742,8 @@ default otherwise."
 
 
 (defvar lsp-jedi-executable-command)
+(defvar lsp-pyls-plugins-jedi-environment)
+(defvar lsp-pylsp-plugins-jedi-environment)
 (defvar lsp-pyright-python-executable-cmd)
 (defvar lsp-pyright-venv-path)
 (defvar dap-python-executable)
@@ -763,6 +765,8 @@ buffer local values."
 
   (setq-local lsp-jedi-executable-command
               (pet-executable-find "jedi-language-server"))
+  (setq-local lsp-pyls-plugins-jedi-environment python-shell-virtualenv-root)
+  (setq-local lsp-pylsp-plugins-jedi-environment python-shell-virtualenv-root)
   (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
   (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
@@ -781,6 +785,8 @@ buffer local values."
   (pet-flycheck-teardown)
 
   (kill-local-variable 'lsp-jedi-executable-command)
+  (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
+  (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
   (kill-local-variable 'lsp-pyright-venv-path)
   (kill-local-variable 'lsp-pyright-python-executable-cmd)
   (kill-local-variable 'dap-python-executable)
@@ -822,6 +828,8 @@ has assigned to."
                        flycheck-python-pyright-executable
                        flycheck-python-pycompile-executable
                        lsp-jedi-executable-command
+                       lsp-pyls-plugins-jedi-environment
+                       lsp-pylsp-plugins-jedi-environment
                        lsp-pyright-python-executable-cmd
                        lsp-pyright-venv-path
                        dap-python-executable
