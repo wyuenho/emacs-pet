@@ -2,7 +2,7 @@
 
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
-;; Version: 1.0.3
+;; Version: 1.1.0
 ;; Package-Requires: ((emacs "26.1") (f "0.6.0"))
 ;; Homepage: https://github.com/wyuenho/emacs-pet/
 ;; Keywords: tools
