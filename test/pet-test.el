@@ -743,7 +743,8 @@
   (it "should return the absolute path of the virtualenv for a project using `conda'"
     (spy-on 'pet-use-conda-p :and-return-value conda-path)
     (spy-on 'pet-environment-path :and-return-value "/home/user/project/environment.yml")
-    (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert (format "{\"active_prefix\": \"%s\"}" conda-virtualenv)) 0))
+    (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert (format "{\"envs\": [\"%s\"]}" conda-virtualenv)) 0))
+    (spy-on 'pet-environment :and-return-value `((prefix . ,conda-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv)
     (expect 'call-process :to-have-been-called-with conda-path nil t nil "info" "--envs" "--json"))

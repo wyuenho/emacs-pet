@@ -554,7 +554,10 @@ Selects a virtualenv in the follow order:
                               (let ((exit-code (call-process program nil t nil "info" "--envs" "--json"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
-                                    (let-alist (pet-parse-json output) .active_prefix)
+                                    (let* ((prefix (alist-get 'prefix (pet-environment)))
+                                           (env (car (member prefix (let-alist (pet-parse-json output) .envs)))))
+                                      (or env
+                                          (user-error "Please create the environment with `$ %s create -f %s' first." program (pet-environment-path))))
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
                      ((when-let ((program (pet-use-poetry-p))
