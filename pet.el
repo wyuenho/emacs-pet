@@ -154,16 +154,14 @@ project, nil otherwise."
 FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
-  (when-let* ((root (pet-project-root))
-              (dir (locate-dominating-file
+  (when-let* ((dir (locate-dominating-file
                     default-directory
                     (lambda (dir)
                       (car
                        (file-expand-wildcards
                         (concat (file-name-as-directory dir) file))))))
               (dir (expand-file-name dir)))
-    (when (string-prefix-p root dir)
-      (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t)))))
+    (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t))))
 
 (defun pet-find-file-from-project-root-recursively (file)
   "Find FILE by recursively searching down from the current project's root.
