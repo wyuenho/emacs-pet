@@ -72,7 +72,7 @@ program by adjusting `pet-toml-to-json-program-arguments'"
                  (const "tomljson")
                  (string :tag "Other")))
 
-(defcustom pet-toml-to-json-program-arguments '("select" "-f" "-" "-p" "toml" "-w" "json")
+(defcustom pet-toml-to-json-program-arguments '("-f" "-" "-r" "toml" "-w" "json")
   "Arguments for `pet-toml-to-json-program'."
   :group 'pet
   :type '(repeat string))
