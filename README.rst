@@ -123,7 +123,7 @@ Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 .. code-block:: elisp
 
    (use-package pet
-     :hook (python-mode))
+     :hook (python-mode . pet-mode))
 
 
 This will setup the buffer local variables for all of the `Supported Emacs
