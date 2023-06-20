@@ -744,6 +744,35 @@ default otherwise."
 
 
 
+;;;###autoload
+(defun pet-eglot-setup ()
+  "Setup all `eglot' Python language server configuration."
+  (with-eval-after-load 'eglot
+    (declare-function eglot-alternatives 'eglot)
+    (setq-local eglot-server-programs
+                (cons
+                 `((python-mode python-ts-mode)
+                   . ,(eglot-alternatives
+                       (mapcar
+                        (lambda (server)
+                          (if (string-suffix-p "pyright-langserver" server)
+                              `(,server "--stdio")
+                            server))
+                        (mapcar (lambda (server)
+                                  (pet-executable-find server))
+                                '("pylsp"
+                                  "pyls"
+                                  "pyright"
+                                  "jedi-language-server")))))
+                 eglot-server-programs))))
+
+;;;###autoload
+(defun pet-eglot-teardown ()
+  "Reset all `eglot' Python language server configuration to default."
+  (kill-local-variable 'eglot-server-programs))
+
+
+
 (defvar lsp-jedi-executable-command)
 (defvar lsp-pyls-plugins-jedi-environment)
 (defvar lsp-pylsp-plugins-jedi-environment)
@@ -765,6 +794,7 @@ buffer local values."
   (setq-local python-shell-virtualenv-root (pet-virtualenv-root))
 
   (pet-flycheck-setup)
+  (pet-eglot-setup)
 
   (setq-local lsp-jedi-executable-command
               (pet-executable-find "jedi-language-server"))
@@ -786,6 +816,7 @@ buffer local values."
   (kill-local-variable 'python-shell-virtualenv-root)
 
   (pet-flycheck-teardown)
+  (pet-eglot-teardown)
 
   (kill-local-variable 'lsp-jedi-executable-command)
   (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
@@ -848,6 +879,19 @@ has assigned to."
               (insert (format "%s" value))
               (insert "\n"))
             kvp)
+      (insert (propertize (format "%-40s" (concat (symbol-name 'eglot-server-programs) " (Python part only):"))
+                          'face 'font-lock-variable-name-face) "\n")
+      (if (null (featurep 'eglot))
+          (insert "(not available because eglot is not loaded now)\n")
+        (defvar eglot-server-programs)
+        (let* ((matcher (lambda (modes mode)
+                          (apply #'provided-mode-derived-p
+                                 mode
+                                 (if (consp modes) modes (list modes)))))
+               (matched (alist-get 'python-mode eglot-server-programs
+                                   nil nil matcher))
+               (langservers (funcall matched)))
+          (mapc (lambda (langserver) (insert (abbreviate-file-name (format "%s" langserver)) "\n")) langservers)))
       (insert (propertize (format "%-40s" (concat (symbol-name 'exec-path) ":")) 'face 'font-lock-variable-name-face) "\n")
       (mapc (lambda (dir) (insert (abbreviate-file-name (format "%s" dir)) "\n")) exec-path)
       (special-mode))))
