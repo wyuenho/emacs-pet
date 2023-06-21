@@ -90,7 +90,7 @@ program by adjusting `pet-yaml-to-json-program-arguments'"
                  (const "yq")
                  (string :tag "Other")))
 
-(defcustom pet-yaml-to-json-program-arguments '("select" "-f" "-" "-p" "yaml" "-w" "json")
+(defcustom pet-yaml-to-json-program-arguments '("-f" "-" "-r" "yaml" "-w" "json")
   "Arguments for `pet-yaml-to-json-program'."
   :group 'pet
   :type '(repeat string))
