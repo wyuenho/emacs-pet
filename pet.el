@@ -109,6 +109,11 @@ and nil otherwise."
                          (const pet-find-file-from-project-root-recursively)
                          function)))
 
+(defcustom pet-venv-dir-names '(".venv" "venv" "env")
+  "Directory names to search for when looking for a virtualenv at the project root."
+  :group 'pet
+  :type '(repeat string))
+
 
 
 (defun pet-system-bin-dir ()
@@ -539,7 +544,7 @@ Selects a virtualenv in the follow order:
 2. If the current project is using `poetry', return the absolute path to the
    virtualenv directory `poetry' created.
 3. Ditto for `pipenv'.
-4. The `.venv' or `venv' directory in the project root if found.
+4. A directory in `pet-venv-dir-names' in the project root if found.
 5. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
@@ -580,7 +585,7 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((dir (cl-loop for name in '(".venv" "venv")
+                     ((when-let ((dir (cl-loop for name in pet-venv-dir-names
                                                with dir = nil
                                                if (setq dir (locate-dominating-file default-directory name))
                                                return (file-name-as-directory (concat dir name)))))
