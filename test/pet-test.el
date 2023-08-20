@@ -850,20 +850,6 @@
     (spy-on 'file-exists-p :and-return-value nil)
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/etc/pylintrc")))
 
-(describe "pet-flycheck-checker-get-advice"
-  (before-each
-    (defun flycheck-checker-get (checker property))
-    (advice-add 'flycheck-checker-get :around #'pet-flycheck-checker-get-advice))
-
-  (after-each
-    (advice-remove 'flycheck-checker-get 'pet-flycheck-checker-get-advice)
-    (fmakunbound 'flycheck-checker-get)
-    (unintern 'flycheck-checker-get))
-
-  (it "should delegate `python-mypy' checker property to `pet-flycheck-checker-props'"
-    (expect (flycheck-checker-get 'python-mypy 'command) :to-equal
-      (assoc-default 'command (assoc-default 'python-mypy pet-flycheck-checker-props)))))
-
 (describe "pet-flycheck-toggle-local-vars"
   :var ((old-default-directory default-directory)
          (home (getenv "HOME"))
@@ -945,10 +931,6 @@
     (fmakunbound 'flycheck-checker-get)
     (unintern 'flycheck-checker-get))
 
-  (it "should advice `flycheck-checker-get' with `pet-flycheck-checker-get-advice'"
-    (pet-flycheck-setup)
-    (expect (advice-member-p 'pet-flycheck-checker-get-advice 'flycheck-checker-get) :to-be-truthy))
-
   (it "should add `pet-flycheck-toggle-local-vars' to `flycheck-mode-hook'"
     (pet-flycheck-setup)
     (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :to-be-truthy)))
@@ -962,9 +944,6 @@
   (after-each
     (fmakunbound 'flycheck-checker-get)
     (unintern 'flycheck-checker-get))
-
-  (it "should remove advice `pet-flycheck-checker-get-advice' from `flycheck-checker-get'"
-    (expect (advice-member-p 'pet-flycheck-checker-get-advice 'flycheck-checker-get) :not :to-be-truthy))
 
   (it "should remove `pet-flycheck-toggle-local-vars' from `flycheck-mode-hook'"
     (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :not :to-be-truthy))

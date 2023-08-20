@@ -617,9 +617,6 @@ Selects a virtualenv in the follow order:
 (declare-function flycheck-register-option-var "ext:flycheck")
 (declare-function flycheck-checker-get "ext:flycheck")
 
-;; https://github.com/flycheck/flycheck/pull/1955
-(defvar flycheck-python-mypy-python-executable)
-
 (defun pet-flycheck-python-pylint-find-pylintrc ()
   "Polyfill `flycheck-pylintrc'.
 
@@ -654,29 +651,6 @@ algorithm described at
             ((let ((home-dir-pylintrc (expand-file-name "~/.pylintrc")))
                (and (file-exists-p home-dir-pylintrc) home-dir-pylintrc)))
             (t "/etc/pylintrc")))))
-
-;; https://github.com/flycheck/flycheck/pull/1955
-(defvar pet-flycheck-checker-props
-  '((python-mypy . ((command . ("mypy"
-                                "--show-column-numbers"
-                                (config-file "--config-file" flycheck-python-mypy-config)
-                                (option "--python-executable" flycheck-python-mypy-python-executable)
-                                (option "--cache-dir" flycheck-python-mypy-cache-dir)
-                                source-original)))))
-  "`flycheck' Python checker property overrides.")
-
-(defun pet-flycheck-checker-get-advice (fn checker property)
-  "Advice `flycheck-checker-get'.
-
-This function installs an advice to `flycheck-checker-get' to
-redirect supported `flycheck' Python checker property lookups to
-those defined in `pet-flycheck-check-props'.
-
-FN is `flycheck-check-get', CHECKER is a `flycheck' Python
-checker symbol, and PROPERTY is the checker property.  See
-`flycheck-define-generic-checker' for details."
-  (or (alist-get property (alist-get checker pet-flycheck-checker-props))
-      (funcall fn checker property)))
 
 (defun pet-flycheck-toggle-local-vars ()
   "Toggle buffer local variables for `flycheck' Python checkers.
@@ -714,31 +688,12 @@ default otherwise."
 (defun pet-flycheck-setup ()
   "Setup all `flycheck' Python checker configuration."
 
-  ;; https://github.com/flycheck/flycheck/pull/1955
-  (when (and (macrop 'flycheck-def-option-var)
-             (functionp 'flycheck-string-or-nil-p)
-             (functionp 'flycheck-register-option-var)
-             (not (boundp 'flycheck-python-mypy-python-executable))
-             (functionp 'flycheck-checker-get)
-             (not (memq 'flycheck-python-mypy-python-executable
-                        (flycheck-checker-get 'python-mypy 'option-vars))))
-    (flycheck-def-option-var flycheck-python-mypy-python-executable nil python-mypy
-      "Python executable to find the installed PEP 561 packages."
-      :type '(choice (const :tag "Same as mypy's" nil)
-                     (string :tag "Path"))
-      :safe 'flycheck-string-or-nil-p))
-
-  (when (functionp 'flycheck-checker-get)
-    (advice-add 'flycheck-checker-get :around #'pet-flycheck-checker-get-advice))
-
   (add-hook 'flycheck-mode-hook #'pet-flycheck-toggle-local-vars))
 
 ;;;###autoload
 (defun pet-flycheck-teardown ()
   "Reset all `flycheck' Python checker configuration to default."
 
-  (when (functionp 'flycheck-checker-get)
-    (advice-remove 'flycheck-checker-get #'pet-flycheck-checker-get-advice))
   (remove-hook 'flycheck-mode-hook #'pet-flycheck-toggle-local-vars)
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
