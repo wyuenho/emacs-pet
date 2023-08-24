@@ -380,7 +380,9 @@ Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
        (or (executable-find "pre-commit")
            (and (when-let* ((venv (pet-virtualenv-root))
-                            (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
+                            (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
+                            (process-environment (copy-sequence process-environment)))
+                  (setenv "PATH" (string-join exec-path path-separator))
                   (executable-find "pre-commit"))))))
 
 (defun pet-use-conda-p ()
@@ -527,7 +529,9 @@ use it."
                  (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
            (error (pet-report-error err))))
         ((when-let* ((venv (pet-virtualenv-root))
-                     (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir)))))
+                     (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
+                     (process-environment (copy-sequence process-environment)))
+           (setenv "PATH" (string-join exec-path path-separator))
            (executable-find executable)))
         ((when (executable-find "pyenv")
            (condition-case err
