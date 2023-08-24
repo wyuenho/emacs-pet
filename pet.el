@@ -476,22 +476,25 @@ must both be installed into the current project first."
                 (let-alist (pet-pre-commit-config) .repos)))
 
               (repo-url
-               (let ((additional-deps
-                      (let-alist repo-config
-                        (let-alist (seq-find (lambda (hook) (let-alist hook (equal .id hook-id))) .hooks)
-                          .additional_dependencies))))
-                 (concat (let-alist repo-config .repo)
-                         (if additional-deps
-                             (concat ":" (string-join (sort (copy-sequence additional-deps) 'string<) ","))))))
+               (let-alist repo-config .repo))
 
               (repo-dir
-               (let-alist (seq-find
-                           (lambda (row)
-                             (let-alist row
-                               (and (equal .repo repo-url)
-                                    (equal .ref (let-alist repo-config .rev)))))
-                           db)
-                 .path)))
+               (let* ((additional-deps
+                       (let-alist repo-config
+                         (let-alist (seq-find (lambda (hook) (let-alist hook (equal .id hook-id))) .hooks)
+                           .additional_dependencies)))
+                      (unsorted-repo-url (concat repo-url ":" (string-join additional-deps ",")))
+                      (sorted-repo-url (concat repo-url ":" (string-join (sort (copy-sequence additional-deps) 'string<) ","))))
+                 (let-alist (seq-find
+                             (lambda (row)
+                               (let-alist row
+                                 (and (if additional-deps
+                                          (or (equal .repo unsorted-repo-url)
+                                              (equal .repo sorted-repo-url))
+                                        (equal .repo repo-url))
+                                      (equal .ref (let-alist repo-config .rev)))))
+                             db)
+                   .path))))
 
     (car
      (last
