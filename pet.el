@@ -388,7 +388,7 @@ Returns the path to the `pre-commit' executable."
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
-Returns the path to the `conda' variant found executable."
+Returns the path to the `conda' executable variant found."
   (and (pet-environment)
        (or (executable-find "conda")
            (executable-find "mamba")
