@@ -702,10 +702,12 @@ default otherwise."
   "Reset all `flycheck' Python checker configuration to default."
 
   (remove-hook 'flycheck-mode-hook #'pet-flycheck-toggle-local-vars)
+  (kill-local-variable 'flycheck-python-mypy-config)
   (kill-local-variable 'flycheck-pylintrc)
   (kill-local-variable 'flycheck-python-flake8-executable)
   (kill-local-variable 'flycheck-python-pylint-executable)
   (kill-local-variable 'flycheck-python-mypy-executable)
+  (kill-local-variable 'flycheck-python-mypy-python-executable)
   (kill-local-variable 'flycheck-python-pyright-executable)
   (kill-local-variable 'flycheck-python-pycompile-executable))
 
