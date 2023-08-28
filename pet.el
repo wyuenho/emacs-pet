@@ -511,7 +511,8 @@ must both be installed into the current project first."
   "Find the correct EXECUTABLE for the current Python project.
 
 Search for EXECUTABLE first in the `pre-commit' virtualenv, then
-`poetry', then finally from the variable `exec-path'.
+whatever environment if found by `pet-virtualenv-root', then
+`pyenv', then finally from the variable `exec-path'.
 
 The executable will only be searched in an environment created by
 a Python virtualenv management tool if the project is setup to
