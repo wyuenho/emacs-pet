@@ -621,9 +621,6 @@ Selects a virtualenv in the follow order:
 (defvar flycheck-python-mypy-executable)
 (defvar flycheck-python-pyright-executable)
 (defvar flycheck-python-pycompile-executable)
-(declare-function flycheck-string-or-nil-p "ext:flycheck")
-(declare-function flycheck-register-option-var "ext:flycheck")
-(declare-function flycheck-checker-get "ext:flycheck")
 
 (defun pet-flycheck-python-pylint-find-pylintrc ()
   "Polyfill `flycheck-pylintrc'.
