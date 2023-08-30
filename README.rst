@@ -115,15 +115,28 @@ Generally, the following snippet is all you'll need:
 .. code-block:: elisp
 
    (require 'pet)
-   (add-hook 'python-mode-hook 'pet-minor-mode)
 
+   ;; Emacs < 26
+   ;; You have to make sure this function is added to the hook last so it's
+   ;; called first
+   (add-hook 'python-mode-hook 'pet-mode)
+
+   ;; Emacs 27+
+   ;; The -10 tells `add-hook' to makes sure the function is called as early as
+   ;; possible whenever it is added to the hook variable
+   (add-hook 'python-mode-hook 'pet-mode -10)
+
+   ;; Emacs 29+
+   ;; This will turn on `pet-mode' on `python-mode' and `python-ts-mode'
+   (add-hook 'python-base-mode-hook 'pet-mode -10)
 
 Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
 .. code-block:: elisp
 
    (use-package pet
-     :hook (python-mode . pet-mode))
+     :config
+     (add-hook 'python-base-mode-hook 'pet-mode -10))
 
 
 This will setup the buffer local variables for all of the `Supported Emacs
