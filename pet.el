@@ -431,12 +431,30 @@ project has hook ID set up."
 (defun pet-parse-pre-commit-db (db-file)
   "Parse `pre-commit' database.
 
-Parse the pre-commit SQLite database located at DB-FILE to JSON."
-  (condition-case err
-      (with-temp-buffer
-        (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
-        (pet-parse-json (buffer-string)))
-    (error (pet-report-error err))))
+Read the pre-commit SQLite database located at DB-FILE into an alist."
+  (if (or (< emacs-major-version 29)
+          (and (functionp 'sqlite-available-p)
+               (not (sqlite-available-p))))
+
+      (condition-case err
+          (with-temp-buffer
+            (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
+            (pet-parse-json (buffer-string)))
+        (error (pet-report-error err)))
+
+    (let ((db (sqlite-open db-file)))
+      (unwind-protect
+          (let* ((result-set (sqlite-select db "select * from repos" nil 'set))
+                 result
+                 row)
+            (while (setq row (sqlite-next result-set))
+              (setq result (cons (seq-mapn (lambda (a b) (cons (intern a) b))
+                                           (sqlite-columns result-set)
+                                           row)
+                                 result)))
+            (sqlite-finalize result-set)
+            result)
+        (sqlite-close db)))))
 
 (defvar pet-pre-commit-database-cache nil)
 

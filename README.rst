@@ -82,7 +82,8 @@ System Requirements
 -------------------
 
 Currently ``pet`` requires a program to convert TOML to JSON, a program to
-convert YAML to JSON, and ``sqlite3`` to be installed on your system.
+convert YAML to JSON, and if you are using Emacs < 29, the ``sqlite3`` command
+to be installed on your system.
 
 By default, both the TOML to JSON and YAML to JSON converters are configured to
 use `dasel <https://github.com/TomWright/dasel>`_.  If you are on Linux, it may
@@ -92,8 +93,7 @@ be more convenient to use `tomljson
 available from the system package management system.
 
 When a suitable Emacs Lisp YAML and TOML parser becomes available, ``dasel``
-will be made optional. Likewise, when Emacs 29 is released, the ``sqlite3``
-system requirement will be made optional.
+will be made optional.
 
 
 Usage

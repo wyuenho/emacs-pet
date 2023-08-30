@@ -587,10 +587,16 @@
     (expect (pet-pre-commit-config-has-hook-p "isort") :not :to-be-truthy)))
 
 (describe "pet-parse-pre-commit-db"
+  (before-all
+    (call-process "sqlite3" nil nil nil "some.db" "CREATE TABLE repos (repo TEXT NOT NULL, ref TEXT NOT NULL, path TEXT NOT NULL, PRIMARY KEY (repo, ref)); INSERT INTO repos VALUES('https://github.com/pycqa/flake8','5.0.0','/home/user/project/flake8');"))
+
+  (after-all
+    (call-process "rm" nil nil nil "some.db"))
+
   (it "should parse `pre-commit' database to alist"
-    (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert "{\"foo\": 1}")))
-    (expect (pet-parse-pre-commit-db "some.db") :to-equal '((foo . 1)))
-    (expect 'call-process :to-have-been-called-with "sqlite3" nil t nil "-json" "some.db" "select * from repos")))
+    (expect (pet-parse-pre-commit-db "some.db") :to-equal '(((repo . "https://github.com/pycqa/flake8")
+                                                              (ref . "5.0.0")
+                                                              (path . "/home/user/project/flake8"))))))
 
 (describe "pet-pre-commit-virtualenv-path"
   :var ((pre-commit-db-content '(((repo . "https://github.com/pycqa/flake8:flake8-comprehensions==3.10.0,flake8-no-implicit-concat==0.3.3")
