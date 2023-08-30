@@ -211,7 +211,7 @@ Complete Example
                              python-shell-virtualenv-root (pet-virtualenv-root))
 
                  (pet-flycheck-setup)
-                 (flycheck-mode 1)
+                 (flycheck-mode)
 
                  (setq-local lsp-jedi-executable-command
                              (pet-executable-find "jedi-language-server"))
@@ -227,11 +227,11 @@ Complete Example
 
                  (when-let ((black-executable (pet-executable-find "black")))
                    (setq-local python-black-command black-executable)
-                   (python-black-on-save-mode 1))
+                   (python-black-on-save-mode))
 
                  (when-let ((isort-executable (pet-executable-find "isort")))
                    (setq-local python-isort-command isort-executable)
-                   (python-isort-on-save-mode 1)))))
+                   (python-isort-on-save-mode)))))
 
 
 FAQ
