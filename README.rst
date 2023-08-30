@@ -57,7 +57,7 @@ Supported Python Virtual Environment Tools
 - `pdm <https://github.com/pdm-project/pdm>`_
 - `pipx <https://pypa.github.io/pipx/>`_
 - `pyenv <https://github.com/pyenv/pyenv>`_
-- Whatever is on your ``exec-path``
+- Whatever is on your ``VIRTUAL_ENV`` environment variable
 
 
 Supported Emacs Packages
