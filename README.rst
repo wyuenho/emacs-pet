@@ -65,8 +65,7 @@ Supported Emacs Packages
 
 - Built-in `project.el <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
 - `projectile <https://docs.projectile.mx/projectile/index.html>`_
-- `direnv.el <https://github.com/wbolster/emacs-direnv>`_
-- `eglot <https://github.com/joaotavora/eglot>`_ (to make it work, eglot must be activated after pet)
+- `envrc <https://github.com/purcell/envrc>`_ (`direnv caveats`_)
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
@@ -225,14 +224,37 @@ Complete Example
 FAQ
 ---
 
-How do I get ``pet`` to pick up the virtualenv created by ``direnv`` or similar tools?
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.. _direnv caveats:
 
-Try `direnv.el <https://github.com/wbolster/emacs-direnv>`_, specifically, `this
-PR <https://github.com/wbolster/emacs-direnv/pull/80>`_.
+How do I get ``pet`` to pick up the virtualenv or PATH created by ``direnv``?
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Once you have set up ``exec-path`` in your ``python-mode`` buffer using
-``direnv.el``, ``pet`` will automatically pick up the executables.
+Short answer:
+
+Use `envrc <https://github.com/purcell/envrc>`_.
+
+.. code-block:: elisp
+
+   (require 'envrc)
+   (add-hook 'change-major-mode-after-body-hook 'envrc-mode)
+
+
+Longer answer:
+
+There are a number of packages similar to ``envrc`` such as ``direnv`` and
+``buffer-env`` that claim to be able to configure ``direnv`` in Emacs. However,
+they all suffer from various problems such as changing the environment and
+``exec-path`` for the entire Emacs process, unable to activate early enough or
+being too general to support direnv tightly.
+
+Because ``pet`` needs to be able to configure the buffer local variables
+**before** the rest of the minor modes are activated, but **after**
+``exec-path`` has been set up by direnv, one must take care of choosing a minor
+mode package that allows the user to customize when it takes effect. This
+requirement rules our ``direnv.el`` [1]_.
+
+.. [1] Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
+       no longer recommended due to this reason.
 
 
 Why didn't ``pet`` set up the executable variables on a fresh Python project clone?
