@@ -992,8 +992,17 @@ has assigned to."
               (insert (format "%s" value))
               (insert "\n"))
             kvp)
-      (insert (propertize (format "%-40s" (concat (symbol-name 'exec-path) ":")) 'face 'font-lock-variable-name-face) "\n")
-      (mapc (lambda (dir) (insert (abbreviate-file-name (format "%s" dir)) "\n")) exec-path)
+      (insert (propertize (format "%-40s"
+                                  (concat (symbol-name (if (file-remote-p default-directory)
+                                                           'tramp-remote-path
+                                                         'exec-path))
+                                          ":"))
+                          'face 'font-lock-variable-name-face) "\n")
+      (mapc (lambda (dir)
+              (insert (abbreviate-file-name (format "%s" dir)) "\n"))
+            (if (file-remote-p default-directory)
+                tramp-remote-path
+              exec-path))
       (special-mode))))
 
 ;;;###autoload
