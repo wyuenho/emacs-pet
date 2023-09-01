@@ -123,6 +123,12 @@ and nil otherwise."
           'windows-nt)
       "Scripts" "bin"))
 
+(defun pet--executable-find (command &optional remote)
+  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26."
+  (if (>= emacs-major-version 27) 
+      (executable-find command remote)
+    (executable-find command)))
+
 (defun pet-report-error (err)
   "Report ERR to the minibuffer.
 
@@ -384,21 +390,21 @@ This variable is an alist where the key is the absolute path to a
 
 Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
-       (or (executable-find "pre-commit")
+       (or (pet--executable-find "pre-commit" t)
            (and (when-let* ((venv (pet-virtualenv-root))
                             (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
                             (process-environment (copy-sequence process-environment)))
                   (setenv "PATH" (string-join exec-path path-separator))
-                  (executable-find "pre-commit"))))))
+                  (pet--executable-find "pre-commit" t))))))
 
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
 Returns the path to the `conda' executable variant found."
   (and (pet-environment)
-       (or (executable-find "conda")
-           (executable-find "mamba")
-           (executable-find "micromamba"))))
+       (or (pet--executable-find "conda" t)
+           (pet--executable-find "mamba" t)
+           (pet--executable-find "micromamba" t))))
 
 (defun pet-use-poetry-p ()
   "Whether the current project is using `poetry'.
@@ -409,21 +415,21 @@ Returns the path to the `poetry' executable."
         (or (let-alist (pet-pyproject)
               .build-system.build-backend)
             ""))
-       (executable-find "poetry")))
+       (pet--executable-find "poetry" t)))
 
 (defun pet-use-pyenv-p ()
   "Whether the current project is using `pyenv'.
 
 Returns the path to the `pyenv' executable."
   (and (pet-python-version)
-       (executable-find "pyenv")))
+       (pet--executable-find "pyenv" t)))
 
 (defun pet-use-pipenv-p ()
   "Whether the current project is using `pipenv'.
 
 Returns the path to the `pipenv' executable."
   (and (pet-pipfile)
-       (executable-find "pipenv")))
+       (pet--executable-find "pipenv" t)))
 
 (defun pet-pre-commit-config-has-hook-p (id)
   "Determine if the `pre-commit' configuration has a hook.
@@ -552,15 +558,17 @@ use it."
                  (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
            (error (pet-report-error err))))
         ((when-let* ((venv (pet-virtualenv-root))
-                     (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
+                     (path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
+                     (exec-path path)
+                     (tramp-remote-path path)
                      (process-environment (copy-sequence process-environment)))
            (setenv "PATH" (string-join exec-path path-separator))
-           (executable-find executable)))
-        ((when (executable-find "pyenv")
+           (pet--executable-find executable t)))
+        ((when (pet--executable-find "pyenv" t)
            (condition-case err
                (car (process-lines "pyenv" "which" executable))
              (error (pet-report-error err)))))
-        (t (executable-find executable))))
+        (t (pet--executable-find executable t))))
 
 (defvar pet-project-virtualenv-cache nil)
 
