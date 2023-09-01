@@ -237,7 +237,7 @@ otherwise."
               (let ((exit-code
                      (when (or toml-p yaml-p)
                        (condition-case err
-                           (apply #'call-process
+                           (apply #'process-file
                                   (cond (toml-p pet-toml-to-json-program)
                                         (yaml-p pet-yaml-to-json-program))
                                   file-path
@@ -456,7 +456,7 @@ Read the pre-commit SQLite database located at DB-FILE into an alist."
 
     (condition-case err
         (with-temp-buffer
-          (call-process "sqlite3" nil t nil "-json" db-file "select * from repos")
+          (process-file "sqlite3" nil t nil "-json" db-file "select * from repos")
           (pet-parse-json (buffer-string)))
       (error (pet-report-error err)))))
 
@@ -586,7 +586,7 @@ Selects a virtualenv in the follow order:
                                  (default-directory (file-name-directory (pet-environment-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (call-process program nil t nil "info" "--envs" "--json"))
+                              (let ((exit-code (process-file program nil t nil "info" "--envs" "--json"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     (let* ((prefix (alist-get 'prefix (pet-environment)))
@@ -599,7 +599,7 @@ Selects a virtualenv in the follow order:
                                  (default-directory (file-name-directory (pet-pyproject-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (call-process program nil t nil "env" "info" "--no-ansi" "--path"))
+                              (let ((exit-code (process-file program nil t nil "env" "info" "--no-ansi" "--path"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     output
@@ -609,7 +609,7 @@ Selects a virtualenv in the follow order:
                                  (default-directory (file-name-directory (pet-pipfile-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (call-process program nil t nil "--venv"))
+                              (let ((exit-code (process-file program nil t nil "--venv"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     output
@@ -624,7 +624,7 @@ Selects a virtualenv in the follow order:
                                  (default-directory (file-name-directory (pet-python-version-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (call-process program nil t nil "prefix"))
+                              (let ((exit-code (process-file program nil t nil "prefix"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     (file-truename output)
