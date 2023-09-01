@@ -114,6 +114,12 @@ and nil otherwise."
 
 
 
+(defun pet--executable-find (command &optional remote)
+  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26."
+  (if (>= emacs-major-version 27) 
+      (executable-find command remote)
+    (executable-find command)))
+
 (defun pet-system-bin-dir ()
   "Determine the correct script directory based on `system-type'."
   (if (eq (if (file-remote-p default-directory)
@@ -122,12 +128,6 @@ and nil otherwise."
             system-type)
           'windows-nt)
       "Scripts" "bin"))
-
-(defun pet--executable-find (command &optional remote)
-  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26."
-  (if (>= emacs-major-version 27) 
-      (executable-find command remote)
-    (executable-find command)))
 
 (defun pet-report-error (err)
   "Report ERR to the minibuffer.
