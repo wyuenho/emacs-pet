@@ -43,6 +43,7 @@
 (require 'python)
 (require 'seq)
 (require 'subr-x)
+(require 'tramp)
 
 (when (< emacs-major-version 27)
   (require 'json))
