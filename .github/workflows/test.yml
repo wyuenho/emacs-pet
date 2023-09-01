@@ -44,12 +44,6 @@ jobs:
           - "28.1"
           - "29.1"
           - "snapshot"
-        go-version:
-          - "1.17"
-          - "1.18"
-          - "1.19"
-          - "1.20"
-          - "1.21"
     steps:
       - uses: actions/checkout@v3
       - uses: purcell/setup-emacs@master
@@ -58,9 +52,10 @@ jobs:
       - uses: cask/setup-cask@master
         with:
           version: snapshot
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: 'stable'
+          check-latest: true
       - name: Install packages
         run: |
           go install github.com/pelletier/go-toml/v2/cmd/tomljson@latest
