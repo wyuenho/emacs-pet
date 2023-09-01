@@ -116,7 +116,12 @@ and nil otherwise."
 
 (defun pet-system-bin-dir ()
   "Determine the correct script directory based on `system-type'."
-  (if (eq system-type 'windows-nt) "Scripts" "bin"))
+  (if (eq (if (file-remote-p default-directory)
+              (tramp-get-connection-property (tramp-dissect-file-name default-directory)
+                                             "uname" 'windows-nt)
+            system-type)
+          'windows-nt)
+      "Scripts" "bin"))
 
 (defun pet-report-error (err)
   "Report ERR to the minibuffer.
