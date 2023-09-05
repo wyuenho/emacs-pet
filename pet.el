@@ -44,9 +44,6 @@
 (require 'seq)
 (require 'subr-x)
 
-(eval-when-compile
-  (require 'flycheck nil t))
-
 (when (< emacs-major-version 27)
   (require 'json))
 
