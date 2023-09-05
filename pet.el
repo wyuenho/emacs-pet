@@ -221,6 +221,7 @@ otherwise."
              (mode (seq-some auto-mode-alist-matcher auto-mode-alist))
              (json-p (or (equal ext "json")
                          (eq 'json-mode mode)
+                         (eq 'json-ts-mode mode)
                          (eq 'jsonian-mode mode)))
              (toml-p (or (equal ext "toml")
                          (eq 'conf-toml-mode mode)))
