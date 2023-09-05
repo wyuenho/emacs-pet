@@ -66,6 +66,7 @@ Supported Emacs Packages
 - Built-in `project.el <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
 - `projectile <https://docs.projectile.mx/projectile/index.html>`_
 - `envrc <https://github.com/purcell/envrc>`_ (`direnv caveats`_)
+- `eglot <https://github.com/joaotavora/eglot>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
@@ -196,6 +197,8 @@ Complete Example
    (use-package dap-python
      :after lsp)
 
+   (use-package eglot)
+
    (use-package python-pytest)
 
    (use-package python-black)
@@ -209,6 +212,9 @@ Complete Example
                (lambda ()
                  (setq-local python-shell-interpreter (pet-executable-find "python")
                              python-shell-virtualenv-root (pet-virtualenv-root))
+
+                 ;; (pet-eglot-setup)
+                 ;; (eglot-ensure)
 
                  (pet-flycheck-setup)
                  (flycheck-mode)
@@ -305,12 +311,18 @@ setting the corresponding ``flycheck`` checker executable variable to the
 intended absolute path.
 
 
-``pet`` can't find my virtualenvs, how do I debug it?
-+++++++++++++++++++++++++++++++++++++++++++++++++++++
+My package didn't pick up the correct paths, how do I debug ``pet``?
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 You can turn on ``pet-debug`` and watch what comes out in the ``*Messages*``
-buffer.  In addition, you can use ``M-x pet-verify-setup`` in your Python
-buffers to find out what was detected.
+buffer. In addition, you can use ``M-x pet-verify-setup`` in your Python buffers
+to find out what was detected.
+
+For ``lsp``, use ``lsp-describe-session``.
+
+For ``eglot``, use ``eglot-show-workspace-configuration``.
+
+For ``flycheck``, use ``flycheck-verify-setup``.
 
 
 Do I still need any of the 11+ virtualenv Emacs packages?

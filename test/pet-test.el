@@ -59,7 +59,7 @@
 
   (it "should find project root with `project.el'"
     (spy-on 'projectile-project-root)
-    (spy-on 'project-current :and-return-value (if (< emacs-major-version 29) '(vc . "/") '(vc Git "/")))
+    (spy-on 'project-current :and-return-value (if (< emacs-major-version 29) (cons 'vc "/") '(vc Git "/")))
     (expect (pet-project-root) :to-equal "/"))
 
   (it "should return nil when Python file does not appear to be in a project"
@@ -961,6 +961,279 @@
     (expect (local-variable-p 'flycheck-python-mypy-executable) :not :to-be-truthy)
     (expect (local-variable-p 'flycheck-python-pyright-executable) :not :to-be-truthy)
     (expect (local-variable-p 'flycheck-python-pycompile-executable) :not :to-be-truthy)))
+
+(describe "pet-eglot--executable-find-advice"
+  (it "should delegate to `pet-executable-find' for Python LSP servers"
+    (spy-on 'eglot--executable-find :and-call-fake (lambda (&rest args) (string-join args " ")))
+    (spy-on 'pet-executable-find :and-call-fake 'identity)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pylsp") :to-equal "pylsp")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pylsp")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyls") :to-equal "pyls")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyls")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyright-langserver") :to-equal "pyright-langserver")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyright-langserver")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "jedi-language-server") :to-equal "jedi-language-server")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "jedi-language-server")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "sh" "-c") :to-equal "sh -c")
+    (expect 'eglot--executable-find :to-have-been-called-with "sh" "-c")))
+
+(describe "pet-eglot--workspace-configuration-plist-advice"
+  (before-each
+    (spy-on 'jsonrpc--process))
+
+  (it "should pass canonicalized PATH to FN if it's a directory"
+    (spy-on 'mock-eglot--workspace-configuration-plist)
+    (spy-on 'process-command :and-return-value '("/usr/bin/jedi-language-server"))
+    (spy-on 'file-directory-p :and-return-value t)
+
+    (pet-eglot--workspace-configuration-plist-advice
+      'mock-eglot--workspace-configuration-plist
+      "server" "/home/users/project")
+
+    (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called-with "server" "/home/users/project/"))
+
+  (it "should pass PATH to FN directly if it's a not directory"
+    (spy-on 'mock-eglot--workspace-configuration-plist)
+    (spy-on 'process-command :and-return-value '("/usr/bin/jedi-language-server"))
+    (spy-on 'file-directory-p :and-return-value nil)
+
+    (pet-eglot--workspace-configuration-plist-advice
+      'mock-eglot--workspace-configuration-plist
+      "server" "/home/users/project/file")
+
+    (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called-with "server" "/home/users/project/file"))
+
+  (it "should return `nil' when no dir local variables and pet server initialization options"
+    (spy-on 'mock-eglot--workspace-configuration-plist)
+    (spy-on 'process-command :and-return-value '("/usr/bin/some-lsp-server"))
+
+    (expect (pet-eglot--workspace-configuration-plist-advice
+              'mock-eglot--workspace-configuration-plist
+              "server")
+      :not :to-be-truthy)
+
+    (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called))
+
+  (it "should return pet server initialization options when no dir local variables"
+    (spy-on 'mock-eglot--workspace-configuration-plist)
+    (spy-on 'process-command :and-return-value '("/usr/bin/pyright-langserver"))
+    (spy-on 'pet-lookup-eglot-server-initialization-options
+      :and-return-value
+      '(:python
+         (:pythonPath
+           "/usr/bin/python"
+           :venvPath
+           "/home/user/project/")))
+
+    (expect (pet-eglot--workspace-configuration-plist-advice
+              'mock-eglot--workspace-configuration-plist
+              "server")
+      :to-equal '(:python
+                   (:pythonPath
+                     "/usr/bin/python"
+                     :venvPath
+                     "/home/user/project/")))
+
+    (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called))
+
+  (it "should return dir local variables when pet server initialization options"
+    (spy-on 'mock-eglot--workspace-configuration-plist
+      :and-return-value
+      '(:python
+         (:pythonPath
+           "/usr/bin/python"
+           :venvPath
+           "/home/user/project/")))
+    (spy-on 'process-command :and-return-value '("/usr/bin/pyright-langserver"))
+    (spy-on 'pet-lookup-eglot-server-initialization-options)
+
+    (expect (pet-eglot--workspace-configuration-plist-advice
+              'mock-eglot--workspace-configuration-plist
+              "server")
+      :to-equal '(:python
+                   (:pythonPath
+                     "/usr/bin/python"
+                     :venvPath
+                     "/home/user/project/")))
+
+    (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called))
+
+  (it "should return dir local variables and pet server initialization options when both available"
+    (spy-on 'mock-eglot--workspace-configuration-plist
+      :and-return-value
+      '(:python
+         (:pythonPath
+           "/usr/bin/python")))
+    (spy-on 'process-command :and-return-value '("/usr/bin/pyright-langserver"))
+    (spy-on 'pet-lookup-eglot-server-initialization-options
+      :and-return-value
+      '(:python
+         (:venvPath
+           "/home/user/project/")))
+
+    (expect (pet-eglot--workspace-configuration-plist-advice
+              'mock-eglot--workspace-configuration-plist
+              "server")
+      :to-equal '(:python
+                   (:pythonPath
+                     "/usr/bin/python"
+                     :venvPath
+                     "/home/user/project/")))
+
+    (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called)))
+
+(describe "pet-eglot--guess-contact-advice"
+  (it "should return output unchanged when there's no pet server initialization"
+    (spy-on 'eglot--guess-contact :and-return-value
+      '((python-mode python-ts-mode)
+         "project"
+         'eglot-lsp-server
+         ("pyright-langserver" "--stdio")
+         "python-ts"))
+
+    (spy-on 'pet-lookup-eglot-server-initialization-options)
+
+    (expect
+      (pet-eglot--guess-contact-advice 'eglot--guess-contact)
+      :to-equal
+      '((python-mode python-ts-mode)
+         "project"
+         'eglot-lsp-server
+         ("pyright-langserver" "--stdio")
+         "python-ts")))
+
+  (it "should return contact with default server initialization when there's no pet server initialization"
+    (spy-on 'eglot--guess-contact :and-return-value
+      '((python-mode python-ts-mode)
+         "project"
+         'eglot-lsp-server
+         ("jedi-language-server"
+           :initializationOptions
+           (:jedi
+             (:executable
+               (:args ["--ws"]))))
+         "python-ts"))
+
+    (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value
+      '(:jedi
+         (:executable
+           (:command
+             "/home/user/project/env/bin/jedi-language-server")
+           :workspace
+           (:environmentPath
+             "/home/user/project/env/bin/python"))))
+
+    (expect
+      (pet-eglot--guess-contact-advice 'eglot--guess-contact)
+      :to-equal
+      '((python-mode python-ts-mode)
+         "project"
+         'eglot-lsp-server
+         ("jedi-language-server"
+           :initializationOptions
+           (:jedi
+             (:executable
+               (:args
+                 ["--ws"]
+                 :command
+                 "/home/user/project/env/bin/jedi-language-server")
+               :workspace
+               (:environmentPath
+                 "/home/user/project/env/bin/python"))))
+         "python-ts"))))
+
+(describe "pet-lookup-eglot-server-initialization-options"
+  (before-each
+    (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/")
+    (spy-on 'pet-executable-find :and-call-fake
+      (lambda (command)
+        (assoc-default command
+          '(("flake8" . "/usr/bin/flake8")
+             ("pylint" . "/usr/bin/pylint")
+             ("python" . "/usr/bin/python")
+             ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server"))))))
+
+  (it "should return eglot initialization options for pylsp"
+    (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pylsp") :to-equal
+      '(:pylsp
+         (:plugins
+           (:jedi
+             (:environment
+               "/home/user/project/")
+             :flake8
+             (:executable
+               "/usr/bin/flake8")
+             :pylint
+             (:executable
+               "/usr/bin/pylint"))))))
+
+  (it "should return eglot initialization options for pyls"
+    (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pyls") :to-equal
+      '(:pyls
+         (:plugins
+           (:jedi
+             (:environment
+               "/home/user/project/")
+             :pylint
+             (:executable
+               "/usr/bin/pylint"))))))
+
+  (it "should return eglot initialization options for pyright"
+    (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pyright-langserver") :to-equal
+      `(:python
+         (:pythonPath
+           "/usr/bin/python"
+           :venvPath
+           "/home/user/project/"))))
+
+  (it "should return eglot initialization options for jedi-language-server"
+    (expect (pet-lookup-eglot-server-initialization-options "jedi-language-server") :to-equal
+      '(:jedi
+         (:executable
+           (:command
+             "/home/user/.local/bin/jedi-language-server")
+           :workspace
+           (:environmentPath
+             "/usr/bin/python"))))))
+
+(describe "pet-merge-eglot-initialization-options"
+  (it "should deeply merge 2 plists"
+    (expect
+      (pet-merge-eglot-initialization-options
+        '(:a (:b [1 2] :c 0 :d "hello" :f :json-null))
+        '(:a (:b [3 4] :c 9 :e "world" :g :json-false)))
+      :to-equal
+      '(:a (:b [1 2 3 4] :c 9 :d "hello" :f :json-null :e "world" :g :json-false)))))
+
+(describe "pet-eglot-setup"
+  (before-each
+    (pet-eglot-setup))
+
+  (after-each
+    (pet-eglot-teardown))
+
+  (it "should advice eglot functions"
+    (pet-eglot-setup)
+    (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be-truthy)
+    (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be-truthy)
+    (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be-truthy)))
+
+(describe "pet-eglot-teardown"
+  (it "should remove `pet' advices from eglot functions"
+    (pet-eglot-setup)
+    (pet-eglot-teardown)
+    (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be nil)
+    (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be nil)
+    (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be nil)))
 
 (describe "pet-buffer-local-vars-setup"
   (after-each

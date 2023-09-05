@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 1.1.0
-;; Package-Requires: ((emacs "26.1") (f "0.6.0"))
+;; Package-Requires: ((emacs "26.1") (f "0.6.0") (map "3.3.1") (seq "2.24"))
 ;; Homepage: https://github.com/wyuenho/emacs-pet/
 ;; Keywords: tools
 
@@ -37,6 +37,7 @@
 (require 'f)
 (require 'filenotify)
 (require 'let-alist)
+(require 'map)
 (require 'pcase)
 (require 'project)
 (require 'python)
@@ -729,6 +730,149 @@ default otherwise."
 
 
 
+(defvar eglot-workspace-configuration)
+(declare-function jsonrpc--process "ext:jsonrpc")
+(declare-function eglot--executable-find "ext:eglot")
+(declare-function eglot--uri-to-path "ext:eglot")
+(declare-function eglot--workspace-configuration-plist "ext:eglot")
+(declare-function eglot--guess-contact "ext:eglot")
+
+(defun pet-eglot--executable-find-advice (fn &rest args)
+  "Look up Python language servers using `pet-executable-find'.
+
+FN is `eglot--executable-find', ARGS is the arguments to
+`eglot--executable-find'."
+  (pcase-let ((`(,command . ,_) args))
+    (if (member command '("pylsp" "pyls" "pyright-langserver" "jedi-language-server"))
+        (pet-executable-find command)
+      (apply fn args))))
+
+(defun pet-lookup-eglot-server-initialization-options (command)
+  "Return LSP initializationOptions for Eglot.
+
+COMMAND is the name of the Python language server command."
+  (cond ((string-match-p "pylsp" command)
+         `(:pylsp
+           (:plugins
+            (:jedi
+             (:environment
+              ,(pet-virtualenv-root))
+             :flake8
+             (:executable
+              ,(pet-executable-find "flake8"))
+             :pylint
+             (:executable
+              ,(pet-executable-find "pylint"))))))
+        ((string-match-p "pyls" command)
+         `(:pyls
+           (:plugins
+            (:jedi
+             (:environment
+              ,(pet-virtualenv-root))
+             :pylint
+             (:executable
+              ,(pet-executable-find "pylint"))))))
+        ((string-match-p "pyright-langserver" command)
+         `(:python
+           (:pythonPath
+            ,(pet-executable-find "python")
+            :venvPath
+            ,(pet-virtualenv-root))))
+        ((string-match-p "jedi-language-server" command)
+         `(:jedi
+           (:executable
+            (:command
+             ,(pet-executable-find "jedi-language-server"))
+            :workspace
+            (:environmentPath
+             ,(pet-executable-find "python")))))
+        (t nil)))
+
+(defalias 'pet--proper-list-p 'proper-list-p)
+(eval-when-compile
+  (when (and (not (functionp 'proper-list-p))
+             (functionp 'format-proper-list-p))
+    (defun pet--proper-list-p (l)
+      (and (format-proper-list-p l)
+           (length l)))))
+
+(defun pet--plistp (object)
+  "Non-nil if and only if OBJECT is a valid plist."
+  (let ((len (pet--proper-list-p object)))
+    (and len
+         (zerop (% len 2))
+         (seq-every-p
+          (lambda (kvp)
+            (keywordp (car kvp)))
+          (seq-split object 2)))))
+
+(defun pet-merge-eglot-initialization-options (a b)
+  "Deep merge plists A and B."
+  (map-merge-with 'plist
+                  (lambda (c d)
+                    (cond ((and (pet--plistp c) (pet--plistp d))
+                           (pet-merge-eglot-initialization-options c d))
+                          ((and (vectorp c) (vectorp d))
+                           (vconcat (seq-union c d)))
+                          (t d)))
+                  (copy-tree a t)
+                  (copy-tree b t)))
+
+(defun pet-eglot--workspace-configuration-plist-advice (fn &rest args)
+  "Enrich `eglot-workspace-configuration' with paths found by `pet'.
+
+FN is `eglot--workspace-configuration-plist', ARGS is the
+arguments to `eglot--workspace-configuration-plist'."
+  (let* ((path (cadr args))
+         (canonical-path (if (and path (file-directory-p path))
+                             (file-name-as-directory path)
+                           path))
+         (server (car args))
+         (command (process-command (jsonrpc--process server)))
+         (program (and (listp command) (car command)))
+         (pet-config (pet-lookup-eglot-server-initialization-options program))
+         (user-config (apply fn server (and canonical-path (cons canonical-path (cddr args))))))
+    (pet-merge-eglot-initialization-options user-config pet-config)))
+
+(defun pet-eglot--guess-contact-advice (fn &rest args)
+  "Enrich `eglot--guess-contact' with paths found by `pet'.
+
+FN is `eglot--guess-contact', ARGS is the arguments to
+`eglot--guess-contact'."
+  (let* ((result (apply fn args))
+         (contact (nth 3 result))
+         (probe (seq-position contact :initializationOptions))
+         (program-with-args (seq-subseq contact 0 (or probe (length contact))))
+         (program (car program-with-args))
+         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions)))
+    (if init-opts
+        (append (seq-subseq result 0 3)
+                (list
+                 (append
+                  program-with-args
+                  (list
+                   :initializationOptions
+                   (pet-merge-eglot-initialization-options
+                    init-opts
+                    (pet-lookup-eglot-server-initialization-options
+                     program)))))
+                (seq-subseq result 4))
+      result)))
+
+(defun pet-eglot-setup ()
+  "Setup Eglot to use server executables and virtualenvs found by PET."
+  (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
+  (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
+  (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
+
+(defun pet-eglot-teardown ()
+  "Setup PET advices to Eglot."
+  (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
+  (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
+  (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
+
+
+
 (defvar lsp-jedi-executable-command)
 (defvar lsp-pyls-plugins-jedi-environment)
 (defvar lsp-pylsp-plugins-jedi-environment)
@@ -762,7 +906,9 @@ buffer local values."
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
   (setq-local blacken-executable python-black-command)
-  (setq-local yapfify-executable (pet-executable-find "yapf")))
+  (setq-local yapfify-executable (pet-executable-find "yapf"))
+
+  (pet-eglot-setup))
 
 (defun pet-buffer-local-vars-teardown ()
   "Reset all supported buffer local variable values to default."
@@ -782,7 +928,9 @@ buffer local values."
   (kill-local-variable 'python-black-command)
   (kill-local-variable 'python-isort-command)
   (kill-local-variable 'blacken-executable)
-  (kill-local-variable 'yapfify-executable))
+  (kill-local-variable 'yapfify-executable)
+
+  (pet-eglot-teardown))
 
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.
