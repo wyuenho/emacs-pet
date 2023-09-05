@@ -224,9 +224,11 @@ otherwise."
                          (eq 'json-ts-mode mode)
                          (eq 'jsonian-mode mode)))
              (toml-p (or (equal ext "toml")
-                         (eq 'conf-toml-mode mode)))
+                         (eq 'conf-toml-mode mode)
+                         (eq 'toml-ts-mode mode)))
              (yaml-p (or (string-match-p "ya?ml" ext)
-                         (eq 'yaml-mode mode))))
+                         (eq 'yaml-mode mode)
+                         (eq 'yaml-ts-mode mode))))
 
         (let ((output (get-buffer-create " *pet parser output*")))
           (unwind-protect
