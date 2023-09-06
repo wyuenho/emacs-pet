@@ -1,3 +1,6 @@
+.. image:: https://img.shields.io/github/actions/workflow/status/wyuenho/emacs-pet/ci.yml
+   :alt: CI Status
+
 **P** ython **E** xecutable **T** racker
 ========================================
 
