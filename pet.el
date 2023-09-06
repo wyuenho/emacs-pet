@@ -116,16 +116,20 @@ and nil otherwise."
 
 
 (defun pet--executable-find (command &optional remote)
-  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26."
-  (if (>= emacs-major-version 27) 
+  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26.
+
+See `executable-find' for the meaning of COMMAND and REMOTE."
+  (if (>= emacs-major-version 27)
       (executable-find command remote)
     (executable-find command)))
 
 (defun pet-system-bin-dir ()
   "Determine the correct script directory based on `system-type'."
   (if (eq (if (file-remote-p default-directory)
-              (tramp-get-connection-property (tramp-dissect-file-name default-directory)
-                                             "uname" 'windows-nt)
+              (tramp-get-connection-property
+               (tramp-dissect-file-name default-directory)
+               "uname"
+               'windows-nt)
             system-type)
           'windows-nt)
       "Scripts" "bin"))
