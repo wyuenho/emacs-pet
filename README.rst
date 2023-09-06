@@ -1,4 +1,5 @@
-.. image:: https://img.shields.io/github/actions/workflow/status/wyuenho/emacs-pet/ci.yml
+.. image:: https://github.com/wyuenho/emacs-pet/actions/workflows/ci.yml/badge.svg
+   :target: https://github.com/wyuenho/emacs-pet/actions/workflows/ci.yml
    :alt: CI Status
 
 **P** ython **E** xecutable **T** racker
