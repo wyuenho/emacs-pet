@@ -56,7 +56,9 @@ Supported Python Virtual Environment Tools
   <https://virtualenv.pypa.io/en/latest/>`_
 - `pdm <https://github.com/pdm-project/pdm>`_
 - `pipx <https://pypa.github.io/pipx/>`_
-- `pyenv <https://github.com/pyenv/pyenv>`_
+- `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained, don't use
+  it unless you are using Homebrew on macOS)
+- `docker <https://hub.docker.com/_/python>`_
 - Whatever is on your ``VIRTUAL_ENV`` environment variable
 
 
