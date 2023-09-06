@@ -452,15 +452,15 @@
       (spy-on 'pet-environment :and-return-value t))
 
     (it "should return `conda' path if `conda' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "conda") "/usr/bin/conda")))
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "conda") "/usr/bin/conda")))
       (expect (pet-use-conda-p) :to-equal "/usr/bin/conda"))
 
     (it "should return `mamba' path if `mamba' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "mamba") "/usr/bin/mamba")))
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "mamba") "/usr/bin/mamba")))
       (expect (pet-use-conda-p) :to-equal "/usr/bin/mamba"))
 
     (it "should return `micromamba' path if `micromamba' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "micromamba") "/usr/bin/micromamba")))
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "micromamba") "/usr/bin/micromamba")))
       (expect (pet-use-conda-p) :to-equal "/usr/bin/micromamba"))
 
     (it "should return nil if none of `conda' or `mamba' or `micromamba' is found"
@@ -472,15 +472,15 @@
       (spy-on 'pet-environment))
 
     (it "should return nil if `conda' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "conda") "/usr/bin/conda")))
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "conda") "/usr/bin/conda")))
       (expect (pet-use-conda-p) :to-be nil))
 
     (it "should return nil if `mamba' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "mamba") "/usr/bin/mamba")))
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "mamba") "/usr/bin/mamba")))
       (expect (pet-use-conda-p) :to-be nil))
 
     (it "should return nil if `microconda' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (_) (when (equal _ "microconda") "/usr/bin/microconda")))
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "microconda") "/usr/bin/microconda")))
       (expect (pet-use-conda-p) :to-be nil))
 
     (it "should return nil if none of `conda' or `mamba' or `micromamba' is found"
@@ -710,7 +710,7 @@
   (it "should return the absolute path the executable for a project from `exec-path'"
     (spy-on 'pet-use-pre-commit-p :and-return-value nil)
     (spy-on 'pet-virtualenv-root :and-return-value nil)
-    (spy-on 'executable-find :and-call-fake (lambda (executable)
+    (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
                                               (when (equal executable "black")
                                                 "/home/user/project/.venv/bin/black")))
     (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black")))
