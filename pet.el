@@ -590,7 +590,7 @@ Selects a virtualenv in the follow order:
 4. A directory in `pet-venv-dir-names' in the project root if found.
 5. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
-  (let ((root (pet-project-root)))
+  (let ((root (or (pet-project-root) default-directory)))
     (or (assoc-default root pet-project-virtualenv-cache)
         (when-let ((ev (getenv "VIRTUAL_ENV")))
           (expand-file-name ev))
