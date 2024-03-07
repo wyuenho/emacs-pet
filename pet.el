@@ -289,7 +289,7 @@ If the file was deleted or renamed, remove the file's watcher,
 and delete the file entry from CACHE-VAR and
 `pet-watched-config-files'."
   (lambda (event)
-    (pcase-let ((`(,_ ,action ,file ,@_) event))
+    (pcase-let ((`(,_ ,action ,file) event))
       (pcase action
         ((or 'deleted 'renamed)
          (file-notify-rm-watch (assoc-default file pet-watched-config-files))
