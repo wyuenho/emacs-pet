@@ -773,6 +773,12 @@ COMMAND is the name of the Python language server command."
             (:jedi
              (:environment
               ,(pet-virtualenv-root))
+             :ruff
+             (:executable
+              ,(pet-executable-find "ruff"))
+             :pylsp_mypy
+             (:overrides
+              ["--python-executable" ,(pet-executable-find "python") t])
              :flake8
              (:executable
               ,(pet-executable-find "flake8"))
@@ -898,6 +904,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar python-pytest-executable)
 (defvar python-black-command)
 (defvar python-isort-command)
+(defvar ruff-format-command)
 (defvar blacken-executable)
 (defvar yapfify-executable)
 
@@ -921,6 +928,7 @@ buffer local values."
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
+  (setq-local ruff-format-command (pet-executable-find "ruff"))
   (setq-local blacken-executable python-black-command)
   (setq-local yapfify-executable (pet-executable-find "yapf"))
 
@@ -943,6 +951,7 @@ buffer local values."
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
   (kill-local-variable 'python-isort-command)
+  (kill-local-variable 'ruff-format-command)
   (kill-local-variable 'blacken-executable)
   (kill-local-variable 'yapfify-executable)
 
@@ -989,6 +998,7 @@ has assigned to."
                        python-black-command
                        blacken-executable
                        python-isort-command
+                       ruff-format-command
                        yapfify-executable))))
 
     (with-current-buffer-window "*pet info*" nil nil
