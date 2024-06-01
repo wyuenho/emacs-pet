@@ -2,7 +2,7 @@ export EMACS ?= $(shell which emacs)
 CASK_DIR := $(shell cask package-directory)
 
 $(CASK_DIR): Cask
-	cask install
+	cask install --debug
 	@touch $(CASK_DIR)
 
 .PHONY: cask
