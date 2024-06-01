@@ -742,6 +742,11 @@
     (setq-local default-directory old-default-directory)
     (setq pet-project-virtualenv-cache nil))
 
+  (it "should not cache nil when not in a project"
+    (spy-on 'pet-project-root :and-return-value nil)
+    (expect (pet-virtualenv-root) :to-be nil)
+    (expect pet-project-virtualenv-cache :to-be nil))
+
   (it "should return the absolute path of the virtualenv for a project from `VIRTUAL_ENV'"
     (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "VIRTUAL_ENV") "/home/user/.venvs/project")))
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/project"))
