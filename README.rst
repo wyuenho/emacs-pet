@@ -62,8 +62,11 @@ Supported Python Virtual Environment Tools
 - `pipx <https://pypa.github.io/pipx/>`_
 - `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained, don't use
   it unless you are using Homebrew on macOS)
+- `uv <https://github.com/astral-sh/uv>`_
 - `docker <https://hub.docker.com/_/python>`_
+- conda/mamba/micromamba (preliminary)
 - Whatever is on your ``VIRTUAL_ENV`` environment variable
+- Even when you aren't in a virtual environment
 
 
 Supported Emacs Packages
@@ -82,6 +85,7 @@ Supported Emacs Packages
 - `python-black <https://github.com/wbolster/emacs-python-black>`_
 - `python-isort <https://github.com/wyuenho/emacs-python-isort>`_
 - `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
+- `ruff <https://docs.astral.sh/ruff/>`_
 
 
 System Requirements
@@ -211,6 +215,8 @@ Complete Example
 
    (use-package python-isort)
 
+   (use-package ruff-format)
+
    (use-package pet
      :ensure-system-package (dasel sqlite3)
      :config
@@ -236,6 +242,10 @@ Complete Example
                  (setq-local dap-python-executable python-shell-interpreter)
 
                  (setq-local python-pytest-executable (pet-executable-find "pytest"))
+
+                 (when-let ((ruff-executable (pet-executable-find "ruff")))
+                   (setq-local ruff-format-command black-executable)
+                   (ruff-format-on-save-mode))
 
                  (when-let ((black-executable (pet-executable-find "black")))
                    (setq-local python-black-command black-executable)
@@ -276,7 +286,7 @@ Because ``pet`` needs to be able to configure the buffer local variables
 **before** the rest of the minor modes are activated, but **after**
 ``exec-path`` has been set up by direnv, one must take care of choosing a minor
 mode package that allows the user to customize when it takes effect. This
-requirement rules our ``direnv.el`` [1]_.
+requirement rules out ``direnv.el`` [1]_.
 
 .. [1] Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
        no longer recommended due to this reason.
