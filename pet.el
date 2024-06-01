@@ -644,7 +644,9 @@ Selects a virtualenv in the follow order:
                                     (file-truename output)
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err))))))))
-          (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path)
+          ;; root maybe nil when not in a project, this avoid caching a nil
+          (when root
+            (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path))
           venv-path))))
 
 
