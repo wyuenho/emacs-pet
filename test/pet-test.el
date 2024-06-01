@@ -1160,7 +1160,8 @@
           '(("flake8" . "/usr/bin/flake8")
              ("pylint" . "/usr/bin/pylint")
              ("python" . "/usr/bin/python")
-             ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server"))))))
+             ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server")
+             ("ruff" . "/usr/bin/ruff"))))))
 
   (it "should return eglot initialization options for pylsp"
     (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pylsp") :to-equal
@@ -1169,6 +1170,12 @@
            (:jedi
              (:environment
                "/home/user/project/")
+             :ruff
+             (:executable
+               "/usr/bin/ruff")
+             :pylsp_mypy
+             (:overrides
+               ["--python-executable" "/usr/bin/python" t])
              :flake8
              (:executable
                "/usr/bin/flake8")
