@@ -573,7 +573,8 @@ use it."
            (condition-case err
                (car (process-lines "pyenv" "which" executable))
              (error (pet-report-error err)))))
-        (t (pet--executable-find executable t))))
+        (t (or (pet--executable-find executable t)
+               (pet--executable-find (concat executable "3") t)))))
 
 (defvar pet-project-virtualenv-cache nil)
 
