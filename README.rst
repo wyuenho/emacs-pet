@@ -12,7 +12,7 @@ managers and/or virtual environments, where all the linters, formatters and
 commit hooks are set up meticulously, and then when you fire up Emacs, packages
 like `flycheck <https://www.flycheck.org/en/latest/>`_ or `lsp-mode
 <https://emacs-lsp.github.io/lsp-mode/>`_ are either unable to find the binary
-in your virtualenv, or are using a wrong one?
+in your virtualenv, or are using the wrong one?
 
 Have you ever tried one of the 11+ Emacs virtualenv packages to help you fix
 this problem, but are still at a lost at why your other favorite Emacs packages
@@ -25,8 +25,8 @@ If you answer "yes" for any of these questions, you've come to the right place.
 How does ``pet`` work?
 ----------------------
 
-The first key insight is to recognize the paths to executables of many of these
-linting and formatting Emacs packages rely on are configurable.
+The first key insight is to recognize the paths to the executables of many
+Python linting and formatting Emacs packages are configurable.
 
 The second key insight is Emacs allows you to setup a different value for the
 exectuable path on a per buffer basis, and that these packages work with these
@@ -85,7 +85,7 @@ Supported Emacs Packages
 - `python-black <https://github.com/wbolster/emacs-python-black>`_
 - `python-isort <https://github.com/wyuenho/emacs-python-isort>`_
 - `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
-- `ruff <https://docs.astral.sh/ruff/>`_
+- `ruff-format <https://melpa.org/#/ruff-format>`_
 
 
 System Requirements
