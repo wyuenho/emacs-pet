@@ -158,9 +158,9 @@ Advanced Usage
 ++++++++++++++
 
 If you need to configure a package that ``pet`` doesn't support, or only want to
-configure a couple of packages instead of all the supported one, ``pet`` offers
-2 autoloaded functions to help you find the correct path to the executable and
-virtualenv directory:
+configure a couple of packages instead of all of the supported ones, ``pet``
+offers 2 autoloaded functions to help you find the correct path to the
+executable and virtualenv directory:
 
 - ``(pet-executable-find EXECUTABLE)``
 - ``(pet-virtualenv-root)``
