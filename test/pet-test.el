@@ -890,7 +890,8 @@
                                                     ("pylint" "/home/user/project/.venv/bin/pylint")
                                                     ("mypy" "/home/user/project/.venv/bin/mypy")
                                                     ("python" "/home/user/project/.venv/bin/python")
-                                                    ("pyright" "/home/user/project/.venv/bin/pyright"))))
+                                                    ("pyright" "/home/user/project/.venv/bin/pyright")
+                                                    ("ruff" "/home/user/project/.venv/bin/ruff"))))
     (spy-on 'derived-mode-p :and-return-value t)
     (pet-flycheck-toggle-local-vars)
     (expect flycheck-python-mypy-config :to-equal `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config"))
@@ -900,7 +901,8 @@
     (expect flycheck-python-mypy-executable :to-equal "/home/user/project/.venv/bin/mypy")
     (expect flycheck-python-mypy-python-executable :to-equal "/home/user/project/.venv/bin/python")
     (expect flycheck-python-pyright-executable :to-equal "/home/user/project/.venv/bin/pyright")
-    (expect flycheck-python-pycompile-executable :to-equal python-shell-interpreter))
+    (expect flycheck-python-pycompile-executable :to-equal python-shell-interpreter)
+    (expect flycheck-python-ruff-executable :to-equal "/home/user/project/.venv/bin/ruff"))
 
   (it "should reset `flycheck' Python checkers variables to default when `flycheck-mode' is nil"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
@@ -910,7 +912,8 @@
                                                     ("pylint" "/home/user/project/.venv/bin/pylint")
                                                     ("mypy" "/home/user/project/.venv/bin/mypy")
                                                     ("python" "/home/user/project/.venv/bin/python")
-                                                    ("pyright" "/home/user/project/.venv/bin/pyright"))))
+                                                    ("pyright" "/home/user/project/.venv/bin/pyright")
+                                                    ("ruff" "/home/user/project/.venv/bin/ruff"))))
     (spy-on 'derived-mode-p :and-return-value t)
     (pet-flycheck-toggle-local-vars)
     (setq-local flycheck-mode nil)
@@ -923,6 +926,7 @@
     (expect (local-variable-p 'flycheck-python-mypy-python-executable) :to-be nil)
     (expect (local-variable-p 'flycheck-python-pyright-executable) :to-be nil)
     (expect (local-variable-p 'flycheck-python-pycompile-executable) :to-be nil)
+    (expect (local-variable-p 'flycheck-python-ruff-executable) :to-be nil)
 
     (kill-local-variable 'flycheck-mode)))
 
@@ -965,7 +969,8 @@
     (expect (local-variable-p 'flycheck-python-pylint-executable) :not :to-be-truthy)
     (expect (local-variable-p 'flycheck-python-mypy-executable) :not :to-be-truthy)
     (expect (local-variable-p 'flycheck-python-pyright-executable) :not :to-be-truthy)
-    (expect (local-variable-p 'flycheck-python-pycompile-executable) :not :to-be-truthy)))
+    (expect (local-variable-p 'flycheck-python-pycompile-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'flycheck-python-ruff-executable) :not :to-be-truthy)))
 
 (describe "pet-eglot--executable-find-advice"
   (it "should delegate to `pet-executable-find' for Python LSP servers"
@@ -986,6 +991,10 @@
 
     (expect (pet-eglot--executable-find-advice 'eglot--executable-find "jedi-language-server") :to-equal "jedi-language-server")
     (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "jedi-language-server")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "ruff-lsp") :to-equal "ruff-lsp")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "ruff-lsp")
     (expect 'eglot--executable-find :not :to-have-been-called)
 
     (expect (pet-eglot--executable-find-advice 'eglot--executable-find "sh" "-c") :to-equal "sh -c")
@@ -1162,11 +1171,11 @@
     (spy-on 'pet-executable-find :and-call-fake
       (lambda (command)
         (assoc-default command
-          '(("flake8" . "/usr/bin/flake8")
-             ("pylint" . "/usr/bin/pylint")
-             ("python" . "/usr/bin/python")
+          '(("flake8"                . "/usr/bin/flake8")
+             ("pylint"               . "/usr/bin/pylint")
+             ("python"               . "/usr/bin/python")
              ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server")
-             ("ruff" . "/usr/bin/ruff"))))))
+             ("ruff"                 . "/usr/bin/ruff"))))))
 
   (it "should return eglot initialization options for pylsp"
     (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pylsp") :to-equal
@@ -1215,7 +1224,15 @@
              "/home/user/.local/bin/jedi-language-server")
            :workspace
            (:environmentPath
-             "/usr/bin/python"))))))
+             "/usr/bin/python")))))
+
+  (it "should return eglot initialization options for ruff-lsp"
+    (expect (pet-lookup-eglot-server-initialization-options "ruff-lsp") :to-equal
+      '(:settings
+         (:interpreter
+           "/usr/bin/python"
+           :path
+           "/usr/bin/ruff")))))
 
 (describe "pet-merge-eglot-initialization-options"
   (it "should deeply merge 2 plists"
@@ -1256,12 +1273,15 @@
     (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
     (kill-local-variable 'lsp-pyright-venv-path)
     (kill-local-variable 'lsp-pyright-python-executable-cmd)
+    (kill-local-variable 'lsp-ruff-lsp-ruff-path)
+    (kill-local-variable 'lsp-ruff-lsp-python-path)
     (kill-local-variable 'dap-python-executable)
     (kill-local-variable 'python-pytest-executable)
     (kill-local-variable 'python-black-command)
     (kill-local-variable 'python-isort-command)
     (kill-local-variable 'blacken-executable)
-    (kill-local-variable 'yapfify-executable))
+    (kill-local-variable 'yapfify-executable)
+    (kill-local-variable 'ruff-format-command))
 
   (it "should set up all buffer local variables for supported packages"
     (spy-on 'pet-executable-find :and-call-fake
@@ -1279,7 +1299,8 @@
             "/usr/bin/isort")
           ("yapf"
             "/usr/bin/yapf")
-          )))
+          ("ruff"
+            "/usr/bin/ruff"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'pet-flycheck-setup)
 
@@ -1294,12 +1315,15 @@
     (expect (local-variable-p 'lsp-pylsp-plugins-jedi-environment) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-venv-path) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :to-be-truthy)
+    (expect (local-variable-p 'lsp-ruff-lsp-ruff-path) :to-be-truthy)
+    (expect (local-variable-p 'lsp-ruff-lsp-python-path) :to-be-truthy)
     (expect (local-variable-p 'dap-python-executable) :to-be-truthy)
     (expect (local-variable-p 'python-pytest-executable) :to-be-truthy)
     (expect (local-variable-p 'python-black-command) :to-be-truthy)
     (expect (local-variable-p 'python-isort-command) :to-be-truthy)
     (expect (local-variable-p 'blacken-executable) :to-be-truthy)
     (expect (local-variable-p 'yapfify-executable) :to-be-truthy)
+    (expect (local-variable-p 'ruff-format-command) :to-be-truthy)
 
     (expect python-shell-interpreter :to-equal "/usr/bin/python")
     (expect python-shell-virtualenv-root :to-equal "/home/user/project/.venv/")
@@ -1308,12 +1332,15 @@
     (expect lsp-pylsp-plugins-jedi-environment :to-equal "/home/user/project/.venv/")
     (expect lsp-pyright-venv-path :to-equal "/home/user/project/.venv/")
     (expect lsp-pyright-python-executable-cmd :to-equal "/usr/bin/python")
+    (expect lsp-ruff-lsp-ruff-path :to-equal "/usr/bin/ruff")
+    (expect lsp-ruff-lsp-python-path :to-equal "/usr/bin/python")
     (expect dap-python-executable :to-equal "/usr/bin/python")
     (expect python-pytest-executable :to-equal "/usr/bin/pytest")
     (expect python-black-command :to-equal "/usr/bin/black")
     (expect python-isort-command :to-equal "/usr/bin/isort")
     (expect blacken-executable :to-equal "/usr/bin/black")
-    (expect yapfify-executable :to-equal "/usr/bin/yapf")))
+    (expect yapfify-executable :to-equal "/usr/bin/yapf")
+    (expect ruff-format-command :to-equal "/usr/bin/ruff")))
 
 (describe "pet-buffer-local-vars-teardown"
   (after-each
@@ -1324,12 +1351,15 @@
     (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
     (kill-local-variable 'lsp-pyright-venv-path)
     (kill-local-variable 'lsp-pyright-python-executable-cmd)
+    (kill-local-variable 'lsp-ruff-lsp-ruff-path)
+    (kill-local-variable 'lsp-ruff-lsp-python-path)
     (kill-local-variable 'dap-python-executable)
     (kill-local-variable 'python-pytest-executable)
     (kill-local-variable 'python-black-command)
     (kill-local-variable 'python-isort-command)
     (kill-local-variable 'blacken-executable)
-    (kill-local-variable 'yapfify-executable))
+    (kill-local-variable 'yapfify-executable)
+    (kill-local-variable 'ruff-format-command))
 
   (it "should reset all buffer local variables for supported packages to default"
     (spy-on 'pet-flycheck-teardown)
@@ -1344,12 +1374,15 @@
     (expect (local-variable-p 'lsp-pylsp-plugins-jedi-environment) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-venv-path) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :not :to-be-truthy)
+    (expect (local-variable-p 'lsp-ruff-lsp-ruff-path) :not :to-be-truthy)
+    (expect (local-variable-p 'lsp-ruff-lsp-python-path) :not :to-be-truthy)
     (expect (local-variable-p 'dap-python-executable) :not :to-be-truthy)
     (expect (local-variable-p 'python-pytest-executable) :not :to-be-truthy)
     (expect (local-variable-p 'python-black-command) :not :to-be-truthy)
     (expect (local-variable-p 'python-isort-command) :not :to-be-truthy)
     (expect (local-variable-p 'blacken-executable) :not :to-be-truthy)
-    (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)))
+    (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'ruff-format-command) :not :to-be-truthy)))
 
 (describe "pet-verify-setup"
   :var ((old-default-directory default-directory)

@@ -659,6 +659,7 @@ Selects a virtualenv in the follow order:
 (defvar flycheck-python-mypy-executable)
 (defvar flycheck-python-pyright-executable)
 (defvar flycheck-python-pycompile-executable)
+(defvar flycheck-python-ruff-executable)
 
 (defun pet-flycheck-python-pylint-find-pylintrc ()
   "Polyfill `flycheck-pylintrc'.
@@ -717,7 +718,8 @@ default otherwise."
           (setq-local flycheck-python-mypy-executable (pet-executable-find "mypy"))
           (setq-local flycheck-python-mypy-python-executable (pet-executable-find "python"))
           (setq-local flycheck-python-pyright-executable (pet-executable-find "pyright"))
-          (setq-local flycheck-python-pycompile-executable python-shell-interpreter)))
+          (setq-local flycheck-python-pycompile-executable python-shell-interpreter)
+          (setq-local flycheck-python-ruff-executable (pet-executable-find "ruff"))))
     (kill-local-variable 'flycheck-python-mypy-config)
     (kill-local-variable 'flycheck-pylintrc)
     (kill-local-variable 'flycheck-python-flake8-executable)
@@ -725,7 +727,8 @@ default otherwise."
     (kill-local-variable 'flycheck-python-mypy-executable)
     (kill-local-variable 'flycheck-python-mypy-python-executable)
     (kill-local-variable 'flycheck-python-pyright-executable)
-    (kill-local-variable 'flycheck-python-pycompile-executable)))
+    (kill-local-variable 'flycheck-python-pycompile-executable)
+    (kill-local-variable 'flycheck-python-ruff-executable)))
 
 ;;;###autoload
 (defun pet-flycheck-setup ()
@@ -745,7 +748,8 @@ default otherwise."
   (kill-local-variable 'flycheck-python-mypy-executable)
   (kill-local-variable 'flycheck-python-mypy-python-executable)
   (kill-local-variable 'flycheck-python-pyright-executable)
-  (kill-local-variable 'flycheck-python-pycompile-executable))
+  (kill-local-variable 'flycheck-python-pycompile-executable)
+  (kill-local-variable 'flycheck-python-ruff-executable))
 
 
 
@@ -762,7 +766,7 @@ default otherwise."
 FN is `eglot--executable-find', ARGS is the arguments to
 `eglot--executable-find'."
   (pcase-let ((`(,command . ,_) args))
-    (if (member command '("pylsp" "pyls" "pyright-langserver" "jedi-language-server"))
+    (if (member command '("pylsp" "pyls" "pyright-langserver" "jedi-language-server" "ruff-lsp"))
         (pet-executable-find command)
       (apply fn args))))
 
@@ -811,6 +815,12 @@ COMMAND is the name of the Python language server command."
             :workspace
             (:environmentPath
              ,(pet-executable-find "python")))))
+        ((string-match-p "ruff-lsp" command)
+         `(:settings
+           (:interpreter
+            ,(pet-executable-find "python")
+            :path
+            ,(pet-executable-find "ruff"))))
         (t nil)))
 
 (defalias 'pet--proper-list-p 'proper-list-p)
@@ -903,6 +913,8 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar lsp-pylsp-plugins-jedi-environment)
 (defvar lsp-pyright-python-executable-cmd)
 (defvar lsp-pyright-venv-path)
+(defvar lsp-ruff-lsp-ruff-path)
+(defvar lsp-ruff-lsp-python-path)
 (defvar dap-python-executable)
 (defvar python-pytest-executable)
 (defvar python-black-command)
@@ -927,6 +939,8 @@ buffer local values."
   (setq-local lsp-pylsp-plugins-jedi-environment python-shell-virtualenv-root)
   (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
   (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
+  (setq-local lsp-ruff-lsp-ruff-path (pet-executable-find "ruff"))
+  (setq-local lsp-ruff-lsp-python-path python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
@@ -950,6 +964,8 @@ buffer local values."
   (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
   (kill-local-variable 'lsp-pyright-venv-path)
   (kill-local-variable 'lsp-pyright-python-executable-cmd)
+  (kill-local-variable 'lsp-ruff-lsp-ruff-path)
+  (kill-local-variable 'lsp-ruff-lsp-python-path)
   (kill-local-variable 'dap-python-executable)
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
@@ -996,6 +1012,8 @@ has assigned to."
                        lsp-pylsp-plugins-jedi-environment
                        lsp-pyright-python-executable-cmd
                        lsp-pyright-venv-path
+                       lsp-ruff-lsp-ruff-path
+                       lsp-ruff-lsp-python-path
                        dap-python-executable
                        python-pytest-executable
                        python-black-command
