@@ -17,7 +17,7 @@ compile: cask clean
 
 .PHONY: test
 test: cask clean
-	cask exec buttercup --traceback full -L . test
+	cask exec buttercup --eval '(when (version< emacs-version "27") (setq package-check-signature nil))' --traceback full -L . test
 
 .PHONY: coverage
 coverage: cask clean
