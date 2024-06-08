@@ -2,7 +2,7 @@ export EMACS ?= $(shell which emacs)
 CASK_DIR := $(shell cask package-directory)
 
 $(CASK_DIR): Cask
-	cask install --verbose
+	cask eval '(progn (when (version< emacs-version "27") (setq package-check-signature nil)) (cask-cli/install))'
 	@touch $(CASK_DIR)
 
 .PHONY: cask
@@ -17,7 +17,7 @@ compile: cask clean
 
 .PHONY: test
 test: cask clean
-	cask exec buttercup --eval '(when (version< emacs-version "27") (setq package-check-signature nil))' --traceback full -L . test
+	cask exec buttercup --traceback full -L . test
 
 .PHONY: coverage
 coverage: cask clean
