@@ -88,6 +88,7 @@ Supported Emacs Packages
 - `python-isort <https://github.com/wyuenho/emacs-python-isort>`_
 - `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
 - `ruff-format <https://melpa.org/#/ruff-format>`_
+- `py-autopep8 <https://github.com/emacsmirror/py-autopep8>`_
 
 
 System Requirements

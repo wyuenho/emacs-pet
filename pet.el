@@ -925,6 +925,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar ruff-format-command)
 (defvar blacken-executable)
 (defvar yapfify-executable)
+(defvar py-autopep8-command)
 
 (defun pet-buffer-local-vars-setup ()
   "Setup the buffer local variables for Python tools.
@@ -951,6 +952,7 @@ buffer local values."
   (setq-local ruff-format-command (pet-executable-find "ruff"))
   (setq-local blacken-executable python-black-command)
   (setq-local yapfify-executable (pet-executable-find "yapf"))
+  (setq-local py-autopep8-command (pet-executable-find "autopep8"))
 
   (pet-eglot-setup))
 
@@ -976,6 +978,7 @@ buffer local values."
   (kill-local-variable 'ruff-format-command)
   (kill-local-variable 'blacken-executable)
   (kill-local-variable 'yapfify-executable)
+  (kill-local-variable 'py-autopep8-command)
 
   (pet-eglot-teardown))
 
@@ -1023,7 +1026,8 @@ has assigned to."
                        blacken-executable
                        python-isort-command
                        ruff-format-command
-                       yapfify-executable))))
+                       yapfify-executable
+                       py-autopep8-command))))
 
     (with-current-buffer-window "*pet info*" nil nil
       (mapc (pcase-lambda (`(,key . ,value))
