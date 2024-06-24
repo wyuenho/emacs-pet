@@ -64,7 +64,9 @@ Supported Python Virtual Environment Tools
   it unless you are using Homebrew on macOS)
 - `uv <https://github.com/astral-sh/uv>`_
 - `docker <https://hub.docker.com/_/python>`_
-- conda/mamba/micromamba (preliminary)
+- `conda <https://docs.conda.io/en/latest/>`_
+- `mamba <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_
+- `micromamba <https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html>`_
 - Whatever is on your ``VIRTUAL_ENV`` environment variable
 - Even when you aren't in a virtual environment
 

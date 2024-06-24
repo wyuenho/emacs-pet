@@ -596,17 +596,20 @@ Selects a virtualenv in the follow order:
         (when-let ((ev (getenv "VIRTUAL_ENV")))
           (expand-file-name ev))
         (let ((venv-path
-               (cond ((when-let ((program (pet-use-conda-p))
-                                 (default-directory (file-name-directory (pet-environment-path))))
+               (cond ((when-let* ((program (pet-use-conda-p))
+                                  (default-directory (file-name-directory (pet-environment-path)))
+                                  (program-args (if (string-match-p "micromamba" program)
+                                                    '("env" "list" "--json")
+                                                  '("info" "--json"))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (process-file program nil t nil "info" "--envs" "--json"))
+                              (let ((exit-code (apply 'process-file program nil t nil program-args))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     (let* ((prefix (alist-get 'prefix (pet-environment)))
                                            (env (car (member prefix (let-alist (pet-parse-json output) .envs)))))
                                       (or env
-                                          (user-error "Please create the environment with `$ %s create -f %s' first" program (pet-environment-path))))
+                                          (user-error "Please create the environment with `$ %s create --file %s' first" program (pet-environment-path))))
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
                      ((when-let ((program (pet-use-poetry-p))
