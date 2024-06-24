@@ -720,8 +720,6 @@
   :var ((project-root "/home/user/project/")
          (conda-path "/usr/bin/conda")
          (conda-virtualenv "/home/user/miniforge3/envs/project/")
-         (micromamba-path "/usr/bin/micromamba")
-         (micromamba-virtualenv "/home/user/micromamba/envs/project/")
          (poetry-path "/usr/bin/poetry")
          (poetry-virtualenv "/home/user/.cache/pypoetry/virtualenvs/project/")
          (pipenv-path "/usr/bin/pipenv")
@@ -761,16 +759,7 @@
     (spy-on 'pet-environment :and-return-value `((prefix . ,conda-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv)
-    (expect 'call-process :to-have-been-called-with conda-path nil t nil "info" "--json"))
-
-  (it "should return the absolute path of the virtualenv for a project using `micromamba'"
-    (spy-on 'pet-use-conda-p :and-return-value micromamba-path)
-    (spy-on 'pet-environment-path :and-return-value "/home/user/project/environment.yml")
-    (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert (format "{\"envs\": [\"%s\"]}" micromamba-virtualenv)) 0))
-    (spy-on 'pet-environment :and-return-value `((prefix . ,micromamba-virtualenv)))
-    (expect (pet-virtualenv-root) :to-equal micromamba-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal micromamba-virtualenv)
-    (expect 'call-process :to-have-been-called-with micromamba-path nil t nil "env" "list" "--json"))
+    (expect 'call-process :to-have-been-called-with conda-path nil t nil "env" "list" "--json"))
 
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
     (spy-on 'pet-use-conda-p :and-return-value nil)

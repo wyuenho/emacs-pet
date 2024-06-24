@@ -597,13 +597,10 @@ Selects a virtualenv in the follow order:
           (expand-file-name ev))
         (let ((venv-path
                (cond ((when-let* ((program (pet-use-conda-p))
-                                  (default-directory (file-name-directory (pet-environment-path)))
-                                  (program-args (if (string-match-p "micromamba" program)
-                                                    '("env" "list" "--json")
-                                                  '("info" "--json"))))
+                                  (default-directory (file-name-directory (pet-environment-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (apply 'process-file program nil t nil program-args))
+                              (let ((exit-code (process-file program nil t nil "env" "list" "--json"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     (let* ((prefix (alist-get 'prefix (pet-environment)))
