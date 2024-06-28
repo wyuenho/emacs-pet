@@ -1016,6 +1016,7 @@ has assigned to."
                        flycheck-python-mypy-python-executable
                        flycheck-python-pyright-executable
                        flycheck-python-pycompile-executable
+                       flycheck-python-ruff-executable
                        lsp-jedi-executable-command
                        lsp-pyls-plugins-jedi-environment
                        lsp-pylsp-plugins-jedi-environment
