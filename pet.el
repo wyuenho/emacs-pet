@@ -548,7 +548,7 @@ whatever environment if found by `pet-virtualenv-root', then
 `pyenv', then finally from the variable `exec-path'.
 
 The executable will only be searched in an environment created by
-a Python virtualenv management tool if the project is setup to
+a Python virtualenv management tool if the project is set up to
 use it."
   (cond ((and (pet-use-pre-commit-p)
               (not (string-prefix-p "python" executable))
@@ -901,13 +901,13 @@ FN is `eglot--guess-contact', ARGS is the arguments to
       result)))
 
 (defun pet-eglot-setup ()
-  "Setup Eglot to use server executables and virtualenvs found by PET."
+  "Set up Eglot to use server executables and virtualenvs found by PET."
   (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
   (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
   (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
 
 (defun pet-eglot-teardown ()
-  "Setup PET advices to Eglot."
+  "Tear down PET advices to Eglot."
   (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
   (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
   (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
@@ -931,7 +931,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar py-autopep8-command)
 
 (defun pet-buffer-local-vars-setup ()
-  "Setup the buffer local variables for Python tools.
+  "Set up the buffer local variables for Python tools.
 
 Assign all supported Python tooling executable variables to
 buffer local values."
@@ -1053,7 +1053,7 @@ has assigned to."
 
 ;;;###autoload
 (define-minor-mode pet-mode
-  "Minor mode to setup buffer local variables for Python tools."
+  "Minor mode to set up buffer local variables for Python tools."
   :lighter " Pet"
   :group 'pet
   (if pet-mode
