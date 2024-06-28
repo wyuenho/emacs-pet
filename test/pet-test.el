@@ -949,7 +949,17 @@
 
   (it "should add `pet-flycheck-toggle-local-vars' to `flycheck-mode-hook'"
     (pet-flycheck-setup)
-    (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :to-be-truthy)))
+    (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :to-be-truthy))
+
+  (it "should advice `flycheck-python-find-project-root'"
+    (pet-flycheck-setup)
+    (expect
+      (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
+      :to-be-truthy))
+
+  (it "should advice `flycheck-python-needs-module-p'"
+    (pet-flycheck-setup)
+    (expect (advice-member-p 'ignore 'flycheck-python-needs-module-p) :to-be-truthy)))
 
 (describe "pet-flycheck-teardown"
   (before-each
@@ -960,6 +970,14 @@
   (after-each
     (fmakunbound 'flycheck-checker-get)
     (unintern 'flycheck-checker-get))
+
+  (it "should remove advice on `flycheck-python-find-project-root'"
+    (expect
+      (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
+      :not :to-be-truthy))
+
+  (it "should remove advice on `flycheck-python-needs-module-p'"
+    (expect (advice-member-p 'ignore 'flycheck-python-needs-module-p) :not :to-be-truthy))
 
   (it "should remove `pet-flycheck-toggle-local-vars' from `flycheck-mode-hook'"
     (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :not :to-be-truthy))
