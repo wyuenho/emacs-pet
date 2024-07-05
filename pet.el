@@ -116,7 +116,7 @@ and nil otherwise."
 (defcustom pet-condaish-root nil
   "Absolute path to the root directory where conda/(micro)mamba environments are stored."
   :group 'pet
-  :type string)
+  :type 'string)
 
 
 
