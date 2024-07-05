@@ -719,6 +719,7 @@
 (describe "pet-virtualenv-root"
   :var ((project-root "/home/user/project/")
          (conda-path "/usr/bin/conda")
+         (conda-env-dirs '("/home/user/miniforge3/envs" "/home/user/.conda/envs"))
          (conda-virtualenv "/home/user/miniforge3/envs/project/")
          (poetry-path "/usr/bin/poetry")
          (poetry-virtualenv "/home/user/.cache/pypoetry/virtualenvs/project/")
@@ -755,11 +756,22 @@
   (it "should return the absolute path of the virtualenv for a project using `conda'"
     (spy-on 'pet-use-conda-p :and-return-value conda-path)
     (spy-on 'pet-environment-path :and-return-value "/home/user/project/environment.yml")
-    (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert (format "{\"envs\": [\"%s\"]}" conda-virtualenv)) 0))
-    (spy-on 'pet-environment :and-return-value `((prefix . ,conda-virtualenv)))
+    (spy-on 'call-process :and-call-fake
+      (lambda (&rest _)
+        (insert
+          (format "{\"envs_dirs\": [%s]}"
+            (string-join
+              (seq-map
+                (lambda (dir)
+                  (format "\"%s\"" dir))
+                conda-env-dirs)
+              ",")))
+        0))
+    (spy-on 'pet-environment :and-return-value `((name . "project")))
+    (spy-on 'file-directory-p :and-call-fake (lambda (filename) (equal filename conda-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv)
-    (expect 'call-process :to-have-been-called-with conda-path nil t nil "env" "list" "--json"))
+    (expect 'call-process :to-have-been-called-with conda-path nil t nil "info" "--json"))
 
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
     (spy-on 'pet-use-conda-p :and-return-value nil)

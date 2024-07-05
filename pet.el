@@ -600,11 +600,20 @@ Selects a virtualenv in the follow order:
                                   (default-directory (file-name-directory (pet-environment-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (process-file program nil t nil "env" "list" "--json"))
+                              (let ((exit-code (process-file program nil t nil "info" "--json"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
-                                    (let* ((prefix (alist-get 'prefix (pet-environment)))
-                                           (env (car (member prefix (let-alist (pet-parse-json output) .envs)))))
+                                    (let* ((json-output (pet-parse-json output))
+                                           (env-dirs (or (let-alist json-output .envs_dirs)
+                                                         (let-alist json-output .envs\ directories)))
+                                           (env-name (alist-get 'name (pet-environment)))
+                                           (env (seq-find 'file-directory-p
+                                                          (seq-map (lambda (dir)
+                                                                     (file-name-as-directory
+                                                                      (concat
+                                                                       (file-name-as-directory dir)
+                                                                       env-name)))
+                                                                   env-dirs))))
                                       (or env
                                           (user-error "Please create the environment with `$ %s create --file %s' first" program (pet-environment-path))))
                                   (user-error (buffer-string)))))
