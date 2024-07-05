@@ -653,7 +653,7 @@ Selects a virtualenv in the follow order:
                                     (file-truename output)
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err))))))))
-          ;; root maybe nil when not in a project, this avoid caching a nil
+          ;; root maybe nil when not in a project, this avoids caching a nil
           (when root
             (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path))
           venv-path))))
