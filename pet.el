@@ -113,6 +113,11 @@ and nil otherwise."
   :group 'pet
   :type '(repeat string))
 
+(defcustom pet-condaish-root nil
+  "Absolute path to the root directory where conda/(micro)mamba environments are stored."
+  :group 'pet
+  :type string)
+
 
 
 (defun pet--executable-find (command &optional remote)
@@ -537,6 +542,19 @@ must both be installed into the current project first."
        (concat (file-name-as-directory repo-dir) "py_env-*")
        t)))))
 
+(defun pet-condaish-env-path ()
+  "Get the path to the current conda/(micro)mamba environment based on environment variables `pet-condaish-root'."
+  (let ((root
+         (or pet-condaish-root
+             (getenv "CONDA_ROOT")
+             (getenv "MAMBA_ROOT_PREFIX"))))
+    (if root
+        (concat (file-name-as-directory root)
+                "envs/"
+                (alist-get 'name (pet-environment)))
+      nil)))
+
+
 
 
 ;;;###autoload
@@ -606,6 +624,7 @@ Selects a virtualenv in the follow order:
                                     (let* ((prefix (alist-get 'prefix (pet-environment)))
                                            (env (car (member prefix (let-alist (pet-parse-json output) .envs)))))
                                       (or env
+                                          (pet-condaish-env-path)
                                           (user-error "Please create the environment with `$ %s create --file %s' first" program (pet-environment-path))))
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
