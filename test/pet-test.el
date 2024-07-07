@@ -907,7 +907,7 @@
                                                     ("ruff" "/home/user/project/.venv/bin/ruff"))))
     (spy-on 'derived-mode-p :and-return-value t)
     (pet-flycheck-toggle-local-vars)
-    (expect flycheck-python-mypy-config :to-equal `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config"))
+    (expect flycheck-python-mypy-config :to-equal `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config" "/home/user/.mypy.ini"))
     (expect flycheck-pylintrc :to-equal "/etc/pylintrc")
     (expect flycheck-python-flake8-executable :to-equal "/home/user/project/.venv/bin/flake8")
     (expect flycheck-python-pylint-executable :to-equal "/home/user/project/.venv/bin/pylint")
@@ -1468,7 +1468,7 @@
                         (re-search-forward "flycheck-python-mypy-config:\s+\\(.+\\)")
                         (match-string 1))
           "," t split-string-default-separators)
-        :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config")))))
+        :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config" "/home/user/.mypy.ini")))))
 
 (describe "pet-mode"
   (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
