@@ -320,7 +320,7 @@ order to make the environment variable ``VIRTUAL_ENV`` to it. For example:
      (lambda ()
        (auto-virtualenvwrapper-activate)
        (pet-mode))
-   -10)
+     -10)
    (add-hook 'window-configuration-change-hook #'auto-virtualenvwrapper-activate)
    (add-hook 'focus-in-hook #'auto-virtualenvwrapper-activate)
 
