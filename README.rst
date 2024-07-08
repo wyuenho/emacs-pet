@@ -58,7 +58,7 @@ Supported Python Virtual Environment Tools
 - `direnv <https://direnv.net>`_
 - `venv <https://docs.python.org/3/library/venv.html>`_, `virtualenv
   <https://virtualenv.pypa.io>`_ or `virtualenvwrapper
-  <https://virtualenvwrapper.readthedocs.io>`_
+  <https://virtualenvwrapper.readthedocs.io>`_ (`virtualenvwrapper caveats`_)
 - `maturin <https://www.maturin.rs>`_
 - `uv <https://github.com/astral-sh/uv>`_ (but not tools installed by ``uv tool install``)
 - `pdm <https://pdm-project.org>`_
@@ -93,6 +93,7 @@ Supported Emacs Packages
 - `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
 - `ruff-format <https://melpa.org/#/ruff-format>`_
 - `py-autopep8 <https://github.com/emacsmirror/py-autopep8>`_
+- `auto-virtualenvwrapper <https://github.com/robert-zaremba/auto-virtualenvwrapper.el/>`_
 
 
 System Requirements
@@ -298,9 +299,33 @@ requirement rules out ``direnv.el`` [1]_.
 .. [1] Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
        no longer recommended due to this reason.
 
+.. _virtualenvwrapper caveats:
+
+My project uses ``virtualenvwrapper``, how do I get ``pet`` to pick up the virtualenv?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+You can use ``envrc`` + `this direnv configuration
+<https://github.com/direnv/direnv/wiki/Python#virtualenvwrapper>`_ to activate
+your virtualenv or `auto-virtualenvwrapper
+<https://github.com/robert-zaremba/auto-virtualenvwrapper.el/>`_. Note that in
+any case, your virtualenv must be activated before turning on ``pet-mode`` in
+order to make the environment variable ``VIRTUAL_ENV`` to it. For example:
+
+.. code-block:: elisp
+
+   (require 'auto-virtualenvwrapper)
+   (require 'pet)
+
+   (add-hook 'python-base-mode-hook
+     (lambda ()
+       (auto-virtualenvwrapper-activate)
+       (pet-mode)))
+   (add-hook 'window-configuration-change-hook #'auto-virtualenvwrapper-activate)
+   (add-hook 'focus-in-hook #'auto-virtualenvwrapper-activate)
+
 
 Why didn't ``pet`` set up the executable variables on a fresh Python project clone?
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ``Pet`` does not automatically create virtualenvs for you. If you have a fresh
 clone, you must create the virtualenv and install your development dependencies
