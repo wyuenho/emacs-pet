@@ -52,21 +52,26 @@ are found by looking into its ``bin`` directory.
 Supported Python Virtual Environment Tools
 ------------------------------------------
 
-- `pre-commit <https://pre-commit.com/>`_
-- `poetry <https://python-poetry.org/>`_
-- `pipenv <https://pipenv.pypa.io/en/latest/>`_
-- `direnv <https://direnv.net/>`_
-- `venv <https://docs.python.org/3/library/venv.html>`_ or `virtualenv
-  <https://virtualenv.pypa.io/en/latest/>`_
-- `pdm <https://github.com/pdm-project/pdm>`_
-- `pipx <https://pypa.github.io/pipx/>`_
+- `pre-commit <https://pre-commit.com>`_
+- `poetry <https://python-poetry.org>`_
+- `pipenv <https://pipenv.pypa.io>`_
+- `direnv <https://direnv.net>`_
+- `venv <https://docs.python.org/3/library/venv.html>`_, `virtualenv
+  <https://virtualenv.pypa.io>`_ or `virtualenvwrapper
+  <https://virtualenvwrapper.readthedocs.io>`_
+- `maturin <https://www.maturin.rs>`_
+- `uv <https://github.com/astral-sh/uv>`_ (but not tools installed by `uv tool
+  install`)
+- `pdm <https://pdm-project.org>`_
+- `pipx <https://pipx.pypa.io>`_
 - `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained, don't use
   it unless you are using Homebrew on macOS)
-- `uv <https://github.com/astral-sh/uv>`_
 - `docker <https://hub.docker.com/_/python>`_
-- `conda <https://docs.conda.io/en/latest/>`_
-- `mamba <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_
-- `micromamba <https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html>`_
+- `conda <https://docs.conda.io>`_
+- `mamba
+  <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_
+- `micromamba
+  <https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html>`_
 - Whatever is on your ``VIRTUAL_ENV`` environment variable
 - Even when you aren't in a virtual environment
 
