@@ -60,8 +60,8 @@ Supported Python Virtual Environment Tools
   <https://virtualenv.pypa.io>`_ or `virtualenvwrapper
   <https://virtualenvwrapper.readthedocs.io>`_
 - `maturin <https://www.maturin.rs>`_
-- `uv <https://github.com/astral-sh/uv>`_ (but not tools installed by `uv tool
-  install`)
+- `uv <https://github.com/astral-sh/uv>`_ (but not tools installed by ``uv tool
+  install``)
 - `pdm <https://pdm-project.org>`_
 - `pipx <https://pipx.pypa.io>`_
 - `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained, don't use
