@@ -319,7 +319,8 @@ order to make the environment variable ``VIRTUAL_ENV`` to it. For example:
    (add-hook 'python-base-mode-hook
      (lambda ()
        (auto-virtualenvwrapper-activate)
-       (pet-mode)))
+       (pet-mode))
+   -10)
    (add-hook 'window-configuration-change-hook #'auto-virtualenvwrapper-activate)
    (add-hook 'focus-in-hook #'auto-virtualenvwrapper-activate)
 
