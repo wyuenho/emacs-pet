@@ -585,11 +585,12 @@ use it."
 Selects a virtualenv in the follow order:
 
 1. The value of the environment variable `VIRTUAL_ENV' if defined.
-2. If the current project is using `poetry', return the absolute path to the
-   virtualenv directory `poetry' created.
-3. Ditto for `pipenv'.
-4. A directory in `pet-venv-dir-names' in the project root if found.
-5. If the current project is using `pyenv', return the path to the virtualenv
+2. If the current project is using any `conda' variant, return the absolute path
+   to the virtualenv directory for the current project.
+3. Ditta for `poetry'.
+4. Ditto for `pipenv'.
+5. A directory in `pet-venv-dir-names' in the project root if found.
+6. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
     (or (assoc-default root pet-project-virtualenv-cache)
