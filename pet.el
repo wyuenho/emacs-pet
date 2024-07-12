@@ -162,8 +162,8 @@ Otherwise, `project-root' is used."
 
 FILE is a file name or a wildcard.
 
-Return absolute path to FILE if found from in the root of the
-project, nil otherwise."
+Return absolute path to FILE if found in the project root, nil
+otherwise."
   (when-let ((root (pet-project-root)))
     (car (file-expand-wildcards (concat (file-name-as-directory root) file) t))))
 
