@@ -749,14 +749,12 @@ default otherwise."
 (defun pet-flycheck-setup ()
   "Set up all `flycheck' Python checker configuration."
   (advice-add 'flycheck-python-find-project-root :override #'pet-flycheck-python-find-project-root-advice)
-  (advice-add 'flycheck-python-needs-module-p :override #'ignore)
   (add-hook 'flycheck-mode-hook #'pet-flycheck-toggle-local-vars))
 
 ;;;###autoload
 (defun pet-flycheck-teardown ()
   "Reset all `flycheck' Python checker configuration to default."
   (advice-remove 'flycheck-python-find-project-root #'pet-flycheck-python-find-project-root-advice)
-  (advice-remove 'flycheck-python-needs-module-p #'ignore)
   (remove-hook 'flycheck-mode-hook #'pet-flycheck-toggle-local-vars)
   (kill-local-variable 'flycheck-python-mypy-config)
   (kill-local-variable 'flycheck-pylintrc)
