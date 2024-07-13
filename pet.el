@@ -970,7 +970,7 @@ buffer local values."
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
-  (setq-local ruff-format-command (pet-executable-find "ruff"))
+  (setq-local ruff-format-command lsp-ruff-lsp-ruff-path)
   (setq-local blacken-executable python-black-command)
   (setq-local yapfify-executable (pet-executable-find "yapf"))
   (setq-local py-autopep8-command (pet-executable-find "autopep8"))
