@@ -931,6 +931,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar lsp-ruff-lsp-ruff-path)
 (defvar lsp-ruff-lsp-python-path)
 (defvar dap-python-executable)
+(defvar dap-variables-project-root-function)
 (defvar python-pytest-executable)
 (defvar python-black-command)
 (defvar python-isort-command)
@@ -958,6 +959,7 @@ buffer local values."
   (setq-local lsp-ruff-lsp-ruff-path (pet-executable-find "ruff"))
   (setq-local lsp-ruff-lsp-python-path python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
+  (setq-local dap-variables-project-root-function #'pet-virtualenv-root)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
@@ -984,6 +986,7 @@ buffer local values."
   (kill-local-variable 'lsp-ruff-lsp-ruff-path)
   (kill-local-variable 'lsp-ruff-lsp-python-path)
   (kill-local-variable 'dap-python-executable)
+  (kill-local-variable 'dap-variables-project-root-function)
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
   (kill-local-variable 'python-isort-command)
@@ -1034,6 +1037,7 @@ has assigned to."
                        lsp-ruff-lsp-ruff-path
                        lsp-ruff-lsp-python-path
                        dap-python-executable
+                       dap-variables-project-root-function
                        python-pytest-executable
                        python-black-command
                        blacken-executable
