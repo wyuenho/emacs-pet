@@ -82,6 +82,7 @@ Supported Emacs Packages
 - `projectile <https://docs.projectile.mx/projectile/index.html>`_
 - `envrc <https://github.com/purcell/envrc>`_ (`direnv caveats`_)
 - `eglot <https://github.com/joaotavora/eglot>`_
+- `dape <https://github.com/svaante/dape>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_

@@ -932,6 +932,8 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar lsp-ruff-lsp-python-path)
 (defvar dap-python-executable)
 (defvar dap-variables-project-root-function)
+(defvar dape-command)
+(defvar dape-cwd-fn)
 (defvar python-pytest-executable)
 (defvar python-black-command)
 (defvar python-isort-command)
@@ -960,6 +962,8 @@ buffer local values."
   (setq-local lsp-ruff-lsp-python-path python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local dap-variables-project-root-function #'pet-virtualenv-root)
+  (setq-local dape-command `(debugpy-module command ,(pet-executable-find "python")))
+  (setq-local dape-cwd-fn #'pet-virtualenv-root)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
@@ -987,6 +991,8 @@ buffer local values."
   (kill-local-variable 'lsp-ruff-lsp-python-path)
   (kill-local-variable 'dap-python-executable)
   (kill-local-variable 'dap-variables-project-root-function)
+  (kill-local-variable 'dape-command)
+  (kill-local-variable 'dape-cwd-fn)
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
   (kill-local-variable 'python-isort-command)
@@ -1038,6 +1044,8 @@ has assigned to."
                        lsp-ruff-lsp-python-path
                        dap-python-executable
                        dap-variables-project-root-function
+                       dape-command
+                       dape-cwd-fn
                        python-pytest-executable
                        python-black-command
                        blacken-executable
