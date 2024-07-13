@@ -1300,14 +1300,22 @@
     (kill-local-variable 'lsp-ruff-lsp-ruff-path)
     (kill-local-variable 'lsp-ruff-lsp-python-path)
     (kill-local-variable 'dap-python-executable)
+    (kill-local-variable 'dap-variables-project-root-function)
+    (kill-local-variable 'dape-command)
+    (kill-local-variable 'dape-cwd-fn)
     (kill-local-variable 'python-pytest-executable)
     (kill-local-variable 'python-black-command)
     (kill-local-variable 'python-isort-command)
     (kill-local-variable 'blacken-executable)
     (kill-local-variable 'yapfify-executable)
-    (kill-local-variable 'ruff-format-command))
+    (kill-local-variable 'ruff-format-command)
+    (kill-local-variable 'py-autopep8-command))
 
   (it "should set up all buffer local variables for supported packages"
+    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
+    (spy-on 'file-exists-p :and-call-fake
+      (lambda (path)
+        (equal path "/home/user/project/src/__main__.py")))
     (spy-on 'pet-executable-find :and-call-fake
       (lambda (exec)
         (pcase exec
@@ -1324,7 +1332,9 @@
           ("yapf"
             "/usr/bin/yapf")
           ("ruff"
-            "/usr/bin/ruff"))))
+            "/usr/bin/ruff")
+          ("autopep8"
+            "/usr/bin/autopep8"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'pet-flycheck-setup)
 
@@ -1342,12 +1352,16 @@
     (expect (local-variable-p 'lsp-ruff-lsp-ruff-path) :to-be-truthy)
     (expect (local-variable-p 'lsp-ruff-lsp-python-path) :to-be-truthy)
     (expect (local-variable-p 'dap-python-executable) :to-be-truthy)
+    (expect (local-variable-p 'dap-variables-project-root-function) :to-be-truthy)
+    (expect (local-variable-p 'dape-command) :to-be-truthy)
+    (expect (local-variable-p 'dape-cwd-fn) :to-be-truthy)
     (expect (local-variable-p 'python-pytest-executable) :to-be-truthy)
     (expect (local-variable-p 'python-black-command) :to-be-truthy)
     (expect (local-variable-p 'python-isort-command) :to-be-truthy)
     (expect (local-variable-p 'blacken-executable) :to-be-truthy)
     (expect (local-variable-p 'yapfify-executable) :to-be-truthy)
     (expect (local-variable-p 'ruff-format-command) :to-be-truthy)
+    (expect (local-variable-p 'py-autopep8-command) :to-be-truthy)
 
     (expect python-shell-interpreter :to-equal "/usr/bin/python")
     (expect python-shell-virtualenv-root :to-equal "/home/user/project/.venv/")
@@ -1359,12 +1373,17 @@
     (expect lsp-ruff-lsp-ruff-path :to-equal "/usr/bin/ruff")
     (expect lsp-ruff-lsp-python-path :to-equal "/usr/bin/python")
     (expect dap-python-executable :to-equal "/usr/bin/python")
+    (expect dap-variables-project-root-function :to-equal #'pet-project-root)
+    (expect dape-cwd-fn :to-equal #'pet-project-root)
+    (expect dape-command :to-equal '(debugpy-module command "/usr/bin/python"))
     (expect python-pytest-executable :to-equal "/usr/bin/pytest")
     (expect python-black-command :to-equal "/usr/bin/black")
     (expect python-isort-command :to-equal "/usr/bin/isort")
     (expect blacken-executable :to-equal "/usr/bin/black")
     (expect yapfify-executable :to-equal "/usr/bin/yapf")
-    (expect ruff-format-command :to-equal "/usr/bin/ruff")))
+    (expect ruff-format-command :to-equal "/usr/bin/ruff")
+    (expect yapfify-executable :to-equal "/usr/bin/yapf")
+    (expect py-autopep8-command :to-equal "/usr/bin/autopep8")))
 
 (describe "pet-buffer-local-vars-teardown"
   (after-each
@@ -1378,14 +1397,23 @@
     (kill-local-variable 'lsp-ruff-lsp-ruff-path)
     (kill-local-variable 'lsp-ruff-lsp-python-path)
     (kill-local-variable 'dap-python-executable)
+    (kill-local-variable 'dap-variables-project-root-function)
+    (kill-local-variable 'dape-command)
+    (kill-local-variable 'dape-cwd-fn)
     (kill-local-variable 'python-pytest-executable)
     (kill-local-variable 'python-black-command)
     (kill-local-variable 'python-isort-command)
     (kill-local-variable 'blacken-executable)
     (kill-local-variable 'yapfify-executable)
-    (kill-local-variable 'ruff-format-command))
+    (kill-local-variable 'ruff-format-command)
+    (kill-local-variable 'py-autopep8-command))
 
   (it "should reset all buffer local variables for supported packages to default"
+    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
+    (spy-on 'file-exists-p :and-call-fake
+      (lambda (path)
+        (equal path "/home/user/project/src/__main__.py")))
+
     (spy-on 'pet-flycheck-teardown)
 
     (pet-buffer-local-vars-setup)
@@ -1401,12 +1429,16 @@
     (expect (local-variable-p 'lsp-ruff-lsp-ruff-path) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-ruff-lsp-python-path) :not :to-be-truthy)
     (expect (local-variable-p 'dap-python-executable) :not :to-be-truthy)
+    (expect (local-variable-p 'dap-variables-project-root-function) :not :to-be-truthy)
+    (expect (local-variable-p 'dape-command) :not :to-be-truthy)
+    (expect (local-variable-p 'dape-cwd-fn) :not :to-be-truthy)
     (expect (local-variable-p 'python-pytest-executable) :not :to-be-truthy)
     (expect (local-variable-p 'python-black-command) :not :to-be-truthy)
     (expect (local-variable-p 'python-isort-command) :not :to-be-truthy)
     (expect (local-variable-p 'blacken-executable) :not :to-be-truthy)
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)
-    (expect (local-variable-p 'ruff-format-command) :not :to-be-truthy)))
+    (expect (local-variable-p 'ruff-format-command) :not :to-be-truthy)
+    (expect (local-variable-p 'py-autopep8-command) :not :to-be-truthy)))
 
 (describe "pet-verify-setup"
   :var ((old-default-directory default-directory)
