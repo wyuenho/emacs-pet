@@ -922,6 +922,30 @@ FN is `eglot--guess-contact', ARGS is the arguments to
   (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
 
 
+(defvar dape-command)
+(defvar dape-cwd-fn)
+
+(defun pet-dape-setup ()
+  "Set up the buffer local variables for `dape'."
+  (if-let* ((main (pet-find-file-from-project-root-recursively "__main__.py"))
+            (module (let* ((dir (file-name-directory main))
+                           (dir-file-name (directory-file-name dir))
+                           (module))
+                      (while (file-exists-p (concat dir "__init__.py"))
+                        (push (file-name-nondirectory dir-file-name) module)
+                        (setq dir (file-name-directory dir-file-name))
+                        (setq dir-file-name (directory-file-name dir)))
+                      (string-join module "."))))
+      (setq-local dape-command `(debugpy-module command ,(pet-executable-find "python") :module ,module))
+    (setq-local dape-command `(debugpy command ,(pet-executable-find "python"))))
+  (setq-local dape-cwd-fn #'pet-project-root))
+
+(defun pet-dape-teardown ()
+  "Tear down the buffer local variables for `dape'."
+  (kill-local-variable 'dape-command)
+  (kill-local-variable 'dape-cwd-fn))
+
+
 
 (defvar lsp-jedi-executable-command)
 (defvar lsp-pyls-plugins-jedi-environment)
@@ -932,8 +956,6 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar lsp-ruff-lsp-python-path)
 (defvar dap-python-executable)
 (defvar dap-variables-project-root-function)
-(defvar dape-command)
-(defvar dape-cwd-fn)
 (defvar python-pytest-executable)
 (defvar python-black-command)
 (defvar python-isort-command)
@@ -962,11 +984,6 @@ buffer local values."
   (setq-local lsp-ruff-lsp-python-path python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local dap-variables-project-root-function #'pet-project-root)
-  (setq-local dape-command
-              (if (file-exists-p (concat (file-name-directory (buffer-file-name)) "__main__.py"))
-                  `(debugpy-module command ,python-shell-interpreter)
-                `(debugpy command ,python-shell-interpreter)))
-  (setq-local dape-cwd-fn #'pet-project-root)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
@@ -975,7 +992,8 @@ buffer local values."
   (setq-local yapfify-executable (pet-executable-find "yapf"))
   (setq-local py-autopep8-command (pet-executable-find "autopep8"))
 
-  (pet-eglot-setup))
+  (pet-eglot-setup)
+  (pet-dape-setup))
 
 (defun pet-buffer-local-vars-teardown ()
   "Reset all supported buffer local variable values to default."
@@ -994,8 +1012,6 @@ buffer local values."
   (kill-local-variable 'lsp-ruff-lsp-python-path)
   (kill-local-variable 'dap-python-executable)
   (kill-local-variable 'dap-variables-project-root-function)
-  (kill-local-variable 'dape-command)
-  (kill-local-variable 'dape-cwd-fn)
   (kill-local-variable 'python-pytest-executable)
   (kill-local-variable 'python-black-command)
   (kill-local-variable 'python-isort-command)
@@ -1004,7 +1020,8 @@ buffer local values."
   (kill-local-variable 'yapfify-executable)
   (kill-local-variable 'py-autopep8-command)
 
-  (pet-eglot-teardown))
+  (pet-eglot-teardown)
+  (pet-dape-teardown))
 
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.

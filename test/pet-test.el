@@ -1288,6 +1288,40 @@
     (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be nil)
     (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be nil)))
 
+(describe "pet-dape-setup"
+  (before-each
+    (spy-on 'pet-find-file-from-project-root-recursively)
+    (spy-on 'pet-executable-find :and-return-value "/usr/bin/python"))
+
+  (it "should set up buffer local variable dape-command when no __main__.py is found"
+    (pet-dape-setup)
+    (expect (local-variable-p 'dape-command) :to-be-truthy)
+    (expect dape-command :to-equal '(debugpy command "/usr/bin/python")))
+
+  (it "should set up buffer local variable dape-command when a __main__.py is found"
+    (spy-on 'pet-find-file-from-project-root-recursively :and-return-value "/home/user/project/src/foo/bar/__main__.py")
+    (spy-on 'file-exists-p :and-call-fake
+      (lambda (path)
+        (member path
+          '("/home/user/project/src/foo/bar/__init__.py" "/home/user/project/src/foo/__init__.py"))))
+    (pet-dape-setup)
+    (expect (local-variable-p 'dape-command) :to-be-truthy)
+    (expect dape-command :to-equal '(debugpy-module command "/usr/bin/python" :module "foo.bar")))
+
+  (it "should set up buffer local variable dape-cwd-fn"
+    (pet-dape-setup)
+    (expect (local-variable-p 'dape-cwd-fn) :to-be-truthy)
+    (expect dape-cwd-fn :to-equal 'pet-project-root)))
+
+(describe "pet-dape-teardown"
+  (it "should tear down bufer local variables for dape"
+    (spy-on 'pet-find-file-from-project-root-recursively)
+    (spy-on 'pet-executable-find :and-return-value "/usr/bin/python")
+    (pet-dape-setup)
+    (pet-dape-teardown)
+    (expect (local-variable-p 'dape-command) :not :to-be-truthy)
+    (expect (local-variable-p 'dape-cwd-fn) :not :to-be-truthy)))
+
 (describe "pet-buffer-local-vars-setup"
   (after-each
     (kill-local-variable 'python-shell-interpreter)
@@ -1301,8 +1335,6 @@
     (kill-local-variable 'lsp-ruff-lsp-python-path)
     (kill-local-variable 'dap-python-executable)
     (kill-local-variable 'dap-variables-project-root-function)
-    (kill-local-variable 'dape-command)
-    (kill-local-variable 'dape-cwd-fn)
     (kill-local-variable 'python-pytest-executable)
     (kill-local-variable 'python-black-command)
     (kill-local-variable 'python-isort-command)
@@ -1312,10 +1344,6 @@
     (kill-local-variable 'py-autopep8-command))
 
   (it "should set up all buffer local variables for supported packages"
-    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
-    (spy-on 'file-exists-p :and-call-fake
-      (lambda (path)
-        (equal path "/home/user/project/src/__main__.py")))
     (spy-on 'pet-executable-find :and-call-fake
       (lambda (exec)
         (pcase exec
@@ -1337,10 +1365,14 @@
             "/usr/bin/autopep8"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'pet-flycheck-setup)
+    (spy-on 'pet-eglot-setup)
+    (spy-on 'pet-dape-setup)
 
     (pet-buffer-local-vars-setup)
 
     (expect 'pet-flycheck-setup :to-have-been-called)
+    (expect 'pet-eglot-setup :to-have-been-called)
+    (expect 'pet-dape-setup :to-have-been-called)
 
     (expect (local-variable-p 'python-shell-interpreter) :to-be-truthy)
     (expect (local-variable-p 'python-shell-virtualenv-root) :to-be-truthy)
@@ -1353,8 +1385,6 @@
     (expect (local-variable-p 'lsp-ruff-lsp-python-path) :to-be-truthy)
     (expect (local-variable-p 'dap-python-executable) :to-be-truthy)
     (expect (local-variable-p 'dap-variables-project-root-function) :to-be-truthy)
-    (expect (local-variable-p 'dape-command) :to-be-truthy)
-    (expect (local-variable-p 'dape-cwd-fn) :to-be-truthy)
     (expect (local-variable-p 'python-pytest-executable) :to-be-truthy)
     (expect (local-variable-p 'python-black-command) :to-be-truthy)
     (expect (local-variable-p 'python-isort-command) :to-be-truthy)
@@ -1374,8 +1404,6 @@
     (expect lsp-ruff-lsp-python-path :to-equal "/usr/bin/python")
     (expect dap-python-executable :to-equal "/usr/bin/python")
     (expect dap-variables-project-root-function :to-equal #'pet-project-root)
-    (expect dape-cwd-fn :to-equal #'pet-project-root)
-    (expect dape-command :to-equal '(debugpy-module command "/usr/bin/python"))
     (expect python-pytest-executable :to-equal "/usr/bin/pytest")
     (expect python-black-command :to-equal "/usr/bin/black")
     (expect python-isort-command :to-equal "/usr/bin/isort")
@@ -1398,8 +1426,6 @@
     (kill-local-variable 'lsp-ruff-lsp-python-path)
     (kill-local-variable 'dap-python-executable)
     (kill-local-variable 'dap-variables-project-root-function)
-    (kill-local-variable 'dape-command)
-    (kill-local-variable 'dape-cwd-fn)
     (kill-local-variable 'python-pytest-executable)
     (kill-local-variable 'python-black-command)
     (kill-local-variable 'python-isort-command)
@@ -1409,15 +1435,16 @@
     (kill-local-variable 'py-autopep8-command))
 
   (it "should reset all buffer local variables for supported packages to default"
-    (spy-on 'buffer-file-name :and-return-value "/home/user/project/src/foo.py")
-    (spy-on 'file-exists-p :and-call-fake
-      (lambda (path)
-        (equal path "/home/user/project/src/__main__.py")))
-
     (spy-on 'pet-flycheck-teardown)
+    (spy-on 'pet-eglot-teardown)
+    (spy-on 'pet-dape-teardown)
 
     (pet-buffer-local-vars-setup)
     (pet-buffer-local-vars-teardown)
+
+    (expect 'pet-flycheck-teardown :to-have-been-called)
+    (expect 'pet-eglot-teardown :to-have-been-called)
+    (expect 'pet-dape-teardown :to-have-been-called)
 
     (expect (local-variable-p 'python-shell-interpreter) :not :to-be-truthy)
     (expect (local-variable-p 'python-shell-virtualenv-root) :not :to-be-truthy)
@@ -1430,8 +1457,6 @@
     (expect (local-variable-p 'lsp-ruff-lsp-python-path) :not :to-be-truthy)
     (expect (local-variable-p 'dap-python-executable) :not :to-be-truthy)
     (expect (local-variable-p 'dap-variables-project-root-function) :not :to-be-truthy)
-    (expect (local-variable-p 'dape-command) :not :to-be-truthy)
-    (expect (local-variable-p 'dape-cwd-fn) :not :to-be-truthy)
     (expect (local-variable-p 'python-pytest-executable) :not :to-be-truthy)
     (expect (local-variable-p 'python-black-command) :not :to-be-truthy)
     (expect (local-variable-p 'python-isort-command) :not :to-be-truthy)
