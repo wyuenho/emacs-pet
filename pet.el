@@ -963,7 +963,7 @@ buffer local values."
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local dap-variables-project-root-function #'pet-project-root)
   (setq-local dape-command
-              (if (file-exists-p (concat (file-name-directory (buffer-file-name)) "__main__.py"))
+              (if (and buffer-file-name (file-exists-p (concat (file-name-directory (buffer-file-name)) "__main__.py")))
                   `(debugpy-module command ,python-shell-interpreter)
                 `(debugpy command ,python-shell-interpreter)))
   (setq-local dape-cwd-fn #'pet-project-root)
