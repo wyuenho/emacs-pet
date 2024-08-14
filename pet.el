@@ -633,7 +633,7 @@ Selects a virtualenv in the follow order:
                                  (default-directory (file-name-directory (pet-pipfile-path))))
                         (condition-case err
                             (with-temp-buffer
-                              (let ((exit-code (process-file program nil t nil "--venv"))
+                              (let ((exit-code (process-file program nil '(t nil) nil "--quiet" "--venv"))
                                     (output (string-trim (buffer-string))))
                                 (if (zerop exit-code)
                                     output
