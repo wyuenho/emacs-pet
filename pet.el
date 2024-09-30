@@ -952,8 +952,8 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar lsp-pylsp-plugins-jedi-environment)
 (defvar lsp-pyright-python-executable-cmd)
 (defvar lsp-pyright-venv-path)
-(defvar lsp-ruff-lsp-ruff-path)
-(defvar lsp-ruff-lsp-python-path)
+(defvar lsp-ruff-server-command)
+(defvar lsp-ruff-python-path)
 (defvar dap-python-executable)
 (defvar dap-variables-project-root-function)
 (defvar python-pytest-executable)
@@ -980,14 +980,14 @@ buffer local values."
   (setq-local lsp-pylsp-plugins-jedi-environment python-shell-virtualenv-root)
   (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
   (setq-local lsp-pyright-python-executable-cmd python-shell-interpreter)
-  (setq-local lsp-ruff-lsp-ruff-path (pet-executable-find "ruff"))
-  (setq-local lsp-ruff-lsp-python-path python-shell-interpreter)
+  (setq-local lsp-ruff-server-command (list (pet-executable-find "ruff") "server"))
+  (setq-local lsp-ruff-python-path python-shell-interpreter)
   (setq-local dap-python-executable python-shell-interpreter)
   (setq-local dap-variables-project-root-function #'pet-project-root)
   (setq-local python-pytest-executable (pet-executable-find "pytest"))
   (setq-local python-black-command (pet-executable-find "black"))
   (setq-local python-isort-command (pet-executable-find "isort"))
-  (setq-local ruff-format-command lsp-ruff-lsp-ruff-path)
+  (setq-local ruff-format-command (pet-executable-find "ruff"))
   (setq-local blacken-executable python-black-command)
   (setq-local yapfify-executable (pet-executable-find "yapf"))
   (setq-local py-autopep8-command (pet-executable-find "autopep8"))
@@ -1008,8 +1008,8 @@ buffer local values."
   (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
   (kill-local-variable 'lsp-pyright-venv-path)
   (kill-local-variable 'lsp-pyright-python-executable-cmd)
-  (kill-local-variable 'lsp-ruff-lsp-ruff-path)
-  (kill-local-variable 'lsp-ruff-lsp-python-path)
+  (kill-local-variable 'lsp-ruff-python-path)
+  (kill-local-variable 'lsp-ruff-server-command)
   (kill-local-variable 'dap-python-executable)
   (kill-local-variable 'dap-variables-project-root-function)
   (kill-local-variable 'python-pytest-executable)
@@ -1060,8 +1060,8 @@ has assigned to."
                        lsp-pylsp-plugins-jedi-environment
                        lsp-pyright-python-executable-cmd
                        lsp-pyright-venv-path
-                       lsp-ruff-lsp-ruff-path
-                       lsp-ruff-lsp-python-path
+                       lsp-ruff-server-command
+                       lsp-ruff-python-path
                        dap-python-executable
                        dap-variables-project-root-function
                        dape-command
