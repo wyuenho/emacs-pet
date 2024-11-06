@@ -790,7 +790,7 @@
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pipenv-virtualenv) 0))
     (expect (pet-virtualenv-root) :to-equal pipenv-virtualenv)
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pipenv-virtualenv)
-    (expect 'call-process :to-have-been-called-with pipenv-path nil t nil "--venv"))
+    (expect 'call-process :to-have-been-called-with pipenv-path nil '(t nil) nil "--quiet" "--venv"))
 
   (it "should return the absolute path of the `.venv' or `venv' directory in a project"
     (spy-on 'pet-use-conda-p :and-return-value nil)
