@@ -291,11 +291,11 @@ they all suffer from various problems such as changing the environment and
 ``exec-path`` for the entire Emacs process, unable to activate early enough or
 being too general to support direnv tightly.
 
-Because ``pet`` needs to be able to configure the buffer local variables
-**before** the rest of the minor modes are activated, but **after**
-``exec-path`` has been set up by direnv, one must take care of choosing a minor
-mode package that allows the user to customize when it takes effect. This
-requirement rules out ``direnv.el`` [1]_.
+Because ``pet`` needs to configure the buffer local variables **before** the
+rest of the minor modes are activated, but **after** ``exec-path`` has been set
+up by direnv, one must take care of choosing a minor mode package that allows
+the user to customize when it takes effect. This requirement rules out
+``direnv.el`` [1]_.
 
 .. [1] Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
        no longer recommended due to this reason.
@@ -310,7 +310,8 @@ You can use ``envrc`` + `this direnv configuration
 your virtualenv or `auto-virtualenvwrapper
 <https://github.com/robert-zaremba/auto-virtualenvwrapper.el/>`_. Note that in
 any case, your virtualenv must be activated before turning on ``pet-mode`` in
-order to make the environment variable ``VIRTUAL_ENV`` to it. For example:
+order to make the environment variable ``VIRTUAL_ENV`` available to it. For
+example:
 
 .. code-block:: elisp
 
