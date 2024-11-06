@@ -253,7 +253,7 @@ Complete Example
                  (setq-local python-pytest-executable (pet-executable-find "pytest"))
 
                  (when-let ((ruff-executable (pet-executable-find "ruff")))
-                   (setq-local ruff-format-command black-executable)
+                   (setq-local ruff-format-command ruff-executable)
                    (ruff-format-on-save-mode))
 
                  (when-let ((black-executable (pet-executable-find "black")))
