@@ -113,6 +113,16 @@ and nil otherwise."
   :group 'pet
   :type '(repeat string))
 
+(defcustom pet-fd-command "fd"
+  "The \"fd\" command in the system."
+  :type 'string
+  :group 'pet)
+
+(defcustom pet-fd-command-args '("-tf" "-H" "-a" "-g")
+  "The arguments to pass to the \"fd\" command."
+  :type '(repeat string)
+  :group 'pet)
+
 
 
 (defun pet--executable-find (command &optional remote)
@@ -191,21 +201,25 @@ FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
   (condition-case err
-      (when-let ((root (pet-project-root))
-                 (fileset
-                  (cond ((functionp 'projectile-dir-files)
-                         (mapcar (apply-partially #'concat root)
-                                 (projectile-dir-files (pet-project-root))))
-                        ((functionp 'project-files)
-                         (project-files (project-current)))
-                        (t (directory-files-recursively
-                            (pet-project-root)
-                            (wildcard-to-regexp file))))))
-        (seq-find (lambda (f)
-                    (string-match-p
-                     (wildcard-to-regexp file)
-                     (file-name-nondirectory f)))
-                  (sort fileset 'string<)))
+      (when-let ((root (pet-project-root)))
+        (if (executable-find pet-fd-command)
+            (car (cl-remove-if
+                  #'string-empty-p
+                  (apply #'process-lines (append (list pet-fd-command) pet-fd-command-args (list file root)))))
+          (when-let ((fileset
+                      (cond ((functionp 'projectile-dir-files)
+                             (mapcar (apply-partially #'concat root)
+                                     (projectile-dir-files (pet-project-root))))
+                            ((functionp 'project-files)
+                             (project-files (project-current)))
+                            (t (directory-files-recursively
+                                (pet-project-root)
+                                (wildcard-to-regexp file))))))
+            (seq-find (lambda (f)
+                        (string-match-p
+                         (wildcard-to-regexp file)
+                         (file-name-nondirectory f)))
+                      (sort fileset 'string<)))))
     (error (pet-report-error err))))
 
 (defun pet-find-file-from-project (file)
