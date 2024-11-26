@@ -205,7 +205,7 @@ Return absolute path to FILE if found, nil otherwise."
         (if (executable-find pet-fd-command)
             (car (cl-remove-if
                   #'string-empty-p
-                  (apply #'process-lines (append (list pet-fd-command) pet-fd-command-args (list file root)))))
+                  (apply #'process-lines `(,pet-fd-command ,@pet-fd-command-args ,file ,root))))
           (when-let ((fileset
                       (cond ((functionp 'projectile-dir-files)
                              (mapcar (apply-partially #'concat root)
