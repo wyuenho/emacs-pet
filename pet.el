@@ -118,7 +118,7 @@ and nil otherwise."
   :type 'string
   :group 'pet)
 
-(defcustom pet-fd-command-args '("-tf" "-H" "-a" "-g")
+(defcustom pet-fd-command-args '("-tf" "-cnever" "-H" "-a" "-g")
   "The arguments to pass to the \"fd\" command."
   :type '(repeat string)
   :group 'pet)
@@ -205,7 +205,7 @@ Return absolute path to FILE if found, nil otherwise."
         (if (executable-find pet-fd-command)
             (car (cl-remove-if
                   #'string-empty-p
-                  (apply #'process-lines (append (list pet-fd-command) pet-fd-command-args (list file root)))))
+                  (apply #'process-lines `(,pet-fd-command ,@pet-fd-command-args ,file ,root))))
           (when-let ((fileset
                       (cond ((functionp 'projectile-dir-files)
                              (mapcar (apply-partially #'concat root)
