@@ -118,7 +118,7 @@ and nil otherwise."
   :type 'string
   :group 'pet)
 
-(defcustom pet-fd-command-args '("-tf" "-H" "-a" "-g")
+(defcustom pet-fd-command-args '("-tf" "-cnever" "-H" "-a" "-g")
   "The arguments to pass to the \"fd\" command."
   :type '(repeat string)
   :group 'pet)
