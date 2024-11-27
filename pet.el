@@ -803,55 +803,54 @@ FN is `eglot--executable-find', ARGS is the arguments to
   "Return LSP initializationOptions for Eglot.
 
 COMMAND is the name of the Python language server command."
-  (pcase command
-    ((rx "pylsp")
-     `(:pylsp
-       (:plugins
-        (:jedi
-         (:environment
-          ,(pet-virtualenv-root))
-         :ruff
-         (:executable
-          ,(pet-executable-find "ruff"))
-         :pylsp_mypy
-         (:overrides
-          ["--python-executable" ,(pet-executable-find "python") t])
-         :flake8
-         (:executable
-          ,(pet-executable-find "flake8"))
-         :pylint
-         (:executable
-          ,(pet-executable-find "pylint"))))))
-    ((rx "pyls")
-     `(:pyls
-       (:plugins
-        (:jedi
-         (:environment
-          ,(pet-virtualenv-root))
-         :pylint
-         (:executable
-          ,(pet-executable-find "pylint"))))))
-    ((rx "pyright-langserver")
-     `(:python
-       (:pythonPath
-        ,(pet-executable-find "python")
-        :venvPath
-        ,(pet-virtualenv-root))))
-    ((rx "jedi-language-server")
-     `(:jedi
-       (:executable
-        (:command
-         ,(pet-executable-find "jedi-language-server"))
-        :workspace
-        (:environmentPath
-         ,(pet-executable-find "python")))))
-    ((rx "ruff-lsp")
-     `(:settings
-       (:interpreter
-        ,(pet-executable-find "python")
-        :path
-        ,(pet-executable-find "ruff"))))
-    (t nil)))
+  (cond
+   ((not
+     (stringp command))
+    'nil)
+   ((string-match "pylsp" command)
+    (let nil
+      `(:pylsp
+        (:plugins
+         (:jedi
+          (:environment ,(pet-virtualenv-root))
+          :ruff
+          (:executable ,(pet-executable-find "ruff"))
+          :pylsp_mypy
+          (:overrides
+           ["--python-executable"
+            (\,
+             (pet-executable-find "python"))
+            t])
+          :flake8
+          (:executable ,(pet-executable-find "flake8"))
+          :pylint
+          (:executable ,(pet-executable-find "pylint")))))))
+   ((string-match "pyls" command)
+    (let nil
+      `(:pyls
+        (:plugins
+         (:jedi
+          (:environment ,(pet-virtualenv-root))
+          :pylint
+          (:executable ,(pet-executable-find "pylint")))))))
+   ((string-match "pyright-langserver" command)
+    (let nil
+      `(:python
+        (:pythonPath ,(pet-executable-find "python")
+                     :venvPath ,(pet-virtualenv-root)))))
+   ((string-match "jedi-language-server" command)
+    (let nil
+      `(:jedi
+        (:executable
+         (:command ,(pet-executable-find "jedi-language-server"))
+         :workspace
+         (:environmentPath ,(pet-executable-find "python"))))))
+   ((string-match "ruff-lsp" command)
+    (let nil
+      `(:settings
+        (:interpreter ,(pet-executable-find "python")
+                      :path ,(pet-executable-find "ruff")))))
+   (t 'nil)))
 
 (defalias 'pet--proper-list-p 'proper-list-p)
 (eval-when-compile
