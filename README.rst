@@ -148,7 +148,7 @@ Generally, the following snippet is all you'll need:
 
    ;; Emacs 29+
    ;; This will turn on `pet-mode' on `python-mode' and `python-ts-mode'
-   (add-hook 'python-base-mode-hook 'pet-mode -10)
+   (add-hook 'python-mode-hook 'pet-mode -10)
 
 Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
@@ -156,7 +156,7 @@ Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
    (use-package pet
      :config
-     (add-hook 'python-base-mode-hook 'pet-mode -10))
+     (add-hook 'python-mode-hook 'pet-mode -10))
 
 
 This will setup the buffer local variables for all of the `Supported Emacs
@@ -318,7 +318,7 @@ example:
    (require 'auto-virtualenvwrapper)
    (require 'pet)
 
-   (add-hook 'python-base-mode-hook
+   (add-hook 'python-mode-hook
      (lambda ()
        (auto-virtualenvwrapper-activate)
        (pet-mode))
