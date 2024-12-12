@@ -782,21 +782,9 @@ default otherwise."
 
 
 
-(defvar eglot-workspace-configuration)
 (declare-function jsonrpc--process "ext:jsonrpc")
-(declare-function eglot--executable-find "ext:eglot")
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
-
-(defun pet-eglot--executable-find-advice (fn &rest args)
-  "Look up Python language servers using `pet-executable-find'.
-
-FN is `eglot--executable-find', ARGS is the arguments to
-`eglot--executable-find'."
-  (pcase-let ((`(,command . ,_) args))
-    (if (member command '("pylsp" "pyls" "pyright-langserver" "jedi-language-server" "ruff-lsp"))
-        (pet-executable-find command)
-      (apply fn args))))
 
 (defun pet-lookup-eglot-server-initialization-options (command)
   "Return LSP initializationOptions for Eglot.
@@ -882,7 +870,7 @@ COMMAND is the name of the Python language server command."
                   (copy-tree b t)))
 
 (defun pet-eglot--workspace-configuration-plist-advice (fn &rest args)
-  "Enrich `eglot-workspace-configuration' with paths found by `pet'.
+  "Enrich `eglot--workspace-configuration-plist' with paths found by `pet'.
 
 FN is `eglot--workspace-configuration-plist', ARGS is the
 arguments to `eglot--workspace-configuration-plist'."
@@ -924,13 +912,11 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."
-  (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
   (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
   (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
 
 (defun pet-eglot-teardown ()
   "Tear down PET advices to Eglot."
-  (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
   (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
   (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
 
