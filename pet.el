@@ -785,6 +785,7 @@ default otherwise."
 (declare-function jsonrpc--process "ext:jsonrpc")
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
+(declare-function eglot--lookup-mode "ext:eglot")
 
 (defun pet-lookup-eglot-server-initialization-options (command)
   "Return LSP initializationOptions for Eglot.
@@ -910,13 +911,74 @@ FN is `eglot--guess-contact', ARGS is the arguments to
                 (seq-subseq result 4))
       result)))
 
+(defun pet-eglot-alternatives (alternatives)
+  "Use `pet-executable-find' instead of `executable-find' in the
+`eglot-alternatives' closure."
+  (lambda (&optional interactive _project)
+    ;; JT@2021-06-13: This function is way more complicated than it
+    ;; could be because it accounts for the fact that Compat's
+    ;; `executable-find' may take much longer to execute on
+    ;; remote files.
+    (let* ((listified (cl-loop for a in alternatives
+                               collect (if (listp a) a (list a))))
+           (err (lambda ()
+                  (error "None of '%s' are valid executables"
+                         (mapconcat #'car listified ", ")))))
+      (cond ((and interactive current-prefix-arg)
+             ;; A C-u always lets user input something manually,
+             nil)
+            (interactive
+             (let* ((augmented (mapcar (lambda (a)
+                                         (let ((found (pet-executable-find (car a))))
+                                           (and found
+                                                (cons (car a) (cons found (cdr a))))))
+                                       listified))
+                    (available (remove nil augmented)))
+               (cond ((cdr available)
+                      (cdr (assoc
+                            (completing-read
+                             "[eglot] More than one server executable available: "
+                             (mapcar #'car available)
+                             nil t nil nil (car (car available)))
+                            available #'equal)))
+                     ((cdr (car available)))
+                     (t
+                      ;; Don't error when used interactively, let the
+                      ;; Eglot prompt the user for alternative (github#719)
+                      nil))))
+            (t
+             (cl-loop for (p . args) in listified
+                      for probe = (pet-executable-find p)
+                      when probe return (cons probe args)
+                      finally (funcall err)))))))
+
+(defun pet-eglot--lookup-mode-advice (fn &rest args)
+  "Advice `eglot--lookup-mode' to use `pet-executable-find' if in Python
+mode.
+
+FN is `eglot--lookup-mode', ARGS is the arguments to
+`eglot--lookup-mode'."
+  (if (provided-mode-derived-p (car args)
+                               (if (functionp 'python-base-mode)
+                                   '(python-base-mode) '(python-mode)))
+      (let ((eglot-server-programs `(((python-mode python-ts-mode)
+                                      ;; Based on eglot v1.17, 2024-12-12
+                                      . ,(pet-eglot-alternatives
+                                          '("pylsp" "pyls" ("basedpyright-langserver" "--stdio")
+                                            ("pyright-langserver" "--stdio")
+                                            "jedi-language-server" "ruff-lsp"))))))
+        (apply fn args))
+    (apply fn args)))
+
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."
+  (advice-add 'eglot--lookup-mode :around #'pet-eglot--lookup-mode-advice)
   (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
   (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
 
 (defun pet-eglot-teardown ()
   "Tear down PET advices to Eglot."
+  (advice-remove 'eglot--lookup-mode #'pet-eglot--lookup-mode-advice)
   (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
   (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
 
