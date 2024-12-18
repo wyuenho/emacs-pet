@@ -1247,14 +1247,41 @@
     (pet-eglot-teardown))
 
   (it "should advice eglot functions"
-    (pet-eglot-setup)
+    (expect (advice-member-p 'pet-eglot--lookup-mode-advice 'eglot--lookup-mode) :to-be-truthy)
     (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be-truthy)
     (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be-truthy)))
+
+(describe "pet-eglot--lookup-mode--advice"
+  (before-each
+    ;; Define the variable that eglot would normally define
+    (defvar eglot-server-programs nil))
+
+  (after-each
+    ;; Clean up
+    (makunbound 'eglot-server-programs))
+  (it "should delegate to `pet-eglot-alternatives' for Python LSP servers"
+    (pet-eglot-setup)
+    (spy-on 'pet-eglot-alternatives :and-call-fake (lambda (alternatives)
+                                                     (lambda (&optional _i _p)
+                                                       '(("pylsp" "pylsp") ("pyls" "pyls")
+                                                          ("basedpyright-langserver" "basedpyright-langserver" "--stdio")
+                                                          ("pyright-langserver" "pyright-langserver" "--stdio")
+                                                          ("jedi-language-server" "jedi-language-server")
+                                                          ("ruff-lsp" "ruff-lsp")))))
+    (spy-on 'eglot--lookup-mode :and-call-fake (lambda (mode) eglot-server-programs))
+    (expect (caar (pet-eglot--lookup-mode-advice 'eglot--lookup-mode 'python-mode)) :to-equal '(python-mode python-ts-mode))
+    (expect (funcall (cdar (pet-eglot--lookup-mode-advice 'eglot--lookup-mode 'python-mode))) :to-equal '(("pylsp" "pylsp") ("pyls" "pyls")
+                                                                                                          ("basedpyright-langserver" "basedpyright-langserver" "--stdio")
+                                                                                                          ("pyright-langserver" "pyright-langserver" "--stdio")
+                                                                                                          ("jedi-language-server" "jedi-language-server")
+                                                                                                          ("ruff-lsp" "ruff-lsp")))
+    (pet-eglot-teardown)))
 
 (describe "pet-eglot-teardown"
   (it "should remove `pet' advices from eglot functions"
     (pet-eglot-setup)
     (pet-eglot-teardown)
+    (expect (advice-member-p 'pet-eglot--lookup-mode-advice 'eglot--lookup-mode) :to-be nil)
     (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be nil)
     (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be nil)))
 

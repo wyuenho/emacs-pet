@@ -786,7 +786,9 @@ default otherwise."
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
 (declare-function eglot--lookup-mode "ext:eglot")
-
+;; We redefine this variable, originally defined in eglot.el, in our
+;; advice. See: `pet-eglot--lookup-mode-advice'.
+(defvar eglot-server-programs)
 (defun pet-lookup-eglot-server-initialization-options (command)
   "Return LSP initializationOptions for Eglot.
 
