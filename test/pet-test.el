@@ -996,34 +996,6 @@
     (expect (local-variable-p 'flycheck-python-pycompile-executable) :not :to-be-truthy)
     (expect (local-variable-p 'flycheck-python-ruff-executable) :not :to-be-truthy)))
 
-(describe "pet-eglot--executable-find-advice"
-  (it "should delegate to `pet-executable-find' for Python LSP servers"
-    (spy-on 'eglot--executable-find :and-call-fake (lambda (&rest args) (string-join args " ")))
-    (spy-on 'pet-executable-find :and-call-fake 'identity)
-
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pylsp") :to-equal "pylsp")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pylsp")
-    (expect 'eglot--executable-find :not :to-have-been-called)
-
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyls") :to-equal "pyls")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyls")
-    (expect 'eglot--executable-find :not :to-have-been-called)
-
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyright-langserver") :to-equal "pyright-langserver")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyright-langserver")
-    (expect 'eglot--executable-find :not :to-have-been-called)
-
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "jedi-language-server") :to-equal "jedi-language-server")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "jedi-language-server")
-    (expect 'eglot--executable-find :not :to-have-been-called)
-
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "ruff-lsp") :to-equal "ruff-lsp")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "ruff-lsp")
-    (expect 'eglot--executable-find :not :to-have-been-called)
-
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "sh" "-c") :to-equal "sh -c")
-    (expect 'eglot--executable-find :to-have-been-called-with "sh" "-c")))
-
 (describe "pet-eglot--workspace-configuration-plist-advice"
   (before-each
     (spy-on 'jsonrpc--process))
@@ -1275,17 +1247,42 @@
     (pet-eglot-teardown))
 
   (it "should advice eglot functions"
-    (pet-eglot-setup)
+    (expect (advice-member-p 'pet-eglot--lookup-mode-advice 'eglot--lookup-mode) :to-be-truthy)
     (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be-truthy)
-    (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be-truthy)
     (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be-truthy)))
+
+(describe "pet-eglot--lookup-mode--advice"
+  (before-each
+    ;; Define the variable that eglot would normally define
+    (defvar eglot-server-programs nil))
+
+  (after-each
+    ;; Clean up
+    (makunbound 'eglot-server-programs))
+  (it "should delegate to `pet-eglot-alternatives' for Python LSP servers"
+    (pet-eglot-setup)
+    (spy-on 'pet-eglot-alternatives :and-call-fake (lambda (alternatives)
+                                                     (lambda (&optional _i _p)
+                                                       '(("pylsp" "pylsp") ("pyls" "pyls")
+                                                          ("basedpyright-langserver" "basedpyright-langserver" "--stdio")
+                                                          ("pyright-langserver" "pyright-langserver" "--stdio")
+                                                          ("jedi-language-server" "jedi-language-server")
+                                                          ("ruff-lsp" "ruff-lsp")))))
+    (spy-on 'eglot--lookup-mode :and-call-fake (lambda (mode) eglot-server-programs))
+    (expect (caar (pet-eglot--lookup-mode-advice 'eglot--lookup-mode 'python-mode)) :to-equal '(python-mode python-ts-mode))
+    (expect (funcall (cdar (pet-eglot--lookup-mode-advice 'eglot--lookup-mode 'python-mode))) :to-equal '(("pylsp" "pylsp") ("pyls" "pyls")
+                                                                                                          ("basedpyright-langserver" "basedpyright-langserver" "--stdio")
+                                                                                                          ("pyright-langserver" "pyright-langserver" "--stdio")
+                                                                                                          ("jedi-language-server" "jedi-language-server")
+                                                                                                          ("ruff-lsp" "ruff-lsp")))
+    (pet-eglot-teardown)))
 
 (describe "pet-eglot-teardown"
   (it "should remove `pet' advices from eglot functions"
     (pet-eglot-setup)
     (pet-eglot-teardown)
+    (expect (advice-member-p 'pet-eglot--lookup-mode-advice 'eglot--lookup-mode) :to-be nil)
     (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be nil)
-    (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be nil)
     (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be nil)))
 
 (describe "pet-dape-setup"
