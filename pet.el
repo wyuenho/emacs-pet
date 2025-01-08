@@ -785,7 +785,6 @@ default otherwise."
 (defvar eglot-workspace-configuration)
 (declare-function jsonrpc--process "ext:jsonrpc")
 (declare-function eglot--executable-find "ext:eglot")
-(declare-function eglot--uri-to-path "ext:eglot")
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
 
