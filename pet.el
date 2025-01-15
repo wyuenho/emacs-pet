@@ -788,15 +788,23 @@ default otherwise."
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
 
-(defun pet-eglot--executable-find-advice (fn &rest args)
+(defun pet-eglot--executable-find (&rest args)
   "Look up Python language servers using `pet-executable-find'.
 
-FN is `eglot--executable-find', ARGS is the arguments to
-`eglot--executable-find'."
+ARGS is the arguments to `executable-find'."
   (pcase-let ((`(,command . ,_) args))
     (if (member command '("pylsp" "pyls" "pyright-langserver" "jedi-language-server" "ruff-lsp"))
         (pet-executable-find command)
-      (apply fn args))))
+      (apply #'pet--executable-find args))))
+
+(defun pet-eglot-alternatives-advice (fn &rest args)
+  "Look up executables using `pet-eglot--executable-find'.
+
+FN is `eglot-alternatives'. See its docstring for the definition of
+ARGS."
+  (cl-letf (((symbol-function 'executable-find)
+             (symbol-function 'pet-eglot--executable-find)))
+    (apply fn args)))
 
 (defun pet-lookup-eglot-server-initialization-options (command)
   "Return LSP initializationOptions for Eglot.
@@ -902,7 +910,9 @@ arguments to `eglot--workspace-configuration-plist'."
 
 FN is `eglot--guess-contact', ARGS is the arguments to
 `eglot--guess-contact'."
-  (let* ((result (apply fn args))
+  (let* ((result (cl-letf (((symbol-function 'executable-find)
+                            (symbol-function 'pet-eglot--executable-find)))
+                   (apply fn args)))
          (contact (nth 3 result))
          (probe (seq-position contact :initializationOptions))
          (program-with-args (seq-subseq contact 0 (or probe (length contact))))
@@ -924,13 +934,13 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."
-  (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
+  (advice-add 'eglot-alternatives :around #'pet-eglot-alternatives-advice)
   (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
   (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
 
 (defun pet-eglot-teardown ()
   "Tear down PET advices to Eglot."
-  (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
+  (advice-remove 'eglot-alternatives #'pet-eglot-alternatives-advice)
   (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
   (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
 
