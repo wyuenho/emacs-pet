@@ -27,6 +27,8 @@ jobs:
           - "29.1"
           - "29.2"
           - "29.3"
+          - "29.4"
+          - "release-snapshot"
         experimental: [false]
         include:
           - emacs-version: "snapshot"
