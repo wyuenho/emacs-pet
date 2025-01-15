@@ -936,7 +936,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 
 (defvar dape-command)
-(defvar dape-cwd-fn)
+(defvar dape-cwd-function)
 
 (defun pet-dape-setup ()
   "Set up the buffer local variables for `dape'."
@@ -951,12 +951,12 @@ FN is `eglot--guess-contact', ARGS is the arguments to
                       (string-join module "."))))
       (setq-local dape-command `(debugpy-module command ,(pet-executable-find "python") :module ,module))
     (setq-local dape-command `(debugpy command ,(pet-executable-find "python"))))
-  (setq-local dape-cwd-fn #'pet-project-root))
+  (setq-local dape-cwd-function #'pet-project-root))
 
 (defun pet-dape-teardown ()
   "Tear down the buffer local variables for `dape'."
   (kill-local-variable 'dape-command)
-  (kill-local-variable 'dape-cwd-fn))
+  (kill-local-variable 'dape-cwd-function))
 
 
 
@@ -1078,7 +1078,7 @@ has assigned to."
                        dap-python-executable
                        dap-variables-project-root-function
                        dape-command
-                       dape-cwd-fn
+                       dape-cwd-function
                        python-pytest-executable
                        python-black-command
                        blacken-executable

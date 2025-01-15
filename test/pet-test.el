@@ -1308,10 +1308,10 @@
     (expect (local-variable-p 'dape-command) :to-be-truthy)
     (expect dape-command :to-equal '(debugpy-module command "/usr/bin/python" :module "foo.bar")))
 
-  (it "should set up buffer local variable dape-cwd-fn"
+  (it "should set up buffer local variable dape-cwd-function"
     (pet-dape-setup)
-    (expect (local-variable-p 'dape-cwd-fn) :to-be-truthy)
-    (expect dape-cwd-fn :to-equal 'pet-project-root)))
+    (expect (local-variable-p 'dape-cwd-function) :to-be-truthy)
+    (expect dape-cwd-function :to-equal 'pet-project-root)))
 
 (describe "pet-dape-teardown"
   (it "should tear down bufer local variables for dape"
@@ -1320,7 +1320,7 @@
     (pet-dape-setup)
     (pet-dape-teardown)
     (expect (local-variable-p 'dape-command) :not :to-be-truthy)
-    (expect (local-variable-p 'dape-cwd-fn) :not :to-be-truthy)))
+    (expect (local-variable-p 'dape-cwd-function) :not :to-be-truthy)))
 
 (describe "pet-buffer-local-vars-setup"
   (after-each
