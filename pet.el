@@ -982,7 +982,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 Assign all supported Python tooling executable variables to
 buffer local values."
-  (setq-local python-shell-interpreter (pet-executable-find "python"))
+  (setq-local python-shell-interpreter (pet-executable-find python-shell-interpreter))
   (setq-local python-shell-virtualenv-root (pet-virtualenv-root))
 
   (pet-flycheck-setup)
