@@ -982,7 +982,13 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 Assign all supported Python tooling executable variables to
 buffer local values."
-  (setq-local python-shell-interpreter (pet-executable-find "python"))
+  ;; Look for the correct shell interpreter prefering ipython
+  (let* ((pyshell (or (pet-executable-find "ipython")
+                      (pet-executable-find "python")))
+         (ipythonp (string-search "ipython" (file-name-nondirectory pyshell))))
+    (setq-local python-shell-interpreter pyshell
+                python-shell-interpreter-args (if ipythonp "-i --simple-prompt" "-i")))
+
   (setq-local python-shell-virtualenv-root (pet-virtualenv-root))
 
   (pet-flycheck-setup)
