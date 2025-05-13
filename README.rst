@@ -84,6 +84,7 @@ Supported Emacs Packages
 - `eglot <https://github.com/joaotavora/eglot>`_
 - `dape <https://github.com/svaante/dape>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
+- `python-lsp-server <https://github.com/python-lsp/python-lsp-server>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 - `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
 - `dap-python <https://emacs-lsp.github.io/dap-mode/page/configuration/#python>`_
