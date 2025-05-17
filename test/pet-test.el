@@ -387,8 +387,7 @@
   (describe "the cache access function"
     (before-each
       (spy-on 'pet-find-file-from-project :and-return-value "/home/user/project/tox.ini")
-      (buttercup-suppress-warning-capture
-        (spy-on 'pet-watch-config-file :and-call-fake 'ignore))
+      (spy-on 'pet-watch-config-file :and-call-fake (lambda (_ __ ___)))
       (spy-on 'parser :and-call-through))
 
     (after-each
@@ -720,12 +719,6 @@
       (expect 'pet--executable-find :to-have-been-called-times 2)))
 
   (describe "when `pet-search-globally' is nil"
-    (before-each
-      (setq pet-debug t))
-
-    (after-each
-      (setq pet-debug nil))
-
     (it "should not return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
       (spy-on 'pet-use-pre-commit-p :and-return-value nil)
       (spy-on 'pet-virtualenv-root :and-return-value nil)
