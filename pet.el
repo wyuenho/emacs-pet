@@ -299,9 +299,9 @@ otherwise."
 (defun pet-make-config-file-change-callback (cache-var parser)
   "Make callback for `file-notify-add-watch'.
 
-Return a callback with CACHE-VAR and PARSER captured in
-itsenvironment.  CACHE-VAR is the symbol to the cache variable to
-update.  PARSER is the symbol to the parser to parse the file.
+Return a callback with CACHE-VAR and PARSER captured in its environment.
+CACHE-VAR is the symbol to the cache variable to update.  PARSER is the
+symbol to the parser to parse the file.
 
 When invoked, the callback returned will parse the file with
 PARSER and cache the result in CACHE-VAR if the file was changed.
