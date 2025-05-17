@@ -166,11 +166,11 @@ If `projectile' is available, the function
 Otherwise, `project-root' is used."
   (or (and (functionp 'projectile-project-root)
            (projectile-project-root))
-      (when-let ((project (project-current)))
+      (when-let*((project (project-current)))
         (or (and (functionp 'project-root)
                  (expand-file-name (project-root project)))
             (and (functionp 'project-roots)
-                 (when-let ((root (car (project-roots project))))
+                 (when-let*((root (car (project-roots project))))
                    (expand-file-name root)))))))
 
 (defun pet-find-file-from-project-root (file)
@@ -180,7 +180,7 @@ FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found in the project root, nil
 otherwise."
-  (when-let ((root (pet-project-root)))
+  (when-let*((root (pet-project-root)))
     (car (file-expand-wildcards (concat (file-name-as-directory root) file) t))))
 
 (defun pet-locate-dominating-file (file)
@@ -207,12 +207,12 @@ FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
   (condition-case err
-      (when-let ((root (pet-project-root)))
+      (when-let*((root (pet-project-root)))
         (if (executable-find pet-fd-command)
             (car (cl-remove-if
                   #'string-empty-p
                   (apply #'process-lines `(,pet-fd-command ,@pet-fd-command-args ,file ,root))))
-          (when-let ((fileset
+          (when-let*((fileset
                       (cond ((functionp 'projectile-dir-files)
                              (mapcar (apply-partially #'concat root)
                                      (projectile-dir-files (pet-project-root))))
@@ -379,11 +379,11 @@ This variable is an alist where the key is the absolute path to a
 
        (defun ,(intern accessor-name) ()
          ,accessor-docstring
-         (when-let ((config-file (,(intern path-accessor-name))))
-           (if-let ((cached-content (assoc-default config-file ,cache-var)))
+         (when-let*((config-file (,(intern path-accessor-name))))
+           (if-let* ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
              (pet-watch-config-file config-file ',cache-var #',parser)
-             (when-let ((content (funcall #',parser config-file)))
+             (when-let*((content (funcall #',parser config-file)))
                (push (cons config-file content) ,cache-var)
                content)))))))
 
@@ -517,7 +517,7 @@ must both be installed into the current project first."
                (or (assoc-default db-file pet-pre-commit-database-cache)
                    (when (file-exists-p db-file)
                      (pet-watch-config-file db-file 'pet-pre-commit-database-cache 'pet-parse-pre-commit-db)
-                     (when-let ((content (pet-parse-pre-commit-db db-file)))
+                     (when-let*((content (pet-parse-pre-commit-db db-file)))
                        (push (cons db-file content) pet-pre-commit-database-cache)
                        content))))
 
@@ -620,7 +620,7 @@ Selects a virtualenv in the follow order:
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
     (or (assoc-default root pet-project-virtualenv-cache)
-        (when-let ((ev (getenv "VIRTUAL_ENV")))
+        (when-let*((ev (getenv "VIRTUAL_ENV")))
           (expand-file-name ev))
         (let ((venv-path
                (cond ((when-let* ((program (pet-use-conda-p))
@@ -645,7 +645,7 @@ Selects a virtualenv in the follow order:
                                           (user-error "Please create the environment with `$ %s create --file %s' first" program (pet-environment-path))))
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((program (pet-use-poetry-p))
+                     ((when-let*((program (pet-use-poetry-p))
                                  (default-directory (file-name-directory (pet-pyproject-path))))
                         (condition-case err
                             (with-temp-buffer
@@ -655,7 +655,7 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((program (pet-use-pipenv-p))
+                     ((when-let*((program (pet-use-pipenv-p))
                                  (default-directory (file-name-directory (pet-pipfile-path))))
                         (condition-case err
                             (with-temp-buffer
@@ -665,12 +665,12 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((dir (cl-loop for name in pet-venv-dir-names
+                     ((when-let*((dir (cl-loop for name in pet-venv-dir-names
                                                with dir = nil
                                                if (setq dir (locate-dominating-file default-directory name))
                                                return (file-name-as-directory (concat dir name)))))
                         (expand-file-name dir)))
-                     ((when-let ((program (pet-use-pyenv-p))
+                     ((when-let*((program (pet-use-pyenv-p))
                                  (default-directory (file-name-directory (pet-python-version-path))))
                         (condition-case err
                             (with-temp-buffer
@@ -711,7 +711,7 @@ algorithm described at
                                     return (expand-file-name path)))
                           ((and (buffer-file-name)
                                 (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py")))
-                           (when-let ((path (cl-loop for f in pylintrc
+                           (when-let*((path (cl-loop for f in pylintrc
                                                      with dir = nil
                                                      do (setq dir (locate-dominating-file default-directory f))
                                                      if dir
@@ -744,7 +744,7 @@ default otherwise."
           (setq-local flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
                                                     ,(expand-file-name
                                                       (concat
-                                                       (or (when-let ((xdg-config-home (getenv "XDG_CONFIG_HOME")))
+                                                       (or (when-let*((xdg-config-home (getenv "XDG_CONFIG_HOME")))
                                                              (file-name-as-directory xdg-config-home))
                                                            "~/.config/")
                                                        "mypy/config"))
@@ -1138,7 +1138,7 @@ Delete configuration file caches and watchers when all
 `python-mode' buffers of a project have been closed."
   (when (and (buffer-file-name)
              (derived-mode-p 'python-base-mode 'python-mode))
-    (when-let ((root (pet-project-root)))
+    (when-let*((root (pet-project-root)))
       (when (null (cl-loop for buf in (buffer-list)
                            if (and (not (equal buf (current-buffer)))
                                    (string-prefix-p root (buffer-file-name buf)))
