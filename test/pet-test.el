@@ -692,29 +692,59 @@
       (spy-on 'file-exists-p :and-call-fake (lambda (path) (not (equal path "/home/user/.cache/pre-commit/repoblack/bin/black"))))
       (expect (pet-executable-find "black") :to-be nil)))
 
-  (it "should return the absolute path the executable for a project if its virtualenv is found"
+  (it "should return the absolute path to the python executable for a project if its virtualenv is found"
     (spy-on 'pet-use-pre-commit-p :and-return-value nil)
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
     (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python"))
 
-  (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
-    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-    (spy-on 'pet-virtualenv-root :and-return-value nil)
-    (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
-                                              (when (equal executable "pyenv")
-                                                "/usr/bin/pyenv")))
-    (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
-    (expect (pet-executable-find "python") :to-equal "/home/user/.pyenv/versions/3.10.5/bin/python")
-    (expect 'process-lines :to-have-been-called-with "pyenv" "which" "python"))
+  (describe "when `pet-search-globally' is t"
+    (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
+                                                     (when (equal executable "pyenv")
+                                                       "/usr/bin/pyenv")))
+      (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
+      (expect (pet-executable-find "python" t) :to-equal "/home/user/.pyenv/versions/3.10.5/bin/python")
+      (expect 'process-lines :to-have-been-called-with "pyenv" "which" "python")
+      (expect 'pet--executable-find :to-have-been-called-times 1))
 
-  (it "should return the absolute path the executable for a project from `exec-path'"
-    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-    (spy-on 'pet-virtualenv-root :and-return-value nil)
-    (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
-                                              (when (equal executable "black")
-                                                "/home/user/project/.venv/bin/black")))
-    (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black")))
+    (it "should return the absolute path the executable for a project from `exec-path'"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
+                                                     (when (equal executable "black")
+                                                       "/home/user/project/.venv/bin/black")))
+      (expect (pet-executable-find "black" t) :to-equal "/home/user/project/.venv/bin/black")
+      (expect 'pet--executable-find :to-have-been-called-times 2)))
+
+  (describe "when `pet-search-globally' is nil"
+    (before-each
+      (setq pet-debug t))
+
+    (after-each
+      (setq pet-debug nil))
+
+    (it "should not return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
+                                                     (when (equal executable "pyenv")
+                                                       "/usr/bin/pyenv")))
+      (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
+      (expect (pet-executable-find "python") :to-equal nil)
+      (expect 'process-lines :not :to-have-been-called-with "pyenv" "which" "python")
+      (expect 'pet--executable-find :to-have-been-called-times 0))
+
+    (it "should not return the absolute path the executable for a project from `exec-path'"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
+                                                     (when (equal executable "black")
+                                                       "/home/user/project/.venv/bin/black")))
+      (expect (pet-executable-find "black") :to-equal nil)
+      (expect 'pet--executable-find :to-have-been-called-times 0))))
 
 (describe "pet-virtualenv-root"
   :var ((project-root "/home/user/project/")
@@ -914,7 +944,7 @@
     (expect flycheck-python-mypy-executable :to-equal "/home/user/project/.venv/bin/mypy")
     (expect flycheck-python-mypy-python-executable :to-equal "/home/user/project/.venv/bin/python")
     (expect flycheck-python-pyright-executable :to-equal "/home/user/project/.venv/bin/pyright")
-    (expect flycheck-python-pycompile-executable :to-equal python-shell-interpreter)
+    (expect flycheck-python-pycompile-executable :to-equal flycheck-python-mypy-python-executable)
     (expect flycheck-python-ruff-executable :to-equal "/home/user/project/.venv/bin/ruff"))
 
   (it "should reset `flycheck' Python checkers variables to default when `flycheck-mode' is nil"

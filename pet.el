@@ -123,6 +123,12 @@ and nil otherwise."
   :type '(repeat string)
   :group 'pet)
 
+(defcustom pet-search-globally nil
+  "Whether `pet-executable-find' should search outside of the project's virtualenvs."
+  :group 'pet
+  :type 'boolean
+  :safe t)
+
 
 
 (defun pet--executable-find (command &optional remote)
@@ -554,41 +560,47 @@ must both be installed into the current project first."
 
 
 ;;;###autoload
-(defun pet-executable-find (executable)
+(defun pet-executable-find (executable &optional search-globally)
   "Find the correct EXECUTABLE for the current Python project.
 
 Search for EXECUTABLE first in the `pre-commit' virtualenv, then
-whatever environment if found by `pet-virtualenv-root', then
-`pyenv', then finally from the variable `exec-path'.
+whatever environment is found by `pet-virtualenv-root'.
 
-The executable will only be searched in an environment created by
-a Python virtualenv management tool if the project is set up to
-use it."
-  (cond ((and (pet-use-pre-commit-p)
-              (not (string-prefix-p "python" executable))
-              (pet-pre-commit-config-has-hook-p executable))
-         (condition-case err
-             (let* ((venv (or (pet-pre-commit-virtualenv-path executable)
-                              (user-error "`pre-commit' is configured but the hook `%s' does not appear to be installed" executable)))
-                    (bin-dir (concat (file-name-as-directory venv) (pet-system-bin-dir)))
-                    (bin-path (concat bin-dir "/" executable)))
-               (if (file-exists-p bin-path)
-                   bin-path
-                 (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
-           (error (pet-report-error err))))
-        ((when-let* ((venv (pet-virtualenv-root))
-                     (path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
-                     (exec-path path)
-                     (tramp-remote-path path)
-                     (process-environment (copy-sequence process-environment)))
-           (setenv "PATH" (string-join exec-path path-separator))
-           (pet--executable-find executable t)))
-        ((when (pet--executable-find "pyenv" t)
+If SEARCH-GLOBALLY or `pet-search-globally' is non-nil, the
+search continues to look in `pyenv', then finally from
+`exec-path'."
+
+  ;; (message "pet-use-pre-commit-p: %s, pet-virtualenv-root: %s" (pet-use-pre-commit-p) (pet-virtualenv-root))
+
+  (catch 'done
+    (cond ((and (pet-use-pre-commit-p)
+                (not (string-prefix-p "python" executable))
+                (pet-pre-commit-config-has-hook-p executable))
+           (condition-case err
+               (let* ((venv (or (pet-pre-commit-virtualenv-path executable)
+                                (user-error "`pre-commit' is configured but the hook `%s' does not appear to be installed" executable)))
+                      (bin-dir (concat (file-name-as-directory venv) (pet-system-bin-dir)))
+                      (bin-path (concat bin-dir "/" executable)))
+                 (if (file-exists-p bin-path)
+                     bin-path
+                   (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
+             (error (pet-report-error err))))
+          ((when-let* ((venv (pet-virtualenv-root))
+                       (path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
+                       (exec-path path)
+                       (tramp-remote-path path)
+                       (process-environment (copy-sequence process-environment)))
+             (setenv "PATH" (string-join exec-path path-separator))
+             (pet--executable-find executable t)))
+          ((if (or search-globally pet-search-globally)
+               nil
+             (throw 'done nil)))
+          ((pet--executable-find "pyenv" t)
            (condition-case err
                (car (process-lines "pyenv" "which" executable))
-             (error (pet-report-error err)))))
-        (t (or (pet--executable-find executable t)
-               (pet--executable-find (concat executable "3") t)))))
+             (error (pet-report-error err))))
+          (t (or (pet--executable-find executable t)
+                 (pet--executable-find (concat executable "3") t))))))
 
 (defvar pet-project-virtualenv-cache nil)
 
