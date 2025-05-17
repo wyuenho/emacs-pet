@@ -332,6 +332,8 @@
 (describe "pet-watch-config-file"
   :var ((file "/home/user/project/tox.ini"))
 
+  (assume (< emacs-major-version 31) "skipped on snapshot")
+
   (describe "when the file is being watched"
     (before-each
       (spy-on 'file-notify-add-watch)
