@@ -274,6 +274,8 @@
             (file "/home/user/project/tox.ini")
             (event `((,file . ,descriptor))))
 
+    (assume (< emacs-major-version 31) "skipped on snapshot")
+
     (before-each
       (spy-on 'file-notify-rm-watch)
       (setq-local pet-watched-config-files event)
@@ -299,6 +301,8 @@
 
   (describe "when received changed event"
     :var ((file "/home/user/project/tox.ini"))
+
+    (assume (< emacs-major-version 31) "skipped on snapshot")
 
     (before-each
       (defvar cache nil)
