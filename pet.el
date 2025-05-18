@@ -123,7 +123,7 @@ and nil otherwise."
   :type '(repeat string)
   :group 'pet)
 
-(defcustom pet-search-globally nil
+(defcustom pet-search-globally t
   "Whether `pet-executable-find' should search outside of the project's virtualenvs.
 
 If you need to configure this value, it is likely that you'd want a
