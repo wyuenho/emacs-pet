@@ -124,7 +124,12 @@ and nil otherwise."
   :group 'pet)
 
 (defcustom pet-search-globally nil
-  "Whether `pet-executable-find' should search outside of the project's virtualenvs."
+  "Whether `pet-executable-find' should search outside of the project's virtualenvs.
+
+If you need to configure this value, it is likely that you'd want a
+different value depending the project you are working on.  If so, you
+can safely set this variable in a `.dir-locals.el' file at the root of
+the project directory."
   :group 'pet
   :type 'boolean
   :safe t)
