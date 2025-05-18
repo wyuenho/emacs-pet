@@ -726,7 +726,7 @@
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
       (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
-      (expect (pet-executable-find "python") :to-equal nil)
+      (expect (pet-executable-find "python" nil) :to-equal nil)
       (expect 'process-lines :not :to-have-been-called-with "pyenv" "which" "python")
       (expect 'pet--executable-find :to-have-been-called-times 0))
 
@@ -736,7 +736,7 @@
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "black")
                                                        "/home/user/project/.venv/bin/black")))
-      (expect (pet-executable-find "black") :to-equal nil)
+      (expect (pet-executable-find "black" nil) :to-equal nil)
       (expect 'pet--executable-find :to-have-been-called-times 0))))
 
 (describe "pet-virtualenv-root"
