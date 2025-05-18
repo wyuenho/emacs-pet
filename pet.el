@@ -575,8 +575,6 @@ If SEARCH-GLOBALLY or `pet-search-globally' is non-nil, the
 search continues to look in `pyenv', then finally from
 `exec-path'."
 
-  ;; (message "pet-use-pre-commit-p: %s, pet-virtualenv-root: %s" (pet-use-pre-commit-p) (pet-virtualenv-root))
-
   (catch 'done
     (cond ((and (pet-use-pre-commit-p)
                 (not (string-prefix-p "python" executable))
