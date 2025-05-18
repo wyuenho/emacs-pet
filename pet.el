@@ -123,6 +123,12 @@ and nil otherwise."
   :type '(repeat string)
   :group 'pet)
 
+(defcustom pet-search-globally nil
+  "Whether `pet-executable-find' should search outside of the project's virtualenvs."
+  :group 'pet
+  :type 'boolean
+  :safe t)
+
 
 
 (defun pet--executable-find (command &optional remote)
@@ -160,11 +166,11 @@ If `projectile' is available, the function
 Otherwise, `project-root' is used."
   (or (and (functionp 'projectile-project-root)
            (projectile-project-root))
-      (when-let ((project (project-current)))
+      (when-let*((project (project-current)))
         (or (and (functionp 'project-root)
                  (expand-file-name (project-root project)))
             (and (functionp 'project-roots)
-                 (when-let ((root (car (project-roots project))))
+                 (when-let*((root (car (project-roots project))))
                    (expand-file-name root)))))))
 
 (defun pet-find-file-from-project-root (file)
@@ -174,7 +180,7 @@ FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found in the project root, nil
 otherwise."
-  (when-let ((root (pet-project-root)))
+  (when-let*((root (pet-project-root)))
     (car (file-expand-wildcards (concat (file-name-as-directory root) file) t))))
 
 (defun pet-locate-dominating-file (file)
@@ -201,12 +207,12 @@ FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
   (condition-case err
-      (when-let ((root (pet-project-root)))
+      (when-let*((root (pet-project-root)))
         (if (executable-find pet-fd-command)
             (car (cl-remove-if
                   #'string-empty-p
                   (apply #'process-lines `(,pet-fd-command ,@pet-fd-command-args ,file ,root))))
-          (when-let ((fileset
+          (when-let*((fileset
                       (cond ((functionp 'projectile-dir-files)
                              (mapcar (apply-partially #'concat root)
                                      (projectile-dir-files (pet-project-root))))
@@ -293,9 +299,9 @@ otherwise."
 (defun pet-make-config-file-change-callback (cache-var parser)
   "Make callback for `file-notify-add-watch'.
 
-Return a callback with CACHE-VAR and PARSER captured in
-itsenvironment.  CACHE-VAR is the symbol to the cache variable to
-update.  PARSER is the symbol to the parser to parse the file.
+Return a callback with CACHE-VAR and PARSER captured in its environment.
+CACHE-VAR is the symbol to the cache variable to update.  PARSER is the
+symbol to the parser to parse the file.
 
 When invoked, the callback returned will parse the file with
 PARSER and cache the result in CACHE-VAR if the file was changed.
@@ -373,11 +379,11 @@ This variable is an alist where the key is the absolute path to a
 
        (defun ,(intern accessor-name) ()
          ,accessor-docstring
-         (when-let ((config-file (,(intern path-accessor-name))))
-           (if-let ((cached-content (assoc-default config-file ,cache-var)))
+         (when-let*((config-file (,(intern path-accessor-name))))
+           (if-let* ((cached-content (assoc-default config-file ,cache-var)))
                cached-content
              (pet-watch-config-file config-file ',cache-var #',parser)
-             (when-let ((content (funcall #',parser config-file)))
+             (when-let*((content (funcall #',parser config-file)))
                (push (cons config-file content) ,cache-var)
                content)))))))
 
@@ -511,7 +517,7 @@ must both be installed into the current project first."
                (or (assoc-default db-file pet-pre-commit-database-cache)
                    (when (file-exists-p db-file)
                      (pet-watch-config-file db-file 'pet-pre-commit-database-cache 'pet-parse-pre-commit-db)
-                     (when-let ((content (pet-parse-pre-commit-db db-file)))
+                     (when-let*((content (pet-parse-pre-commit-db db-file)))
                        (push (cons db-file content) pet-pre-commit-database-cache)
                        content))))
 
@@ -554,41 +560,47 @@ must both be installed into the current project first."
 
 
 ;;;###autoload
-(defun pet-executable-find (executable)
+(defun pet-executable-find (executable &optional search-globally)
   "Find the correct EXECUTABLE for the current Python project.
 
 Search for EXECUTABLE first in the `pre-commit' virtualenv, then
-whatever environment if found by `pet-virtualenv-root', then
-`pyenv', then finally from the variable `exec-path'.
+whatever environment is found by `pet-virtualenv-root'.
 
-The executable will only be searched in an environment created by
-a Python virtualenv management tool if the project is set up to
-use it."
-  (cond ((and (pet-use-pre-commit-p)
-              (not (string-prefix-p "python" executable))
-              (pet-pre-commit-config-has-hook-p executable))
-         (condition-case err
-             (let* ((venv (or (pet-pre-commit-virtualenv-path executable)
-                              (user-error "`pre-commit' is configured but the hook `%s' does not appear to be installed" executable)))
-                    (bin-dir (concat (file-name-as-directory venv) (pet-system-bin-dir)))
-                    (bin-path (concat bin-dir "/" executable)))
-               (if (file-exists-p bin-path)
-                   bin-path
-                 (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
-           (error (pet-report-error err))))
-        ((when-let* ((venv (pet-virtualenv-root))
-                     (path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
-                     (exec-path path)
-                     (tramp-remote-path path)
-                     (process-environment (copy-sequence process-environment)))
-           (setenv "PATH" (string-join exec-path path-separator))
-           (pet--executable-find executable t)))
-        ((when (pet--executable-find "pyenv" t)
+If SEARCH-GLOBALLY or `pet-search-globally' is non-nil, the
+search continues to look in `pyenv', then finally from
+`exec-path'."
+
+  ;; (message "pet-use-pre-commit-p: %s, pet-virtualenv-root: %s" (pet-use-pre-commit-p) (pet-virtualenv-root))
+
+  (catch 'done
+    (cond ((and (pet-use-pre-commit-p)
+                (not (string-prefix-p "python" executable))
+                (pet-pre-commit-config-has-hook-p executable))
+           (condition-case err
+               (let* ((venv (or (pet-pre-commit-virtualenv-path executable)
+                                (user-error "`pre-commit' is configured but the hook `%s' does not appear to be installed" executable)))
+                      (bin-dir (concat (file-name-as-directory venv) (pet-system-bin-dir)))
+                      (bin-path (concat bin-dir "/" executable)))
+                 (if (file-exists-p bin-path)
+                     bin-path
+                   (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
+             (error (pet-report-error err))))
+          ((when-let* ((venv (pet-virtualenv-root))
+                       (path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
+                       (exec-path path)
+                       (tramp-remote-path path)
+                       (process-environment (copy-sequence process-environment)))
+             (setenv "PATH" (string-join exec-path path-separator))
+             (pet--executable-find executable t)))
+          ((if (or search-globally pet-search-globally)
+               nil
+             (throw 'done nil)))
+          ((pet--executable-find "pyenv" t)
            (condition-case err
                (car (process-lines "pyenv" "which" executable))
-             (error (pet-report-error err)))))
-        (t (or (pet--executable-find executable t)
-               (pet--executable-find (concat executable "3") t)))))
+             (error (pet-report-error err))))
+          (t (or (pet--executable-find executable t)
+                 (pet--executable-find (concat executable "3") t))))))
 
 (defvar pet-project-virtualenv-cache nil)
 
@@ -608,7 +620,7 @@ Selects a virtualenv in the follow order:
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
     (or (assoc-default root pet-project-virtualenv-cache)
-        (when-let ((ev (getenv "VIRTUAL_ENV")))
+        (when-let*((ev (getenv "VIRTUAL_ENV")))
           (expand-file-name ev))
         (let ((venv-path
                (cond ((when-let* ((program (pet-use-conda-p))
@@ -633,7 +645,7 @@ Selects a virtualenv in the follow order:
                                           (user-error "Please create the environment with `$ %s create --file %s' first" program (pet-environment-path))))
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((program (pet-use-poetry-p))
+                     ((when-let*((program (pet-use-poetry-p))
                                  (default-directory (file-name-directory (pet-pyproject-path))))
                         (condition-case err
                             (with-temp-buffer
@@ -643,7 +655,7 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((program (pet-use-pipenv-p))
+                     ((when-let*((program (pet-use-pipenv-p))
                                  (default-directory (file-name-directory (pet-pipfile-path))))
                         (condition-case err
                             (with-temp-buffer
@@ -653,12 +665,12 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let ((dir (cl-loop for name in pet-venv-dir-names
+                     ((when-let*((dir (cl-loop for name in pet-venv-dir-names
                                                with dir = nil
                                                if (setq dir (locate-dominating-file default-directory name))
                                                return (file-name-as-directory (concat dir name)))))
                         (expand-file-name dir)))
-                     ((when-let ((program (pet-use-pyenv-p))
+                     ((when-let*((program (pet-use-pyenv-p))
                                  (default-directory (file-name-directory (pet-python-version-path))))
                         (condition-case err
                             (with-temp-buffer
@@ -699,7 +711,7 @@ algorithm described at
                                     return (expand-file-name path)))
                           ((and (buffer-file-name)
                                 (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py")))
-                           (when-let ((path (cl-loop for f in pylintrc
+                           (when-let*((path (cl-loop for f in pylintrc
                                                      with dir = nil
                                                      do (setq dir (locate-dominating-file default-directory f))
                                                      if dir
@@ -732,7 +744,7 @@ default otherwise."
           (setq-local flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
                                                     ,(expand-file-name
                                                       (concat
-                                                       (or (when-let ((xdg-config-home (getenv "XDG_CONFIG_HOME")))
+                                                       (or (when-let*((xdg-config-home (getenv "XDG_CONFIG_HOME")))
                                                              (file-name-as-directory xdg-config-home))
                                                            "~/.config/")
                                                        "mypy/config"))
@@ -741,10 +753,11 @@ default otherwise."
           (setq-local flycheck-python-flake8-executable (pet-executable-find "flake8"))
           (setq-local flycheck-python-pylint-executable (pet-executable-find "pylint"))
           (setq-local flycheck-python-mypy-executable (pet-executable-find "mypy"))
-          (setq-local flycheck-python-mypy-python-executable (pet-executable-find "python"))
           (setq-local flycheck-python-pyright-executable (pet-executable-find "pyright"))
-          (setq-local flycheck-python-pycompile-executable python-shell-interpreter)
-          (setq-local flycheck-python-ruff-executable (pet-executable-find "ruff"))))
+          (setq-local flycheck-python-ruff-executable (pet-executable-find "ruff"))
+          (let ((python-path (pet-executable-find "python")))
+            (setq-local flycheck-python-mypy-python-executable python-path)
+            (setq-local flycheck-python-pycompile-executable python-path))))
     (kill-local-variable 'flycheck-python-mypy-config)
     (kill-local-variable 'flycheck-pylintrc)
     (kill-local-variable 'flycheck-python-flake8-executable)
@@ -1129,7 +1142,7 @@ Delete configuration file caches and watchers when all
 `python-mode' buffers of a project have been closed."
   (when (and (buffer-file-name)
              (derived-mode-p 'python-base-mode 'python-mode))
-    (when-let ((root (pet-project-root)))
+    (when-let*((root (pet-project-root)))
       (when (null (cl-loop for buf in (buffer-list)
                            if (and (not (equal buf (current-buffer)))
                                    (string-prefix-p root (buffer-file-name buf)))

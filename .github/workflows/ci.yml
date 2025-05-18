@@ -31,9 +31,9 @@ jobs:
           - "30.1"
           - "release-snapshot"
         experimental: [false]
-        include:
-          - emacs-version: "snapshot"
-            experimental: true
+        # include:
+        #   - emacs-version: "snapshot"
+        #     experimental: true
 
     steps:
       - uses: "actions/checkout@v4"
