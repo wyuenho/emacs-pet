@@ -719,6 +719,12 @@
       (expect 'pet--executable-find :to-have-been-called-times 2)))
 
   (describe "when `pet-search-globally' is nil"
+    (before-each
+      (setq-local pet-search-globally nil))
+
+    (after-each
+      (kill-local-variable 'pet-search-globally))
+
     (it "should not return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
       (spy-on 'pet-use-pre-commit-p :and-return-value nil)
       (spy-on 'pet-virtualenv-root :and-return-value nil)
@@ -726,6 +732,7 @@
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
       (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
+
       (expect (pet-executable-find "python" nil) :to-equal nil)
       (expect 'process-lines :not :to-have-been-called-with "pyenv" "which" "python")
       (expect 'pet--executable-find :to-have-been-called-times 0))
@@ -736,6 +743,7 @@
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "black")
                                                        "/home/user/project/.venv/bin/black")))
+
       (expect (pet-executable-find "black" nil) :to-equal nil)
       (expect 'pet--executable-find :to-have-been-called-times 0))))
 
