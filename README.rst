@@ -66,7 +66,7 @@ Supported Python Virtual Environment Tools
 - `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained, don't use
   it unless you are using Homebrew on macOS)
 - `docker <https://hub.docker.com/_/python>`_
-- `conda <https://docs.conda.io>`_
+- `conda <https://docs.conda.io>`_ (no support for conda-project yet)
 - `mamba
   <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_
 - `micromamba
