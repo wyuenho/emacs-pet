@@ -691,11 +691,49 @@
       (spy-on 'file-exists-p :and-call-fake (lambda (path) (not (equal path "/home/user/.cache/pre-commit/repoblack/bin/black"))))
       (expect (pet-executable-find "black") :to-be nil)))
 
-  (it "should return the absolute path to the python executable for a project if its virtualenv is found"
-    (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-    (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
-    (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
-    (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python"))
+  (describe "when on *nix"
+    (it "should return the absolute path to the python executable for a project if its virtualenv is found"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
+      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'pet-system-bin-dir)
+      (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
+      (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python")
+      (expect 'pet-system-bin-dir :to-have-been-called-times 1))
+
+    (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value "/home/user/anaconda/envs/project/")
+      (spy-on 'pet-use-conda-p :and-return-value t)
+      (spy-on 'pet-system-bin-dir)
+      (spy-on 'executable-find :and-return-value "/home/user/anaconda/envs/project/bin/python")
+      (expect (pet-executable-find "python") :to-equal "/home/user/anaconda/envs/project/bin/python")
+      (expect 'pet-system-bin-dir :to-have-been-called-times 1)))
+
+  (describe "when on windows"
+    (before-each
+      (setq-local system-type 'windows-nt))
+
+    (after-each
+      (kill-local-variable 'system-type))
+
+    (it "should return the absolute path to the python executable for a project if its virtualenv is found"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/project/.venv/")
+      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'pet-system-bin-dir)
+      (spy-on 'executable-find :and-return-value "C:/Users/user/project/.venv/bin/python")
+      (expect (pet-executable-find "python") :to-equal "C:/Users/user/project/.venv/bin/python")
+      (expect 'pet-system-bin-dir :to-have-been-called-times 1))
+
+    (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/Anaconda3/envs/project/")
+      (spy-on 'pet-use-conda-p :and-return-value t)
+      (spy-on 'pet-system-bin-dir)
+      (spy-on 'executable-find :and-return-value "C:/Users/user/Anaconda3/envs/project/python")
+      (expect (pet-executable-find "python") :to-equal "C:/Users/user/Anaconda3/envs/project/python")
+      (expect 'pet-system-bin-dir :not :to-have-been-called)))
 
   (describe "when `pet-search-globally' is t"
     (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
