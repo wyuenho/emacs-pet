@@ -939,6 +939,51 @@ default otherwise."
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
 
+(defun pet--process-guess-contact-result (contact-result)
+  "Process CONTACT-RESULT from `eglot--guess-contact` to merge PET's initialization options."
+  (let* ((contact (nth 3 contact-result)) ; contact is the 4th element of contact-result
+         (probe (seq-position contact :initializationOptions))
+         (program-with-args (seq-subseq contact 0 (or probe (length contact))))
+         (program (car program-with-args))
+         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions)))
+    (if init-opts
+        (append (seq-subseq contact-result 0 3) ; Use contact-result here
+                (list
+                 (append
+                  program-with-args
+                  (list
+                   :initializationOptions
+                   (pet-merge-eglot-initialization-options
+                    init-opts
+                    (pet-lookup-eglot-server-initialization-options
+                     program)))))
+                (seq-subseq contact-result 4))   ; And here
+      contact-result))) ; Return original contact-result if no init-opts
+
+(defun pet-eglot--guess-contact-advice (fn &rest args)
+  "Enrich `eglot--guess-contact' with paths found by `pet'.
+
+FN is `eglot--guess-contact', ARGS is the arguments to
+`eglot--guess-contact'."
+  (let ((result (apply fn args)))
+    (pet--process-guess-contact-result result)))
+
+(defun pet-eglot--guess-contact-for-1.17-advice (fn &rest guess_args)
+  "Advice for `eglot--guess-contact` in Eglot 1.17.
+Uses `cl-letf` to ensure `pet`'s executable finding is used via `executable-find`,
+and merges PET's initialization options."
+  (let* ((original-global-executable-find #'executable-find) ; Renamed for clarity, captures the true global executable-find
+         (result
+          (cl-letf (((symbol-function 'executable-find)
+                     (lambda (command &optional remote search)
+                       ;; Call pet-eglot--executable-find-advice directly
+                       ;; The first arg to the advice is the function it's advising (here, the original global executable-find)
+                       ;; The rest of the args (command remote search) become the &rest args for the advice.
+                       (pet-eglot--executable-find-advice original-global-executable-find command remote search))))
+            (apply fn guess_args))))
+    ;; Call the new helper function to process the result
+    (pet--process-guess-contact-result result)))
+
 (defun pet-eglot--executable-find-advice (fn &rest args)
   "Look up Python language servers using `pet-executable-find'.
 
@@ -1048,42 +1093,30 @@ arguments to `eglot--workspace-configuration-plist'."
          (user-config (apply fn server (and canonical-path (cons canonical-path (cddr args))))))
     (pet-merge-eglot-initialization-options user-config pet-config)))
 
-(defun pet-eglot--guess-contact-advice (fn &rest args)
-  "Enrich `eglot--guess-contact' with paths found by `pet'.
-
-FN is `eglot--guess-contact', ARGS is the arguments to
-`eglot--guess-contact'."
-  (let* ((result (apply fn args))
-         (contact (nth 3 result))
-         (probe (seq-position contact :initializationOptions))
-         (program-with-args (seq-subseq contact 0 (or probe (length contact))))
-         (program (car program-with-args))
-         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions)))
-    (if init-opts
-        (append (seq-subseq result 0 3)
-                (list
-                 (append
-                  program-with-args
-                  (list
-                   :initializationOptions
-                   (pet-merge-eglot-initialization-options
-                    init-opts
-                    (pet-lookup-eglot-server-initialization-options
-                     program)))))
-                (seq-subseq result 4))
-      result)))
-
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."
-  (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
-  (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
-  (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
+  (if (fboundp 'eglot--executable-find)
+      ;; For Eglot versions that have eglot--executable-find (<1.17 or >=1.18)
+      (progn
+        (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
+        (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
+        (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
+    ;; For Eglot 1.17 (where eglot--executable-find is not defined)
+    ;; The conditional defun block for pet-eglot--guess-contact-for-1.17-advice is now removed from here.
+    (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-for-1.17-advice)
+    (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)))
 
 (defun pet-eglot-teardown ()
   "Tear down PET advices to Eglot."
-  (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
-  (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
-  (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
+  (if (fboundp 'eglot--executable-find)
+      ;; For Eglot versions that have eglot--executable-find
+      (progn
+        (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
+        (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
+        (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
+    ;; For Eglot 1.17
+    (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-for-1.17-advice)
+    (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)))
 
 
 (defvar dape-command)
