@@ -427,6 +427,40 @@ Returns the path to the `pre-commit' executable."
                   (setenv "PATH" (string-join exec-path path-separator))
                   (pet--executable-find "pre-commit" t))))))
 
+(defun pet-debug-pyproject ()
+  "Debug function to inspect the parsed pyproject.toml structure."
+  (interactive)
+  (let ((pyproject (pet-pyproject)))
+    (if pyproject
+        (with-current-buffer (get-buffer-create "*pet-debug*")
+          (erase-buffer)
+          (insert "Parsed pyproject.toml structure:\n\n")
+          (pp pyproject (current-buffer))
+          (goto-char (point-min))
+          (pop-to-buffer (current-buffer)))
+      (message "No pyproject.toml found or failed to parse"))))
+
+(defun pet-use-pixi-p ()
+  "Whether the current project is using `pixi'.
+
+Returns the path to the `pixi' executable."
+  (when pet-debug
+    (message "Checking for pixi..."))
+  (when-let ((pyproject (pet-pyproject)))
+    (when pet-debug
+      (message "Found pyproject.toml, checking for tool.pixi section..."))
+    (let ((has-pixi (or
+                     ;; Try different possible structures
+                     (alist-get 'pixi (alist-get 'tool pyproject))
+                     (alist-get "pixi" (alist-get "tool" pyproject))
+                     ;; Sometimes the parser might use strings as keys
+                     (let-alist pyproject
+                       (and .tool .tool.pixi)))))
+      (when pet-debug
+        (message "Has pixi section: %s" has-pixi))
+      (when has-pixi
+        (pet--executable-find "pixi" t)))))
+
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
@@ -620,10 +654,11 @@ Selects a virtualenv in the follow order:
 1. The value of the environment variable `VIRTUAL_ENV' if defined.
 2. If the current project is using any `conda' variant, return the absolute path
    to the virtualenv directory for the current project.
-3. Ditta for `poetry'.
+3. Ditto for `poetry'.
 4. Ditto for `pipenv'.
-5. A directory in `pet-venv-dir-names' in the project root if found.
-6. If the current project is using `pyenv', return the path to the virtualenv
+5. Ditto for `pixi'.
+6. A directory in `pet-venv-dir-names' in the project root if found.
+7. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
     (or (assoc-default root pet-project-virtualenv-cache)
@@ -672,6 +707,38 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
+                     ((when-let* ((program (pet-use-pixi-p))
+                                  (default-directory (file-name-directory (pet-pyproject-path))))
+                        (condition-case err
+                            (with-temp-buffer
+                              (let ((exit-code (process-file program nil t nil "info" "--json"))
+                                    (output (string-trim (buffer-string))))
+                                (if (zerop exit-code)
+                                    (let* ((json-output (pet-parse-json output))
+                                           ;; Try to get the default environment prefix
+                                           (env-dir (or
+                                                     ;; First try the nested structure
+                                                     (let-alist json-output
+                                                       .environments_info.default.prefix)
+                                                     ;; Also try with string keys
+                                                     (alist-get 'prefix
+                                                                (alist-get 'default
+                                                                           (alist-get 'environments_info json-output)))
+                                                     ;; Try alternative structure with string keys
+                                                     (alist-get "prefix"
+                                                                (alist-get "default"
+                                                                           (alist-get "environments_info" json-output))))))
+                                      (if env-dir
+                                          (expand-file-name env-dir)
+                                        ;; If we can't find it in the JSON, fall back to the default location
+                                        (let ((default-env-path (expand-file-name ".pixi/envs/default"
+                                                                                  (file-name-directory (pet-pyproject-path)))))
+                                          (if (file-directory-p default-env-path)
+                                              default-env-path
+                                            (user-error "Pixi environment not found. Please run 'pixi install' first")))))
+                                  (user-error (buffer-string)))))
+                          (error (pet-report-error err)))))
+                     ;; Generic venv directory check comes AFTER pixi
                      ((when-let*((dir (cl-loop for name in pet-venv-dir-names
                                                with dir = nil
                                                if (setq dir (locate-dominating-file default-directory name))
