@@ -44,7 +44,7 @@
 
     (it "should call minibuffer-message"
       (buttercup-suppress-warning-capture
-        (spy-on 'minibuffer-message :and-call-fake 'ignore))
+        (spy-on 'minibuffer-message))
       (pet-report-error '(error . ("error")))
       (expect 'minibuffer-message :to-have-been-called-with "error")))
 
