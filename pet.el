@@ -356,27 +356,28 @@ content into an alist."
 (cl-defmacro pet-def-config-accessor (name &key file-name parser)
   "Create a function for reading the content of a config file.
 
-NAME will be used to create a memorized funcion named `pet-NAME'
-to return the content of the configuration file FILE-NAME.
-FILE-NAME is the name or glob pattern of the configuration file
-that will be searched in the project.  The content of the file
-will be parsed by PARSER and then cached in a variable called
-`pet-NAME-cache'.
+NAME will be used to create a memorized funcion named `pet-NAME' to
+return the content of the configuration file FILE-NAME.  FILE-NAME is
+the name or glob pattern of the configuration file that will be searched
+in the project.
 
-Changes to the file will automatically update the cached content
-See `pet-watch-config-file' for details."
+
+The content of the file will be parsed by PARSER and then cached in a
+variable called `pet-NAME-cache'.  Changes to the file will
+automatically update the cached content. See `pet-watch-config-file' for
+details."
   (let* ((accessor-name (concat "pet-" (symbol-name name)))
          (path-accessor-name (concat accessor-name "-path"))
          (cache-var (intern (concat accessor-name "-cache")))
          (accessor-docstring
           (format "Accessor for `%s' in the current Python project.
 
-If the file is found in the current Python project, cache its
-content in `%s' and return it.
+If the file is found in the current Python project, cache its content in
+`%s' and return it.
 
 If the file content change, it is parsed again and the cache is
-refreshed automatically.  If it is renamed or deleted, the cache
-entry is deleted.
+refreshed automatically.  If it is renamed or deleted, the cache entry
+is deleted.
 "
                   name (symbol-name cache-var)))
          (path-accessor-docstring (format "Path of `%s' in the current Python project.
@@ -385,9 +386,9 @@ Return nil if the file is not found." file-name))
          (cache-var-docstring
           (format "Cache for `%s'.
 
-This variable is an alist where the key is the absolute path to a
-`%s' in some Python project and the value is the parsed content.
-" name name)))
+This variable is an alist where the key is the absolute path to the `%s'
+in a Python project and the value is the parsed content.
+" name file-name)))
     `(progn
        (defvar ,cache-var nil ,cache-var-docstring)
 
