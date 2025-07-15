@@ -96,6 +96,7 @@ program by adjusting `pet-yaml-to-json-program-arguments'"
 
 (defcustom pet-find-file-functions '(pet-find-file-from-project-root
                                      pet-locate-dominating-file
+                                     pet-find-file-from-project-root-natively
                                      pet-find-file-from-project-root-recursively)
   "Order in which `pet-find-file-from-project' should search for a config file.
 
@@ -105,6 +106,7 @@ and nil otherwise."
   :group 'pet
   :type '(repeat (choice (const pet-find-file-from-project-root)
                          (const pet-locate-dominating-file)
+                         (const pet-find-file-from-project-root-natively)
                          (const pet-find-file-from-project-root-recursively)
                          function)))
 
@@ -205,33 +207,44 @@ Return absolute path to FILE if found, nil otherwise."
     (when (string-prefix-p root dir)
       (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t)))))
 
+(defun pet-find-file-from-project-root-natively (file)
+  "Find FILE natively by searching down from the current project's root.
+
+FILE is a file name or a wildcard.
+
+Return absolute path to FILE if found, nil otherwise.
+
+The actual search is done via calling native programs in a subprocess.
+
+Currently only `fd' is supported.  See `pet-fd-command' and
+`pet-fd-command-args'."
+  (condition-case err
+      (when-let*((root (pet-project-root))
+                 (fd (executable-find pet-fd-command)))
+        (car (process-lines fd `(,@pet-fd-command-args ,file ,root))))
+    (error (pet-report-error err))))
+
 (defun pet-find-file-from-project-root-recursively (file)
   "Find FILE by recursively searching down from the current project's root.
 
 FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
-  (condition-case err
-      (when-let*((root (pet-project-root)))
-        (if (executable-find pet-fd-command)
-            (car (cl-remove-if
-                  #'string-empty-p
-                  (apply #'process-lines `(,pet-fd-command ,@pet-fd-command-args ,file ,root))))
-          (when-let*((fileset
-                      (cond ((functionp 'projectile-dir-files)
-                             (mapcar (apply-partially #'concat root)
-                                     (projectile-dir-files (pet-project-root))))
-                            ((functionp 'project-files)
-                             (project-files (project-current)))
-                            (t (directory-files-recursively
-                                (pet-project-root)
-                                (wildcard-to-regexp file))))))
-            (seq-find (lambda (f)
-                        (string-match-p
-                         (wildcard-to-regexp file)
-                         (file-name-nondirectory f)))
-                      (sort fileset 'string<)))))
-    (error (pet-report-error err))))
+  (when-let*((root (pet-project-root)))
+    (when-let*((fileset
+                (cond ((functionp 'projectile-dir-files)
+                       (mapcar (apply-partially #'concat root)
+                               (projectile-dir-files (pet-project-root))))
+                      ((functionp 'project-files)
+                       (project-files (project-current)))
+                      (t (directory-files-recursively
+                          (pet-project-root)
+                          (wildcard-to-regexp file))))))
+      (seq-find (lambda (f)
+                  (string-match-p
+                   (wildcard-to-regexp file)
+                   (file-name-nondirectory f)))
+                (sort fileset 'string<)))))
 
 (defun pet-find-file-from-project (file)
   "Find FILE from the current project.
@@ -960,7 +973,8 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 (defun pet-dape-setup ()
   "Set up the buffer local variables for `dape'."
-  (if-let* ((main (pet-find-file-from-project-root-recursively "__main__.py"))
+  (if-let* ((main (or (pet-find-file-from-project-root-natively "__main__.py")
+                      (pet-find-file-from-project-root-recursively "__main__.py")))
             (module (let* ((dir (file-name-directory main))
                            (dir-file-name (directory-file-name dir))
                            (module))
