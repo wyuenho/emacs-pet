@@ -364,8 +364,8 @@ in the project.
 
 The content of the file will be parsed by PARSER and then cached in a
 variable called `pet-NAME-cache'.  Changes to the file will
-automatically update the cached content. See `pet-watch-config-file' for
-details."
+automatically update the cached content.  See `pet-watch-config-file'
+for details."
   (declare (indent defun))
   (let* ((accessor-name (concat "pet-" (symbol-name name)))
          (path-accessor-name (concat accessor-name "-path"))
@@ -586,8 +586,8 @@ must both be installed into the current project first."
 Search for EXECUTABLE first in the `pre-commit' virtualenv, then
 whatever environment is found by `pet-virtualenv-root'.
 
-If SEARCH-GLOBALLY or `pet-search-globally' is non-nil, the
-search continues to look in `pyenv', then finally from
+If SEARCH-GLOBALLY or `pet-search-globally' is non-nil, the search
+continues to look in `pyenv', then finally from the variable
 `exec-path'."
 
   (catch 'done
