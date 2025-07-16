@@ -366,6 +366,7 @@ The content of the file will be parsed by PARSER and then cached in a
 variable called `pet-NAME-cache'.  Changes to the file will
 automatically update the cached content. See `pet-watch-config-file' for
 details."
+  (declare (indent defun))
   (let* ((accessor-name (concat "pet-" (symbol-name name)))
          (path-accessor-name (concat accessor-name "-path"))
          (cache-var (intern (concat accessor-name "-cache")))
@@ -407,27 +408,27 @@ in a Python project and the value is the parsed content.
                content)))))))
 
 (pet-def-config-accessor pre-commit-config
-                         :file-name ".pre-commit-config.yaml"
-                         :parser pet-parse-config-file)
+  :file-name ".pre-commit-config.yaml"
+  :parser pet-parse-config-file)
 
 (pet-def-config-accessor pyproject
-                         :file-name "pyproject.toml"
-                         :parser pet-parse-config-file)
+  :file-name "pyproject.toml"
+  :parser pet-parse-config-file)
 
 (pet-def-config-accessor python-version
-                         :file-name ".python-version"
-                         :parser f-read-text)
+  :file-name ".python-version"
+  :parser f-read-text)
 
 (pet-def-config-accessor pipfile
-                         :file-name "Pipfile"
-                         :parser pet-parse-config-file)
+  :file-name "Pipfile"
+  :parser pet-parse-config-file)
 
 ;; So `pet-parse-config-file' knows Pipfile can be parsed with `pet-toml-to-json-program'.
 (add-to-list 'auto-mode-alist '("/Pipfile\\'" . conf-toml-mode))
 
 (pet-def-config-accessor environment
-                         :file-name "environment*.y*ml"
-                         :parser pet-parse-config-file)
+  :file-name "environment*.y*ml"
+  :parser pet-parse-config-file)
 
 (defun pet-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'.
