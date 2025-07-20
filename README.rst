@@ -66,6 +66,7 @@ Supported Python Virtual Environment Tools
 - `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained, don't use
   it unless you are using Homebrew on macOS)
 - `docker <https://hub.docker.com/_/python>`_
+- `pixi <https://pixi.sh>`_
 - `conda <https://docs.conda.io>`_ (no support for conda-project yet)
 - `mamba
   <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_
@@ -161,6 +162,20 @@ Or, if you use `use-package <https://github.com/jwiegley/use-package>`_:
 
 This will setup the buffer local variables for all of the `Supported Emacs
 Packages`_.
+
+
+Environment Switching
++++++++++++++++++++++
+
+For projects using conda, mamba, or pixi, ``pet`` now provides interactive
+environment switching::
+
+   M-x pet-conda-switch-environment
+   M-x pet-mamba-switch-environment
+   M-x pet-pixi-switch-environment
+
+When you enable ``pet-mode`` on a fresh project using these tools, ``pet`` will
+automatically prompt you to select an environment if none is currently active.
 
 
 Advanced Usage

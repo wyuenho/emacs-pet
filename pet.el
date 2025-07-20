@@ -136,6 +136,16 @@ the project directory."
   :type 'boolean
   :safe t)
 
+(defcustom pet-after-buffer-local-vars-setup nil
+  "Functions to run after buffer local variable values are set up."
+  :type 'hook
+  :group 'pet)
+
+(defcustom pet-before-buffer-local-vars-teardown nil
+  "Functions to run before buffer local variables values are torn down."
+  :type 'hook
+  :group 'pet)
+
 
 
 (defun pet--executable-find (command &optional remote)
@@ -353,6 +363,8 @@ content into an alist."
                  (pet-make-config-file-change-callback cache-var parser)))
           pet-watched-config-files)))
 
+(defvar pet-config-cache-vars nil)
+
 (cl-defmacro pet-def-config-accessor (name &key file-name parser)
   "Create a function for reading the content of a config file.
 
@@ -393,6 +405,8 @@ in a Python project and the value is the parsed content.
     `(progn
        (defvar ,cache-var nil ,cache-var-docstring)
 
+       (push ',cache-var pet-config-cache-vars)
+
        (defun ,(intern path-accessor-name) ()
          ,path-accessor-docstring
          (pet-find-file-from-project ,file-name))
@@ -430,6 +444,10 @@ in a Python project and the value is the parsed content.
   :file-name "environment*.y*ml"
   :parser pet-parse-config-file)
 
+(pet-def-config-accessor pixi
+  :file-name "pixi.toml"
+  :parser pet-parse-config-file)
+
 (defun pet-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'.
 
@@ -445,11 +463,26 @@ Returns the path to the `pre-commit' executable."
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
-Returns the path to the `conda' executable variant found."
+Returns the path to the `conda' executable found."
   (and (pet-environment)
-       (or (pet--executable-find "conda" t)
-           (pet--executable-find "mamba" t)
+       (pet--executable-find "conda" t)))
+
+(defun pet-use-mamba-p ()
+  "Whether the current project is using `mamba' or `micromamba'.
+
+Returns the path to the `mamba' executable variant found."
+  (and (pet-environment)
+       (or (pet--executable-find "mamba" t)
            (pet--executable-find "micromamba" t))))
+
+(defun pet-use-pixi-p ()
+  "Whether the current project is using `pixi'.
+
+Returns the path to the `pixi' executable."
+  (and (or (pet-pixi)
+           (let-alist (pet-pyproject)
+             .tool.pixi))
+       (pet--executable-find "pixi" t)))
 
 (defun pet-use-poetry-p ()
   "Whether the current project is using `poetry'.
@@ -642,31 +675,13 @@ Selects a virtualenv in the follow order:
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
     (or (assoc-default root pet-project-virtualenv-cache)
-        (when-let*((ev (getenv "VIRTUAL_ENV")))
-          (expand-file-name ev))
         (let ((venv-path
-               (cond ((when-let* ((program (pet-use-conda-p))
-                                  (default-directory (file-name-directory (pet-environment-path))))
-                        (condition-case err
-                            (with-temp-buffer
-                              (let ((exit-code (process-file program nil t nil "info" "--json"))
-                                    (output (string-trim (buffer-string))))
-                                (if (zerop exit-code)
-                                    (let* ((json-output (pet-parse-json output))
-                                           (env-dirs (or (let-alist json-output .envs_dirs)
-                                                         (let-alist json-output .envs\ directories)))
-                                           (env-name (alist-get 'name (pet-environment)))
-                                           (env (seq-find 'file-directory-p
-                                                          (seq-map (lambda (dir)
-                                                                     (file-name-as-directory
-                                                                      (concat
-                                                                       (file-name-as-directory dir)
-                                                                       env-name)))
-                                                                   env-dirs))))
-                                      (or env
-                                          (user-error "Please create the environment with `$ %s create --file %s' first" program (pet-environment-path))))
-                                  (user-error (buffer-string)))))
-                          (error (pet-report-error err)))))
+               (cond ((when-let* ((ev (or (getenv "VIRTUAL_ENV")
+                                          (and (or (pet-use-pixi-p)
+                                                   (pet-use-conda-p)
+                                                   (pet-use-mamba-p))
+                                               (getenv "CONDA_PREFIX")))))
+                        (expand-file-name ev)))
                      ((when-let*((program (pet-use-poetry-p))
                                  (default-directory (file-name-directory (pet-pyproject-path))))
                         (condition-case err
@@ -706,6 +721,107 @@ Selects a virtualenv in the follow order:
           (when root
             (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path))
           venv-path))))
+
+(cl-defmacro pet-def-env-list (name &key args parse-output)
+  "Define a function to get a list of environments from a Python environment manager.
+
+NAME is the environment manager name.  It will be used to look up a
+`pet-use-NAME-p' function that determines whether this environment
+manager is applicable to the current project, and the path of the
+environment manager program.
+
+The other required keyboard arguments are:
+
+:args - a list of strings.  Command-line arguments to the environment
+manager program that contains a listing of environments.
+
+:parse-output - sexp.  Expression that parses the output of the
+environment manager program, made available as the variable `output',
+for a list of environments.  This expression must return a list of
+strings."
+  (declare (indent defun))
+  (let ((env-list-fn (intern (format "pet-%s-environments" name)))
+        (use-prog-fn (intern (format "pet-use-%s-p" name)))
+        (docstring (format "The list of environments managed by `%s'." name)))
+    `(defun ,env-list-fn ()
+       ,docstring
+       (when-let* ((program (,use-prog-fn)))
+         (condition-case err
+             (with-temp-buffer
+               (let ((exit-code (process-file program nil t nil ,@args))
+                     (output (string-trim (buffer-string))))
+                 (if (zerop exit-code)
+                     ,parse-output
+                   (user-error (buffer-string)))))
+           (error (pet-report-error err)))))))
+
+(pet-def-env-list pixi
+  :args ("info" "--json")
+  :parse-output
+  (mapcar (lambda (env) (let-alist env .prefix))
+          (let-alist (pet-parse-json output) .environments_info)))
+
+(pet-def-env-list conda
+  :args ("info" "--json")
+  :parse-output
+  (let-alist (pet-parse-json output) .envs))
+
+(pet-def-env-list mamba
+  :args ("info" "--envs" "--json")
+  :parse-output
+  (let-alist (pet-parse-json output) .envs))
+
+(cl-defmacro pet-def-env-switch (name &key env-list-fn prompt-text (env-var "CONDA_PREFIX"))
+  "Define an environment switching function for different Python environment managers.
+
+NAME is the environment manager name.
+
+The following are the keyword arguments:
+
+:env-list-fn is the function name that returns available environments.
+:prompt-text is the text to display in the completion prompt.
+:env-var is the environment variable to set."
+  (declare (indent defun))
+  (let ((switch-fn (intern (format "pet-%s-switch-environment" name)))
+        (name-str (symbol-name name))
+        (docstring (format "Switch to a different %s environment and refresh buffer variables.
+
+ENV should be the path to the %s environment directory as
+returned by `%s'." name name env-list-fn)))
+    `(defun ,switch-fn (env)
+       ,docstring
+       (interactive
+        (list
+         (completing-read ,prompt-text (,env-list-fn) nil t)))
+
+       (when-let* ((root (pet-project-root)))
+         (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) env)
+
+         (when-let* ((project-buffers (cl-loop for buffer in (buffer-list)
+                                               when (with-current-buffer buffer
+                                                      (and (buffer-file-name)
+                                                           (string-prefix-p root (buffer-file-name))
+                                                           (derived-mode-p 'python-base-mode 'python-mode)))
+                                               collect buffer)))
+           (dolist (buffer project-buffers)
+             (with-current-buffer buffer
+               (setenv ,env-var env)
+               (pet-buffer-local-vars-teardown)
+               (pet-buffer-local-vars-setup)))
+
+           (message "Switched to %s environment: %s" ,name-str env))))))
+
+(pet-def-env-switch pixi
+  :env-list-fn pet-pixi-environments
+  :prompt-text "Please select a pixi environment: ")
+
+(pet-def-env-switch conda
+  :env-list-fn pet-conda-environments
+  :prompt-text "Please select a conda environment: ")
+
+(pet-def-env-switch mamba
+  :env-list-fn pet-mamba-environments
+  :prompt-text "Please select a mamba environment: ")
 
 
 
@@ -1042,10 +1158,14 @@ buffer local values."
   (setq-local py-autopep8-command (pet-executable-find "autopep8"))
 
   (pet-eglot-setup)
-  (pet-dape-setup))
+  (pet-dape-setup)
+
+  (run-hooks 'pet-after-buffer-local-vars-setup))
 
 (defun pet-buffer-local-vars-teardown ()
   "Reset all supported buffer local variable values to default."
+
+  (run-hooks 'pet-before-buffer-local-vars-teardown)
 
   (kill-local-variable 'python-shell-interpreter)
   (kill-local-variable 'python-shell-virtualenv-root)
@@ -1149,7 +1269,18 @@ has assigned to."
   :group 'pet
   (if pet-mode
       (progn
-        (pet-buffer-local-vars-setup)
+        (cl-block nil
+          (unless (assoc-default (pet-project-root) pet-project-virtualenv-cache)
+            (cond ((pet-use-pixi-p)
+                   (call-interactively #'pet-pixi-switch-environment)
+                   (cl-return))
+                  ((pet-use-conda-p)
+                   (call-interactively #'pet-conda-switch-environment)
+                   (cl-return))
+                  ((pet-use-mamba-p)
+                   (call-interactively #'pet-mamba-switch-environment)
+                   (cl-return))))
+          (pet-buffer-local-vars-setup))
         (add-hook 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))
     (pet-buffer-local-vars-teardown)
     (remove-hook 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t)))
@@ -1162,10 +1293,12 @@ Delete configuration file caches and watchers when all
   (when (and (buffer-file-name)
              (derived-mode-p 'python-base-mode 'python-mode))
     (when-let*((root (pet-project-root)))
-      (when (null (cl-loop for buf in (buffer-list)
-                           if (and (not (equal buf (current-buffer)))
-                                   (string-prefix-p root (buffer-file-name buf)))
-                           return buf))
+      (unless (cl-loop for buf in (buffer-list)
+                       if (and (not (equal buf (current-buffer)))
+                               (string-prefix-p root (buffer-file-name buf))
+                               (with-current-buffer buf
+                                 (derived-mode-p 'python-base-mode 'python-mode)))
+                       return buf)
 
         (setf (alist-get root pet-project-virtualenv-cache nil t 'equal) nil)
 
@@ -1174,11 +1307,7 @@ Delete configuration file caches and watchers when all
             (file-notify-rm-watch watcher)
             (setf (alist-get config-file pet-watched-config-files nil t 'equal) nil)))
 
-        (dolist (cache '(pet-pre-commit-config-cache
-                         pet-pyproject-cache
-                         pet-python-version-cache
-                         pet-pipfile-cache
-                         pet-environment-cache))
+        (dolist (cache pet-config-cache-vars)
           (pcase-dolist (`(,key . ,_) (symbol-value cache))
             (when (string-prefix-p root key)
               (setf (alist-get key (symbol-value cache) nil t 'equal) nil))))))))

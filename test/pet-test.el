@@ -467,7 +467,7 @@
 
       (it "should cache config file content"
         (pet-tox-ini)
-        (expect (alist-get "/home/user/project/tox.ini" pet-tox-ini-cache nil nil 'equal) :to-equal "content")))))
+        (expect (assoc-default "/home/user/project/tox.ini" pet-tox-ini-cache) :to-equal "content")))))
 
 (describe "pet-use-pre-commit-p"
   (describe "when the project has a `.pre-commit-config.yaml' file"
@@ -512,15 +512,7 @@
       (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "conda") "/usr/bin/conda")))
       (expect (pet-use-conda-p) :to-equal "/usr/bin/conda"))
 
-    (it "should return `mamba' path if `mamba' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "mamba") "/usr/bin/mamba")))
-      (expect (pet-use-conda-p) :to-equal "/usr/bin/mamba"))
-
-    (it "should return `micromamba' path if `micromamba' is found"
-      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "micromamba") "/usr/bin/micromamba")))
-      (expect (pet-use-conda-p) :to-equal "/usr/bin/micromamba"))
-
-    (it "should return nil if none of `conda' or `mamba' or `micromamba' is found"
+    (it "should return nil if `conda' is not found"
       (spy-on 'executable-find)
       (expect (pet-use-conda-p) :to-be nil)))
 
@@ -532,17 +524,108 @@
       (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "conda") "/usr/bin/conda")))
       (expect (pet-use-conda-p) :to-be nil))
 
+    (it "should return nil if `conda' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-conda-p) :to-be nil))))
+
+(describe "pet-use-mamba-p"
+  (describe "when the project has an `environment[a-zA-Z0-9-_].yaml' file"
+    (before-each
+      (spy-on 'pet-environment :and-return-value t))
+
+    (it "should return `mamba' path if `mamba' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "mamba") "/usr/bin/mamba")))
+      (expect (pet-use-mamba-p) :to-equal "/usr/bin/mamba"))
+
+    (it "should return `micromamba' path if `micromamba' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "micromamba") "/usr/bin/micromamba")))
+      (expect (pet-use-mamba-p) :to-equal "/usr/bin/micromamba"))
+
+    (it "should return nil if none of `mamba' or `micromamba' is found"
+      (spy-on 'executable-find)
+      (expect (pet-use-mamba-p) :to-be nil)))
+
+  (describe "when the project does not have a `environment[a-zA-Z0-9-_].yaml' file"
+    (before-each
+      (spy-on 'pet-environment))
+
     (it "should return nil if `mamba' is found"
       (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "mamba") "/usr/bin/mamba")))
-      (expect (pet-use-conda-p) :to-be nil))
+      (expect (pet-use-mamba-p) :to-be nil))
 
     (it "should return nil if `microconda' is found"
       (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "microconda") "/usr/bin/microconda")))
-      (expect (pet-use-conda-p) :to-be nil))
+      (expect (pet-use-mamba-p) :to-be nil))
 
-    (it "should return nil if none of `conda' or `mamba' or `micromamba' is found"
+    (it "should return nil if none of `mamba' or `micromamba' is found"
       (spy-on 'executable-find)
-      (expect (pet-use-conda-p) :to-be nil))))
+      (expect (pet-use-mamba-p) :to-be nil))))
+
+(describe "pet-use-pixi-p"
+  (describe "when the project has a `pixi.toml' file"
+    (before-each
+      (spy-on 'pet-pyproject)
+      (spy-on 'pet-pixi :and-return-value '((workspace (name . "test-project")))))
+
+    (it "should return `pixi' path if `pixi' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "pixi") "/usr/bin/pixi")))
+      (expect (pet-use-pixi-p) :to-equal "/usr/bin/pixi"))
+
+    (it "should return nil if `pixi' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pixi-p) :to-be nil)))
+
+  (describe "when the project has `tool.pixi' section in `pyproject.toml'"
+    (before-each
+      (spy-on 'pet-pixi)
+      (spy-on 'pet-pyproject :and-return-value '((tool (pixi (environments (test . ("test"))))))))
+
+    (it "should return `pixi' path if `pixi' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "pixi") "/usr/bin/pixi")))
+      (expect (pet-use-pixi-p) :to-equal "/usr/bin/pixi"))
+
+    (it "should return nil if `pixi' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pixi-p) :to-be nil)))
+
+  (describe "when the project has both `pixi.toml' and `tool.pixi' in `pyproject.toml'"
+    (before-each
+      (spy-on 'pet-pixi :and-return-value '((workspace (name . "test-project"))))
+      (spy-on 'pet-pyproject :and-return-value '((tool (pixi (environments (test . ("test"))))))))
+
+    (it "should return `pixi' path if `pixi' is found (pixi.toml takes precedence)"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "pixi") "/usr/bin/pixi")))
+      (expect (pet-use-pixi-p) :to-equal "/usr/bin/pixi"))
+
+    (it "should return nil if `pixi' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pixi-p) :to-be nil)))
+
+  (describe "when the project does not have `pixi.toml' or `tool.pixi' section"
+    (before-each
+      (spy-on 'pet-pixi)
+      (spy-on 'pet-pyproject))
+
+    (it "should return nil if `pixi' is found"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "pixi") "/usr/bin/pixi")))
+      (expect (pet-use-pixi-p) :to-be nil))
+
+    (it "should return nil if `pixi' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pixi-p) :to-be nil)))
+
+  (describe "when `pyproject.toml' has empty `tool.pixi' section"
+    (before-each
+      (spy-on 'pet-pixi)
+      (spy-on 'pet-pyproject :and-return-value '((tool (pixi)))))
+
+    (it "should return nil if `pixi' is found (empty tool.pixi is not valid)"
+      (spy-on 'executable-find :and-call-fake (lambda (exe &optional _) (when (equal exe "pixi") "/usr/bin/pixi")))
+      (expect (pet-use-pixi-p) :to-be nil))
+
+    (it "should return nil if `pixi' is not found"
+      (spy-on 'executable-find)
+      (expect (pet-use-pixi-p) :to-be nil))))
 
 (describe "pet-use-poetry-p"
   (describe "when the `pyproject.toml' file in the project declares `poetry' as the build system"
@@ -846,8 +929,11 @@
 (describe "pet-virtualenv-root"
   :var ((project-root "/home/user/project/")
          (conda-path "/usr/bin/conda")
-         (conda-env-dirs '("/home/user/miniforge3/envs" "/home/user/.conda/envs"))
          (conda-virtualenv "/home/user/miniforge3/envs/project/")
+         (mamba-path "/usr/bin/micromamba")
+         (mamba-virtualenv "/home/user/micromamba/envs/project/")
+         (pixi-path "/usr/bin/pixi")
+         (pixi-virtualenv "/home/user/project/.pixi/envs/default/")
          (poetry-path "/usr/bin/poetry")
          (poetry-virtualenv "/home/user/.cache/pypoetry/virtualenvs/project/")
          (pipenv-path "/usr/bin/pipenv")
@@ -881,27 +967,33 @@
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/project"))
 
   (it "should return the absolute path of the virtualenv for a project using `conda'"
+    (spy-on 'pet-use-pixi-p :and-return-value nil)
     (spy-on 'pet-use-conda-p :and-return-value conda-path)
-    (spy-on 'pet-environment-path :and-return-value "/home/user/project/environment.yml")
-    (spy-on 'call-process :and-call-fake
-      (lambda (&rest _)
-        (insert
-          (format "{\"envs_dirs\": [%s]}"
-            (string-join
-              (seq-map
-                (lambda (dir)
-                  (format "\"%s\"" dir))
-                conda-env-dirs)
-              ",")))
-        0))
-    (spy-on 'pet-environment :and-return-value `((name . "project")))
-    (spy-on 'file-directory-p :and-call-fake (lambda (filename) (equal filename conda-virtualenv)))
+    (spy-on 'pet-use-mamba-p :and-return-value nil)
+    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") conda-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv)
-    (expect 'call-process :to-have-been-called-with conda-path nil t nil "info" "--json"))
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv))
+
+  (it "should return the absolute path of the virtualenv for a project using `mamba'"
+    (spy-on 'pet-use-pixi-p :and-return-value nil)
+    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p :and-return-value mamba-path)
+    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") mamba-virtualenv)))
+    (expect (pet-virtualenv-root) :to-equal mamba-virtualenv)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal mamba-virtualenv))
+
+  (it "should return the absolute path of the virtualenv for a project using `pixi'"
+    (spy-on 'pet-use-pixi-p :and-return-value pixi-path)
+    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p :and-return-value nil)
+    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") pixi-virtualenv)))
+    (expect (pet-virtualenv-root) :to-equal pixi-virtualenv)
+    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pixi-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
+    (spy-on 'pet-use-pixi-p :and-return-value nil)
     (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value poetry-path)
     (spy-on 'pet-pyproject-path :and-return-value "/home/user/project/pyproject.toml")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert poetry-virtualenv) 0))
@@ -910,7 +1002,9 @@
     (expect 'call-process :to-have-been-called-with poetry-path nil t nil "env" "info" "--no-ansi" "--path"))
 
   (it "should return the absolute path of the virtualenv for a project using `pipenv'"
+    (spy-on 'pet-use-pixi-p :and-return-value nil)
     (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value nil)
     (spy-on 'pet-use-pipenv-p :and-return-value pipenv-path)
     (spy-on 'pet-pipfile-path :and-return-value "/home/user/project/Pipfile")
@@ -920,7 +1014,9 @@
     (expect 'call-process :to-have-been-called-with pipenv-path nil '(t nil) nil "--quiet" "--venv"))
 
   (it "should return the absolute path of the `.venv' or `venv' directory in a project"
+    (spy-on 'pet-use-pixi-p :and-return-value nil)
     (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value nil)
     (spy-on 'pet-use-pipenv-p :and-return-value nil)
     (spy-on 'locate-dominating-file :and-return-value project-root)
@@ -928,7 +1024,9 @@
     (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal venv-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `pyenv'"
+    (spy-on 'pet-use-pixi-p :and-return-value nil)
     (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p :and-return-value nil)
     (spy-on 'pet-use-poetry-p :and-return-value nil)
     (spy-on 'pet-use-pipenv-p :and-return-value nil)
     (spy-on 'locate-dominating-file :and-return-value nil)
@@ -943,6 +1041,589 @@
   (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
     (setq pet-project-virtualenv-cache `((,project-root . "/home/user/.venvs/env/")))
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/")))
+
+(describe "pet-pixi-environments"
+  (describe "when pixi is available"
+    (before-each
+      (spy-on 'pet-use-pixi-p :and-return-value "/usr/bin/pixi"))
+
+    (it "should return list of environment prefixes on success"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{\"environments_info\": [{\"prefix\": \"/home/user/project/.pixi/envs/default\"}, {\"prefix\": \"/home/user/project/.pixi/envs/test\"}]}")
+          0))
+      (expect (pet-pixi-environments) :to-equal '("/home/user/project/.pixi/envs/default" "/home/user/project/.pixi/envs/test")))
+
+    (it "should return empty list when no environments exist"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{\"environments_info\": []}")
+          0))
+      (expect (pet-pixi-environments) :to-equal '()))
+
+    (it "should return nil on command failure"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "pixi: command not found")
+          1))
+      (spy-on 'pet-report-error)
+      (expect (pet-pixi-environments) :to-equal nil)
+      (expect 'pet-report-error :to-have-been-called-with '(user-error "pixi: command not found")))
+
+    (it "should handle malformed JSON gracefully"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{invalid json")
+          0))
+      (spy-on 'pet-report-error)
+      (expect (pet-pixi-environments) :to-be nil)
+      (expect 'pet-report-error :to-have-been-called)))
+
+  (describe "when pixi is not available"
+    (before-each
+      (spy-on 'pet-use-pixi-p :and-return-value nil))
+
+    (it "should return nil"
+      (expect (pet-pixi-environments) :to-be nil))))
+
+(describe "pet-conda-environments"
+  (describe "when conda is available"
+    (before-each
+      (spy-on 'pet-use-conda-p :and-return-value "/usr/bin/conda"))
+
+    (it "should return list of environment paths on success"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{\"envs\": [\"/home/user/miniforge3/envs/myenv\", \"/home/user/miniforge3/envs/test\"]}")
+          0))
+      (expect (pet-conda-environments) :to-equal '("/home/user/miniforge3/envs/myenv" "/home/user/miniforge3/envs/test")))
+
+    (it "should return empty list when no environments exist"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{\"envs\": []}")
+          0))
+      (expect (pet-conda-environments) :to-equal '()))
+
+    (it "should return nil on command failure"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "conda: command not found")
+          1))
+      (spy-on 'pet-report-error)
+      (expect (pet-conda-environments) :to-equal nil)
+      (expect 'pet-report-error :to-have-been-called-with '(user-error "conda: command not found")))
+
+    (it "should handle malformed JSON gracefully"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{invalid json")
+          0))
+      (spy-on 'pet-report-error)
+      (expect (pet-conda-environments) :to-be nil)
+      (expect 'pet-report-error :to-have-been-called)))
+
+  (describe "when conda is not available"
+    (before-each
+      (spy-on 'pet-use-conda-p :and-return-value nil))
+
+    (it "should return nil"
+      (expect (pet-conda-environments) :to-be nil))))
+
+(describe "pet-mamba-environments"
+  (describe "when mamba is available"
+    (before-each
+      (spy-on 'pet-use-mamba-p :and-return-value "/usr/bin/mamba"))
+
+    (it "should return list of environment paths on success"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{\"envs\": [\"/home/user/micromamba/envs/myenv\", \"/home/user/micromamba/envs/test\"]}")
+          0))
+      (expect (pet-mamba-environments) :to-equal '("/home/user/micromamba/envs/myenv" "/home/user/micromamba/envs/test")))
+
+    (it "should return empty list when no environments exist"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{\"envs\": []}")
+          0))
+      (expect (pet-mamba-environments) :to-equal '()))
+
+    (it "should signal user-error on command failure"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "mamba: command not found")
+          1))
+      (spy-on 'pet-report-error)
+      (expect (pet-mamba-environments) :to-equal nil)
+      (expect 'pet-report-error :to-have-been-called-with '(user-error "mamba: command not found")))
+
+    (it "should handle malformed JSON gracefully"
+      (spy-on 'process-file :and-call-fake
+        (lambda (&rest _)
+          (insert "{invalid json")
+          0))
+      (spy-on 'pet-report-error)
+      (expect (pet-mamba-environments) :to-be nil)
+      (expect 'pet-report-error :to-have-been-called)))
+
+  (describe "when mamba is not available"
+    (before-each
+      (spy-on 'pet-use-mamba-p :and-return-value nil))
+
+    (it "should return nil"
+      (expect (pet-mamba-environments) :to-be nil))))
+
+(describe "pet-pixi-switch-environment"
+  :var ((project-root "/home/user/project/")
+         (env-path "/home/user/project/.pixi/envs/test/")
+         (other-env-path "/home/user/project/.pixi/envs/default/")
+         (buffer-a nil)
+         (buffer-b nil)
+         (other-project-buffer nil))
+
+  (before-each
+    (spy-on 'pet-project-root :and-return-value project-root)
+    (spy-on 'pet-pixi-environments :and-return-value
+      (list other-env-path env-path))
+
+    ;; Create test buffers in the project
+    (setq buffer-a (get-buffer-create "test-a.py"))
+    (setq buffer-b (get-buffer-create "test-b.py"))
+    (with-current-buffer buffer-a
+      (setq buffer-file-name "/home/user/project/main.py")
+      (python-mode)
+      (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
+    (with-current-buffer buffer-b
+      (setq buffer-file-name "/home/user/project/utils.py")
+      (python-mode)
+      (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
+
+    ;; Create buffer from different project
+    (setq other-project-buffer (get-buffer-create "other.py"))
+    (with-current-buffer other-project-buffer
+      (setq buffer-file-name "/home/user/other-project/main.py")
+      (python-mode)
+      (setq-local process-environment '("CONDA_PREFIX=/other/old/env"))))
+
+  (after-each
+    (when buffer-a (kill-buffer buffer-a))
+    (when buffer-b (kill-buffer buffer-b))
+    (when other-project-buffer (kill-buffer other-project-buffer))
+    (setq pet-project-virtualenv-cache nil))
+
+  (describe "basic functionality"
+    (it "should update virtualenv cache with selected environment"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-pixi-switch-environment env-path)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache)
+        :to-equal env-path))
+
+    (it "should call teardown and setup for all project Python buffers"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+      (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b other-project-buffer))
+
+      (pet-pixi-switch-environment env-path)
+
+      ;; Should be called once for each project buffer only
+      (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 2)
+      (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 2))
+
+    (it "should display success message"
+      (spy-on 'message)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-pixi-switch-environment env-path)
+
+      (expect 'message :to-have-been-called-with
+        "Switched to %s environment: %s" "pixi" env-path)))
+
+  (describe "environment variable handling"
+    (it "should set CONDA_PREFIX environment variable in project buffers"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+      (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b))
+
+      (pet-pixi-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
+      (with-current-buffer buffer-b
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path)))
+
+    (it "should preserve other environment variables while updating CONDA_PREFIX"
+      (spy-on 'buffer-list :and-return-value (list buffer-a))
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-pixi-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "PATH") :to-equal "/usr/bin")
+        (expect (getenv "HOME") :to-equal "/home/user")
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))))
+
+  (describe "buffer isolation"
+    (it "should not affect buffers from other projects"
+      (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-pixi-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
+      (with-current-buffer other-project-buffer
+        (expect (getenv "CONDA_PREFIX") :to-equal "/other/old/env"))))
+
+  (describe "interactive completion"
+    (it "should prompt with available environments"
+      (spy-on 'completing-read :and-return-value env-path)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (call-interactively #'pet-pixi-switch-environment)
+
+      (expect 'completing-read :to-have-been-called-with
+        "Please select a pixi environment: "
+        (list other-env-path env-path)
+        nil t))
+
+    (it "should use the selected environment"
+      (spy-on 'completing-read :and-return-value other-env-path)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (call-interactively #'pet-pixi-switch-environment)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache)
+        :to-equal other-env-path)))
+
+  (describe "error handling"
+    (it "should handle when no project root is found"
+      (spy-on 'pet-project-root :and-return-value nil)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-pixi-switch-environment env-path)
+
+      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)
+      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+
+    (it "should handle when no Python buffers exist in project"
+      (spy-on 'buffer-list :and-return-value '())
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-pixi-switch-environment env-path)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal env-path)
+      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
+
+(describe "pet-conda-switch-environment"
+  :var ((project-root "/home/user/project/")
+         (env-path "/home/user/miniforge3/envs/test/")
+         (other-env-path "/home/user/miniforge3/envs/default/")
+         (buffer-a nil)
+         (buffer-b nil)
+         (other-project-buffer nil))
+
+  (before-each
+    (spy-on 'pet-project-root :and-return-value project-root)
+    (spy-on 'pet-conda-environments :and-return-value
+      (list other-env-path env-path))
+
+    ;; Create test buffers in the project
+    (setq buffer-a (get-buffer-create "test-a.py"))
+    (setq buffer-b (get-buffer-create "test-b.py"))
+    (with-current-buffer buffer-a
+      (setq buffer-file-name "/home/user/project/main.py")
+      (python-mode)
+      (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
+    (with-current-buffer buffer-b
+      (setq buffer-file-name "/home/user/project/utils.py")
+      (python-mode)
+      (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
+
+    ;; Create buffer from different project
+    (setq other-project-buffer (get-buffer-create "other.py"))
+    (with-current-buffer other-project-buffer
+      (setq buffer-file-name "/home/user/other-project/main.py")
+      (python-mode)
+      (setq-local process-environment '("CONDA_PREFIX=/other/old/env"))))
+
+  (after-each
+    (when buffer-a (kill-buffer buffer-a))
+    (when buffer-b (kill-buffer buffer-b))
+    (when other-project-buffer (kill-buffer other-project-buffer))
+    (setq pet-project-virtualenv-cache nil))
+
+  (describe "basic functionality"
+    (it "should update virtualenv cache with selected environment"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-conda-switch-environment env-path)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache)
+        :to-equal env-path))
+
+    (it "should call teardown and setup for all project Python buffers"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+      (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b other-project-buffer))
+
+      (pet-conda-switch-environment env-path)
+
+      (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 2)
+      (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 2))
+
+    (it "should display success message"
+      (spy-on 'message)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-conda-switch-environment env-path)
+
+      (expect 'message :to-have-been-called-with
+        "Switched to %s environment: %s" "conda" env-path)))
+
+  (describe "environment variable handling"
+    (it "should set CONDA_PREFIX environment variable in project buffers"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+      (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b))
+
+      (pet-conda-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
+      (with-current-buffer buffer-b
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path)))
+
+    (it "should preserve other environment variables while updating CONDA_PREFIX"
+      (spy-on 'buffer-list :and-return-value (list buffer-a))
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-conda-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "PATH") :to-equal "/usr/bin")
+        (expect (getenv "HOME") :to-equal "/home/user")
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))))
+
+  (describe "buffer isolation"
+    (it "should not affect buffers from other projects"
+      (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-conda-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
+      (with-current-buffer other-project-buffer
+        (expect (getenv "CONDA_PREFIX") :to-equal "/other/old/env"))))
+
+  (describe "interactive completion"
+    (it "should prompt with available environments"
+      (spy-on 'completing-read :and-return-value env-path)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (call-interactively #'pet-conda-switch-environment)
+
+      (expect 'completing-read :to-have-been-called-with
+        "Please select a conda environment: "
+        (list other-env-path env-path)
+        nil t))
+
+    (it "should use the selected environment"
+      (spy-on 'completing-read :and-return-value other-env-path)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (call-interactively #'pet-conda-switch-environment)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache)
+        :to-equal other-env-path)))
+
+  (describe "error handling"
+    (it "should handle when no project root is found"
+      (spy-on 'pet-project-root :and-return-value nil)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-conda-switch-environment env-path)
+
+      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)
+      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+
+    (it "should handle when no Python buffers exist in project"
+      (spy-on 'buffer-list :and-return-value '())
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-conda-switch-environment env-path)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal env-path)
+      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
+
+(describe "pet-mamba-switch-environment"
+  :var ((project-root "/home/user/project/")
+         (env-path "/home/user/micromamba/envs/test/")
+         (other-env-path "/home/user/micromamba/envs/default/")
+         (buffer-a nil)
+         (buffer-b nil)
+         (other-project-buffer nil))
+
+  (before-each
+    (spy-on 'pet-project-root :and-return-value project-root)
+    (spy-on 'pet-mamba-environments :and-return-value
+      (list other-env-path env-path))
+
+    ;; Create test buffers in the project
+    (setq buffer-a (get-buffer-create "test-a.py"))
+    (setq buffer-b (get-buffer-create "test-b.py"))
+    (with-current-buffer buffer-a
+      (setq buffer-file-name "/home/user/project/main.py")
+      (python-mode)
+      (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
+    (with-current-buffer buffer-b
+      (setq buffer-file-name "/home/user/project/utils.py")
+      (python-mode)
+      (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
+
+    ;; Create buffer from different project
+    (setq other-project-buffer (get-buffer-create "other.py"))
+    (with-current-buffer other-project-buffer
+      (setq buffer-file-name "/home/user/other-project/main.py")
+      (python-mode)
+      (setq-local process-environment '("CONDA_PREFIX=/other/old/env"))))
+
+  (after-each
+    (when buffer-a (kill-buffer buffer-a))
+    (when buffer-b (kill-buffer buffer-b))
+    (when other-project-buffer (kill-buffer other-project-buffer))
+    (setq pet-project-virtualenv-cache nil))
+
+  (describe "basic functionality"
+    (it "should update virtualenv cache with selected environment"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-mamba-switch-environment env-path)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache)
+        :to-equal env-path))
+
+    (it "should call teardown and setup for all project Python buffers"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+      (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b other-project-buffer))
+
+      (pet-mamba-switch-environment env-path)
+
+      (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 2)
+      (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 2))
+
+    (it "should display success message"
+      (spy-on 'message)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-mamba-switch-environment env-path)
+
+      (expect 'message :to-have-been-called-with
+        "Switched to %s environment: %s" "mamba" env-path)))
+
+  (describe "environment variable handling"
+    (it "should set CONDA_PREFIX environment variable in project buffers"
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+      (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b))
+
+      (pet-mamba-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
+      (with-current-buffer buffer-b
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path)))
+
+    (it "should preserve other environment variables while updating CONDA_PREFIX"
+      (spy-on 'buffer-list :and-return-value (list buffer-a))
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-mamba-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "PATH") :to-equal "/usr/bin")
+        (expect (getenv "HOME") :to-equal "/home/user")
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))))
+
+  (describe "buffer isolation"
+    (it "should not affect buffers from other projects"
+      (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-mamba-switch-environment env-path)
+
+      (with-current-buffer buffer-a
+        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
+      (with-current-buffer other-project-buffer
+        (expect (getenv "CONDA_PREFIX") :to-equal "/other/old/env"))))
+
+  (describe "interactive completion"
+    (it "should prompt with available environments"
+      (spy-on 'completing-read :and-return-value env-path)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (call-interactively #'pet-mamba-switch-environment)
+
+      (expect 'completing-read :to-have-been-called-with
+        "Please select a mamba environment: "
+        (list other-env-path env-path)
+        nil t))
+
+    (it "should use the selected environment"
+      (spy-on 'completing-read :and-return-value other-env-path)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (call-interactively #'pet-mamba-switch-environment)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache)
+        :to-equal other-env-path)))
+
+  (describe "error handling"
+    (it "should handle when no project root is found"
+      (spy-on 'pet-project-root :and-return-value nil)
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-mamba-switch-environment env-path)
+
+      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)
+      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+
+    (it "should handle when no Python buffers exist in project"
+      (spy-on 'buffer-list :and-return-value '())
+      (spy-on 'pet-buffer-local-vars-teardown)
+      (spy-on 'pet-buffer-local-vars-setup)
+
+      (pet-mamba-switch-environment env-path)
+
+      (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal env-path)
+      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
@@ -1539,7 +2220,21 @@
     (expect yapfify-executable :to-equal "/usr/bin/yapf")
     (expect ruff-format-command :to-equal "/usr/bin/ruff")
     (expect yapfify-executable :to-equal "/usr/bin/yapf")
-    (expect py-autopep8-command :to-equal "/usr/bin/autopep8")))
+    (expect py-autopep8-command :to-equal "/usr/bin/autopep8"))
+
+  (it "should run the hook `pet-after-buffer-local-vars-setup'"
+    (spy-on 'pet-executable-find)
+    (spy-on 'pet-virtualenv-root)
+    (spy-on 'pet-flycheck-setup)
+    (spy-on 'pet-eglot-setup)
+    (spy-on 'pet-dape-setup)
+
+    (let* ((calls 0)
+            (test-func (lambda () (cl-incf calls (1+ calls)))))
+      (add-hook 'pet-after-buffer-local-vars-setup test-func)
+      (pet-buffer-local-vars-setup)
+      (expect calls :to-equal 1)
+      (remove-hook 'pet-after-buffer-local-vars-setup test-func))))
 
 (describe "pet-buffer-local-vars-teardown"
   (after-each
@@ -1561,6 +2256,18 @@
     (kill-local-variable 'yapfify-executable)
     (kill-local-variable 'ruff-format-command)
     (kill-local-variable 'py-autopep8-command))
+
+  (it "should run the hook `pet-before-buffer-local-vars-teardown'"
+    (spy-on 'pet-flycheck-teardown)
+    (spy-on 'pet-eglot-teardown)
+    (spy-on 'pet-dape-teardown)
+
+    (let* ((calls 0)
+            (test-func (lambda () (cl-incf calls (1+ calls)))))
+      (add-hook 'pet-before-buffer-local-vars-teardown test-func)
+      (pet-buffer-local-vars-teardown)
+      (expect calls :to-equal 1)
+      (remove-hook 'pet-before-buffer-local-vars-teardown test-func)))
 
   (it "should reset all buffer local variables for supported packages to default"
     (spy-on 'pet-flycheck-teardown)
@@ -1649,131 +2356,244 @@
         :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config" "/home/user/.mypy.ini")))))
 
 (describe "pet-mode"
-  (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
+  (before-each
+    (spy-on 'pet-project-root :and-return-value "/home/user/project/")
     (spy-on 'pet-buffer-local-vars-setup)
-    (pet-mode 1)
-    (expect 'pet-buffer-local-vars-setup :to-have-been-called))
-
-  (it "should reset all buffer local variables for supported packages to default if `pet-mode' is nil"
     (spy-on 'pet-buffer-local-vars-teardown)
-    (pet-mode -1)
-    (expect 'pet-buffer-local-vars-teardown :to-have-been-called)))
+    (spy-on 'add-hook)
+    (spy-on 'remove-hook))
+
+  (describe "when enabling pet-mode"
+    (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
+      (spy-on 'assoc-default :and-return-value "/home/user/project/.venv/")
+      (pet-mode 1)
+      (expect 'pet-buffer-local-vars-setup :to-have-been-called)
+      (expect 'add-hook :to-have-been-called-with 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))
+
+    (it "should call pixi environment switch when pixi is detected and no cached virtualenv"
+      (spy-on 'assoc-default :and-return-value nil)
+      (spy-on 'pet-use-pixi-p :and-return-value "/usr/bin/pixi")
+      (spy-on 'call-interactively)
+      (pet-mode 1)
+      (expect 'call-interactively :to-have-been-called-with #'pet-pixi-switch-environment)
+      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+
+    (it "should call conda environment switch when conda is detected and no cached virtualenv and pixi not available"
+      (spy-on 'assoc-default :and-return-value nil)
+      (spy-on 'pet-use-pixi-p :and-return-value nil)
+      (spy-on 'pet-use-conda-p :and-return-value "/usr/bin/conda")
+      (spy-on 'call-interactively)
+      (pet-mode 1)
+      (expect 'call-interactively :to-have-been-called-with #'pet-conda-switch-environment)
+      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+
+    (it "should call mamba environment switch when mamba is detected and no cached virtualenv and pixi/conda not available"
+      (spy-on 'assoc-default :and-return-value nil)
+      (spy-on 'pet-use-pixi-p :and-return-value nil)
+      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'pet-use-mamba-p :and-return-value "/usr/bin/mamba")
+      (spy-on 'call-interactively)
+      (pet-mode 1)
+      (expect 'call-interactively :to-have-been-called-with #'pet-mamba-switch-environment)
+      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+
+    (it "should set up buffer local vars when no environment managers are detected"
+      (spy-on 'assoc-default :and-return-value nil)
+      (spy-on 'pet-use-pixi-p :and-return-value nil)
+      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'pet-use-mamba-p :and-return-value nil)
+      (pet-mode 1)
+      (expect 'pet-buffer-local-vars-setup :to-have-been-called)))
+
+  (describe "when disabling pet-mode"
+    (it "should reset all buffer local variables for supported packages to default if `pet-mode' is nil"
+      (pet-mode -1)
+      (expect 'pet-buffer-local-vars-teardown :to-have-been-called)
+      (expect 'remove-hook :to-have-been-called-with 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))))
 
 (describe "pet-cleanup-watchers-and-caches"
-  :var ((last-project-buf-file-name "/home/user/project/src/__init__.py")
-         (buffers (mapcar
-                    (lambda (file)
-                      (with-current-buffer (create-file-buffer file)
-                        (set-visited-file-name file)
-                        (python-mode)
-                        (set-buffer-modified-p nil)
-                        (current-buffer)))
-                    '("/home/user/foo.py" "/home/user/project2/src/bar.py"))))
+  (describe "when pre-conditions are not met"
+    :var ((project-root-a "/home/user/project-a/")
+           (config-file-a "/home/user/project-a/pyproject.toml")
+           (mock-watcher-a 'mock-watcher-a))
 
-  (after-all
-    (dolist (buf buffers)
-      (kill-buffer buf)))
-
-  (before-each
-    (setq pet-project-virtualenv-cache '(("/home/user/project/" . "/home/user/project/.venv/")))
-    (setq pet-pre-commit-config-cache '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
-    (setq pet-pyproject-cache '(("/home/user/project/pyproject.toml" . "whatever")))
-    (setq pet-pipfile-cache '(("/home/user/project/Pipfile" . "whatever")))
-    (setq pet-python-version-cache '(("/home/user/project/.python-verion" . "whatever")))
-    (setq pet-environment-cache '(("/home/user/project/environment.yml" . "whatever")))
-    (setq pet-watched-config-files '(("/home/user/.cache/pre-commit/db.db" . 1)
-                                      ("/home/user/project/.pre-commit-config.yaml" . 2)
-                                      ("/home/user/project/pyproject.toml" . 3)
-                                      ("/home/user/project/Pipfile" . 4)
-                                      ("/home/user/project/.python-verion" . 5)
-                                      ("/home/user/project/environment.yml" . 6)))
-
-    (spy-on 'pet-project-root :and-return-value "/home/user/project/")
-    (spy-on 'buffer-list :and-return-value buffers)
-    (spy-on 'file-notify-rm-watch))
-
-  (describe "when a buffer is killed"
-    (it "should do nothing if it's not a file visiting buffer"
-      (kill-buffer (with-current-buffer (get-buffer-create "*pet test*")
-                     (python-mode)
-                     (current-buffer)))
-
-      (expect pet-project-virtualenv-cache :to-equal '(("/home/user/project/" . "/home/user/project/.venv/")))
-      (expect pet-pre-commit-config-cache :to-equal '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
-      (expect pet-pyproject-cache :to-equal '(("/home/user/project/pyproject.toml" . "whatever")))
-      (expect pet-pipfile-cache :to-equal '(("/home/user/project/Pipfile" . "whatever")))
-      (expect pet-python-version-cache :to-equal '(("/home/user/project/.python-verion" . "whatever")))
-      (expect pet-environment-cache :to-equal '(("/home/user/project/environment.yml" . "whatever")))
-      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1)
-                                                    ("/home/user/project/.pre-commit-config.yaml" . 2)
-                                                    ("/home/user/project/pyproject.toml" . 3)
-                                                    ("/home/user/project/Pipfile" . 4)
-                                                    ("/home/user/project/.python-verion" . 5)
-                                                    ("/home/user/project/environment.yml" . 6))))
-
-    (it "should do nothing if it's not a python mode buffer"
-      (kill-buffer (with-current-buffer (create-file-buffer "/home/user/.emacs")
-                     (emacs-lisp-mode)
-                     (set-buffer-modified-p nil)
-                     (current-buffer)))
-
-      (expect pet-project-virtualenv-cache :to-equal '(("/home/user/project/" . "/home/user/project/.venv/")))
-      (expect pet-pre-commit-config-cache :to-equal '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
-      (expect pet-pyproject-cache :to-equal '(("/home/user/project/pyproject.toml" . "whatever")))
-      (expect pet-pipfile-cache :to-equal '(("/home/user/project/Pipfile" . "whatever")))
-      (expect pet-python-version-cache :to-equal '(("/home/user/project/.python-verion" . "whatever")))
-      (expect pet-environment-cache :to-equal '(("/home/user/project/environment.yml" . "whatever")))
-      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1)
-                                                    ("/home/user/project/.pre-commit-config.yaml" . 2)
-                                                    ("/home/user/project/pyproject.toml" . 3)
-                                                    ("/home/user/project/Pipfile" . 4)
-                                                    ("/home/user/project/.python-verion" . 5)
-                                                    ("/home/user/project/environment.yml" . 6))))
-
-    (it "should do nothing if it does not belong in a project"
-      (spy-calls-reset 'pet-project-root)
-      (spy-on 'pet-project-root)
-
-      (kill-buffer (with-current-buffer (create-file-buffer "/home/user/baz.py")
-                     (set-visited-file-name "/home/user/baz.py")
-                     (python-mode)
-                     (set-buffer-modified-p nil)
-                     (current-buffer)))
-
-      (expect pet-project-virtualenv-cache :to-equal '(("/home/user/project/" . "/home/user/project/.venv/")))
-      (expect pet-pre-commit-config-cache :to-equal '(("/home/user/project/.pre-commit-config.yaml" . "whatever")))
-      (expect pet-pyproject-cache :to-equal '(("/home/user/project/pyproject.toml" . "whatever")))
-      (expect pet-pipfile-cache :to-equal '(("/home/user/project/Pipfile" . "whatever")))
-      (expect pet-python-version-cache :to-equal '(("/home/user/project/.python-verion" . "whatever")))
-      (expect pet-environment-cache :to-equal '(("/home/user/project/environment.yml" . "whatever")))
-      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1)
-                                                    ("/home/user/project/.pre-commit-config.yaml" . 2)
-                                                    ("/home/user/project/pyproject.toml" . 3)
-                                                    ("/home/user/project/Pipfile" . 4)
-                                                    ("/home/user/project/.python-verion" . 5)
-                                                    ("/home/user/project/environment.yml" . 6)))))
-
-  (describe "when the last Python buffer for a project is killed"
     (before-each
-      (kill-buffer (with-current-buffer (create-file-buffer last-project-buf-file-name)
-                     (set-visited-file-name last-project-buf-file-name)
-                     (python-mode)
-                     (set-buffer-modified-p nil)
-                     (current-buffer))))
+      (setq pet-config-cache-vars '(pet-pyproject-cache pet-environment-cache))
+      ;; Set up initial state that should remain unchanged
+      (setq pet-project-virtualenv-cache `((,project-root-a . "/venv/a")))
+      (setq pet-watched-config-files `((,config-file-a . ,mock-watcher-a)))
+      (setq pet-pyproject-cache `((,config-file-a . test-data))))
 
-    (it "should clean `pet-project-virtualenv-cache'"
-      (expect (assoc-default "/home/user/project/" pet-project-virtualenv-cache) :to-be nil))
+    (after-each
+      ;; Reset all caches
+      (setq pet-project-virtualenv-cache nil)
+      (setq pet-watched-config-files nil)
+      (setq pet-pyproject-cache nil)
+      (setq pet-environment-cache nil))
 
-    (it "should clear all watched files except `pre-commit' db"
-      (expect pet-watched-config-files :to-equal '(("/home/user/.cache/pre-commit/db.db" . 1))))
+    (it "should not modify anything when buffer has no file name"
+      (with-temp-buffer
+        (pet-cleanup-watchers-and-caches)
 
-    (it "should clear all config file caches"
-      (expect pet-project-virtualenv-cache :to-be nil)
-      (expect pet-pre-commit-config-cache :to-be nil)
-      (expect pet-pyproject-cache :to-be nil)
-      (expect pet-pipfile-cache :to-be nil)
-      (expect pet-python-version-cache :to-be nil)
-      (expect pet-environment-cache :to-be nil))))
+        (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
+        (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
+        (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data)))
+
+    (it "should not modify anything when buffer is not python-mode"
+      (with-temp-buffer
+        (setq buffer-file-name "/some/file.txt")
+        (pet-cleanup-watchers-and-caches)
+
+        (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
+        (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
+        (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data)))
+
+    (it "should not modify anything when project root cannot be determined"
+      (with-temp-buffer
+        (setq buffer-file-name "/some/file.py")
+        (python-mode)
+        (spy-on 'pet-project-root :and-return-value nil)
+
+        (pet-cleanup-watchers-and-caches)
+
+        (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
+        (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
+        (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data))))
+
+  (describe "when pre-conditions are met"
+    :var ((project-root-a "/home/user/project-a/")
+           (project-root-b "/home/user/project-b/")
+           (config-file-a "/home/user/project-a/pyproject.toml")
+           (config-file-b "/home/user/project-b/environment.yml")
+           (mock-watcher-a 'mock-watcher-a)
+           (mock-watcher-b 'mock-watcher-b)
+           (other-buffer-a nil)
+           (other-buffer-b nil))
+
+    (before-each
+      (setq pet-config-cache-vars '(pet-pyproject-cache pet-environment-cache))
+      (spy-on 'file-notify-rm-watch))
+
+    (after-each
+      ;; Clean up test buffers
+      (when (and other-buffer-a (buffer-live-p other-buffer-a)) (kill-buffer other-buffer-a))
+      (when (and other-buffer-b (buffer-live-p other-buffer-b)) (kill-buffer other-buffer-b))
+      ;; Reset all caches
+      (setq pet-project-virtualenv-cache nil)
+      (setq pet-watched-config-files nil)
+      (setq pet-pyproject-cache nil)
+      (setq pet-environment-cache nil))
+
+    (describe "when other python buffers exist in project"
+      (it "should not clean up anything"
+        (with-temp-buffer
+          (setq buffer-file-name "/home/user/project-a/main.py")
+          (python-mode)
+          (spy-on 'pet-project-root :and-return-value project-root-a)
+
+          ;; Set up other buffer in same project
+          (setq other-buffer-a (get-buffer-create "other-a"))
+          (with-current-buffer other-buffer-a
+            (setq buffer-file-name "/home/user/project-a/module.py")
+            (python-mode))
+
+          ;; Set up initial cache state
+          (setq pet-project-virtualenv-cache `((,project-root-a . "/venv/a") (,project-root-b . "/venv/b")))
+          (setq pet-watched-config-files `((,config-file-a . ,mock-watcher-a) (,config-file-b . ,mock-watcher-b)))
+          (setq pet-pyproject-cache `((,config-file-a . test-data-a) (,config-file-b . test-data-b)))
+
+          (pet-cleanup-watchers-and-caches)
+
+          ;; Nothing should be cleaned up
+          (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
+          (expect (assoc-default project-root-b pet-project-virtualenv-cache) :to-equal "/venv/b")
+          (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
+          (expect (assoc-default config-file-b pet-watched-config-files) :to-equal mock-watcher-b)
+          (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data-a)
+          (expect (assoc-default config-file-b pet-pyproject-cache) :to-equal 'test-data-b)
+          (expect 'file-notify-rm-watch :not :to-have-been-called))))
+
+    (describe "when no other python buffers exist in project"
+      (it "should clear virtualenv cache for project only"
+        (with-temp-buffer
+          (setq buffer-file-name "/home/user/project-a/main.py")
+          (python-mode)
+          (spy-on 'pet-project-root :and-return-value project-root-a)
+
+          ;; Set up other buffer in different project
+          (setq other-buffer-b (get-buffer-create "other-b"))
+          (with-current-buffer other-buffer-b
+            (setq buffer-file-name "/home/user/project-b/other.py")
+            (python-mode))
+
+          (setq pet-project-virtualenv-cache
+            `((,project-root-a . "/venv/a") (,project-root-b . "/venv/b")))
+
+          (pet-cleanup-watchers-and-caches)
+
+          (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-be nil)
+          (expect (assoc-default project-root-b pet-project-virtualenv-cache) :to-equal "/venv/b")))
+
+      (it "should remove file watchers for project files only"
+        (with-temp-buffer
+          (setq buffer-file-name "/home/user/project-a/main.py")
+          (python-mode)
+          (spy-on 'pet-project-root :and-return-value project-root-a)
+
+          ;; Set up other buffer in different project
+          (setq other-buffer-b (get-buffer-create "other-b"))
+          (with-current-buffer other-buffer-b
+            (setq buffer-file-name "/home/user/project-b/other.py")
+            (python-mode))
+
+          (setq pet-watched-config-files
+            `((,config-file-a . ,mock-watcher-a) (,config-file-b . ,mock-watcher-b)))
+
+          (pet-cleanup-watchers-and-caches)
+
+          (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-a)
+          (expect 'file-notify-rm-watch :not :to-have-been-called-with mock-watcher-b)
+          (expect (assoc-default config-file-a pet-watched-config-files) :to-be nil)
+          (expect (assoc-default config-file-b pet-watched-config-files) :to-equal mock-watcher-b)))
+
+      (it "should clear all config caches for project only"
+        (with-temp-buffer
+          (setq buffer-file-name "/home/user/project-a/main.py")
+          (python-mode)
+          (spy-on 'pet-project-root :and-return-value project-root-a)
+
+          ;; Set up other buffer in different project
+          (setq other-buffer-b (get-buffer-create "other-b"))
+          (with-current-buffer other-buffer-b
+            (setq buffer-file-name "/home/user/project-b/other.py")
+            (python-mode))
+
+          (setq pet-pyproject-cache
+            `((,config-file-a . test-data-a) (,config-file-b . test-data-b)))
+          (setq pet-environment-cache
+            `((,config-file-a . env-data-a) (,config-file-b . env-data-b)))
+
+          (pet-cleanup-watchers-and-caches)
+
+          (expect (assoc-default config-file-a pet-pyproject-cache) :to-be nil)
+          (expect (assoc-default config-file-b pet-pyproject-cache) :to-equal 'test-data-b)
+          (expect (assoc-default config-file-a pet-environment-cache) :to-be nil)
+          (expect (assoc-default config-file-b pet-environment-cache) :to-equal 'env-data-b)))
+
+      (it "should handle empty caches gracefully"
+        (with-temp-buffer
+          (setq buffer-file-name "/home/user/project-a/main.py")
+          (python-mode)
+          (spy-on 'pet-project-root :and-return-value project-root-a)
+
+          ;; Ensure caches are empty
+          (setq pet-project-virtualenv-cache nil)
+          (setq pet-watched-config-files nil)
+          (setq pet-pyproject-cache nil)
+          (setq pet-environment-cache nil)
+
+          (expect (pet-cleanup-watchers-and-caches) :not :to-throw)
+          (expect 'file-notify-rm-watch :not :to-have-been-called))))))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)
