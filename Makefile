@@ -17,9 +17,9 @@ compile: cask clean
 
 .PHONY: test
 test: cask clean
-	cask exec buttercup --traceback full -L . test
+	cask exec buttercup --traceback pretty -L . test
 
 .PHONY: coverage
 coverage: cask clean
 	mkdir -p coverage
-	UNDERCOVER_FORCE=true cask exec buttercup --traceback full -L . test
+	UNDERCOVER_FORCE=true cask exec buttercup --traceback pretty -L . test
