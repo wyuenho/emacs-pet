@@ -945,7 +945,7 @@ default otherwise."
 FN is `eglot--executable-find', ARGS is the arguments to
 `eglot--executable-find'."
   (pcase-let ((`(,command . ,_) args))
-    (if (member command '("pylsp" "pyls" "pyright-langserver" "jedi-language-server" "ruff-lsp"))
+    (if (member command '("pylsp" "pyls" "basedpyright-langserver" "pyright-langserver" "jedi-language-server" "ruff" "ruff-lsp"))
         (pet-executable-find command)
       (apply fn args))))
 
@@ -983,6 +983,11 @@ COMMAND is the name of the Python language server command."
           (:environment ,(pet-virtualenv-root))
           :pylint
           (:executable ,(pet-executable-find "pylint")))))))
+   ((string-match "basedpyright-langserver" command)
+    (let nil
+      `(:python
+        (:pythonPath ,(pet-executable-find "python")
+                     :venvPath ,(pet-virtualenv-root)))))
    ((string-match "pyright-langserver" command)
     (let nil
       `(:python
@@ -995,6 +1000,11 @@ COMMAND is the name of the Python language server command."
          (:command ,(pet-executable-find "jedi-language-server"))
          :workspace
          (:environmentPath ,(pet-executable-find "python"))))))
+   ((string-match "ruff" command)
+    (let nil
+      `(:settings
+        (:interpreter ,(pet-executable-find "python")
+                      :path ,(pet-executable-find "ruff")))))
    ((string-match "ruff-lsp" command)
     (let nil
       `(:settings
