@@ -82,7 +82,7 @@ Supported Emacs Packages
 - Built-in `project.el <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
 - `projectile <https://docs.projectile.mx/projectile/index.html>`_
 - `envrc <https://github.com/purcell/envrc>`_ (`direnv caveats`_)
-- `eglot <https://github.com/joaotavora/eglot>`_
+- `eglot <https://github.com/joaotavora/eglot>`_ (`eglot versions supported`_)
 - `dape <https://github.com/svaante/dape>`_
 - `flycheck <https://www.flycheck.org/en/latest/>`_
 - `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
@@ -314,6 +314,19 @@ the user to customize when it takes effect. This requirement rules out
 
 .. [1] Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
        no longer recommended due to this reason.
+
+
+.. _eglot versions supported:
+
+Which version of ``eglot`` is supported?
+++++++++++++++++++++++++++++++++++++++++
+
+The only version of ``eglot`` that doesn't work with ``pet`` is 1.17.*, which
+unfortunately is the version that comes with Emacs 30.  There is no easy way to
+support it without massively complicating the already complex advices required.
+The easiest thing to do is to upgrade to 1.18, which has reverted the change the
+broken change that prevents ``pet`` from working.
+
 
 .. _virtualenvwrapper caveats:
 
