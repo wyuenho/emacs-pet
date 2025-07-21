@@ -1937,66 +1937,6 @@
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called)))
 
-(describe "pet-eglot--guess-contact-advice"
-  (it "should return output unchanged when there's no pet server initialization"
-    (spy-on 'eglot--guess-contact :and-return-value
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("pyright-langserver" "--stdio")
-         "python-ts"))
-
-    (spy-on 'pet-lookup-eglot-server-initialization-options)
-
-    (expect
-      (pet-eglot--guess-contact-advice 'eglot--guess-contact)
-      :to-equal
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("pyright-langserver" "--stdio")
-         "python-ts")))
-
-  (it "should return contact with default server initialization when there's no pet server initialization"
-    (spy-on 'eglot--guess-contact :and-return-value
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("jedi-language-server"
-           :initializationOptions
-           (:jedi
-             (:executable
-               (:args ["--ws"]))))
-         "python-ts"))
-
-    (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value
-      '(:jedi
-         (:executable
-           (:command
-             "/home/user/project/env/bin/jedi-language-server")
-           :workspace
-           (:environmentPath
-             "/home/user/project/env/bin/python"))))
-
-    (expect
-      (pet-eglot--guess-contact-advice 'eglot--guess-contact)
-      :to-equal
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("jedi-language-server"
-           :initializationOptions
-           (:jedi
-             (:executable
-               (:args
-                 ["--ws"]
-                 :command
-                 "/home/user/project/env/bin/jedi-language-server")
-               :workspace
-               (:environmentPath
-                 "/home/user/project/env/bin/python"))))
-         "python-ts"))))
-
 (describe "pet-lookup-eglot-server-initialization-options"
   (before-each
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/")
@@ -2085,16 +2025,73 @@
   (it "should advice eglot functions"
     (pet-eglot-setup)
     (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be-truthy)
-    (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be-truthy)
-    (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be-truthy)))
+    (if (fboundp 'eglot--executable-find)
+      ;; For Eglot versions that have eglot--executable-find (<1.17 or >=1.18)
+      (progn
+        (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be-truthy)
+        (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be-truthy))
+      ;; For Eglot 1.17 (where eglot--executable-find is not defined)
+      (expect (advice-member-p 'pet-eglot--guess-contact-for-1.17-advice 'eglot--guess-contact) :to-be-truthy))))
 
 (describe "pet-eglot-teardown"
   (it "should remove `pet' advices from eglot functions"
     (pet-eglot-setup)
     (pet-eglot-teardown)
     (expect (advice-member-p 'pet-eglot--workspace-configuration-plist-advice 'eglot--workspace-configuration-plist) :to-be nil)
-    (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be nil)
-    (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be nil)))
+    (if (fboundp 'eglot--executable-find)
+      ;; For Eglot versions that have eglot--executable-find (<1.17 or >=1.18)
+      (progn
+        (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be nil)
+        (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be nil))
+      ;; For Eglot 1.17 (where eglot--executable-find is not defined)
+      (expect (advice-member-p 'pet-eglot--guess-contact-for-1.17-advice 'eglot--guess-contact) :to-be nil))))
+
+(when (fboundp 'eglot--guess-contact)
+  (describe "advised eglot--guess-contact"
+    (before-each
+      (spy-on 'pet-executable-find :and-return-value "/path/to/venv/bin/pylsp")
+      (spy-on 'executable-find :and-return-value "/usr/bin/pylsp")
+      (pet-eglot-setup))
+
+    (after-each
+      (pet-eglot-teardown))
+
+    (it "should use pet-executable-find path for Python LSP servers"
+      (with-temp-buffer
+        (python-mode)
+        (let* ((result (eglot--guess-contact))
+               (contact (nth 3 result))
+               (program (car contact)))
+          (expect program :to-equal "/path/to/venv/bin/pylsp"))))
+
+    (it "should add pet initialization options when none exist"
+      (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:test-option t))
+      (with-temp-buffer
+        (python-mode)
+        (let* ((result (eglot--guess-contact))
+               (contact (nth 3 result)))
+          (expect (plist-get contact :initializationOptions) :to-equal '(:test-option t)))))
+
+    (it "should merge pet initialization options with existing ones"
+      (let ((eglot-server-programs '((python-mode "pylsp" :initializationOptions (:existing-option t)))))
+        (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:pet-option t))
+        (with-temp-buffer
+          (python-mode)
+          (let* ((result (eglot--guess-contact))
+                 (contact (nth 3 result))
+                 (init-opts (plist-get contact :initializationOptions)))
+            (expect (plist-get init-opts :existing-option) :to-equal t)
+            (expect (plist-get init-opts :pet-option) :to-equal t)))))
+
+    (it "should preserve existing options when pet has no initialization options"
+      (let ((eglot-server-programs '((python-mode "pylsp" :initializationOptions (:existing-option t)))))
+        (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value nil)
+        (with-temp-buffer
+          (python-mode)
+          (let* ((result (eglot--guess-contact))
+                 (contact (nth 3 result))
+                 (init-opts (plist-get contact :initializationOptions)))
+            (expect (plist-get init-opts :existing-option) :to-equal t)))))))
 
 (describe "pet-dape-setup"
   (before-each

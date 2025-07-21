@@ -940,14 +940,17 @@ default otherwise."
 (declare-function eglot--guess-contact "ext:eglot")
 
 (defun pet--process-guess-contact-result (contact-result)
-  "Process CONTACT-RESULT from `eglot--guess-contact` to merge PET's initialization options."
-  (let* ((contact (nth 3 contact-result)) ; contact is the 4th element of contact-result
+  "Merge PET's initialization options to Eglot's contacts.
+
+CONTACT-RESULT is the result of `eglot--guess-contact'."
+  (let* ((contact (nth 3 contact-result))
          (probe (seq-position contact :initializationOptions))
          (program-with-args (seq-subseq contact 0 (or probe (length contact))))
          (program (car program-with-args))
-         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions)))
-    (if init-opts
-        (append (seq-subseq contact-result 0 3) ; Use contact-result here
+         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions))
+         (pet-init-opts (pet-lookup-eglot-server-initialization-options program)))
+    (if (or init-opts pet-init-opts)
+        (append (seq-subseq contact-result 0 3)
                 (list
                  (append
                   program-with-args
@@ -955,33 +958,37 @@ default otherwise."
                    :initializationOptions
                    (pet-merge-eglot-initialization-options
                     init-opts
-                    (pet-lookup-eglot-server-initialization-options
-                     program)))))
-                (seq-subseq contact-result 4))   ; And here
-      contact-result))) ; Return original contact-result if no init-opts
+                    pet-init-opts))))
+                (seq-subseq contact-result 4))
+      contact-result)))
 
 (defun pet-eglot--guess-contact-advice (fn &rest args)
-  "Enrich `eglot--guess-contact' with paths found by `pet'.
+  "Advice for the `eglot--guess-contact' in Eglot < 1.17 and >= 1.18.
 
 FN is `eglot--guess-contact', ARGS is the arguments to
-`eglot--guess-contact'."
+`eglot--guess-contact'.
+
+Returns the result of `eglot--guess-contact' with PET's server
+initialization options merged to the contacts."
   (let ((result (apply fn args)))
     (pet--process-guess-contact-result result)))
 
-(defun pet-eglot--guess-contact-for-1.17-advice (fn &rest guess_args)
-  "Advice for `eglot--guess-contact` in Eglot 1.17.
-Uses `cl-letf` to ensure `pet`'s executable finding is used via `executable-find`,
-and merges PET's initialization options."
-  (let* ((original-global-executable-find #'executable-find) ; Renamed for clarity, captures the true global executable-find
+(defun pet-eglot--guess-contact-for-1.17-advice (fn &rest args)
+  "Advice for the `eglot--guess-contact' in Eglot 1.17.
+
+FN is `eglot--guess-contact', ARGS is the arguments to
+`eglot--guess-contact'.
+
+Re-routes `executable-find' to `pet-executable-find'.
+
+Returns the result of `eglot--guess-contact' with PET's server
+initialization options merged to the contacts."
+  (let* ((orig-executable-find #'executable-find)
          (result
           (cl-letf (((symbol-function 'executable-find)
-                     (lambda (command &optional remote search)
-                       ;; Call pet-eglot--executable-find-advice directly
-                       ;; The first arg to the advice is the function it's advising (here, the original global executable-find)
-                       ;; The rest of the args (command remote search) become the &rest args for the advice.
-                       (pet-eglot--executable-find-advice original-global-executable-find command remote search))))
-            (apply fn guess_args))))
-    ;; Call the new helper function to process the result
+                     (lambda (command &optional remote)
+                       (pet-eglot--executable-find-advice orig-executable-find command remote))))
+            (apply fn args))))
     (pet--process-guess-contact-result result)))
 
 (defun pet-eglot--executable-find-advice (fn &rest args)
@@ -1095,28 +1102,21 @@ arguments to `eglot--workspace-configuration-plist'."
 
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."
+  (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
   (if (fboundp 'eglot--executable-find)
-      ;; For Eglot versions that have eglot--executable-find (<1.17 or >=1.18)
       (progn
         (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
-        (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
         (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
-    ;; For Eglot 1.17 (where eglot--executable-find is not defined)
-    ;; The conditional defun block for pet-eglot--guess-contact-for-1.17-advice is now removed from here.
-    (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-for-1.17-advice)
-    (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)))
+    (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-for-1.17-advice)))
 
 (defun pet-eglot-teardown ()
   "Tear down PET advices to Eglot."
+  (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
   (if (fboundp 'eglot--executable-find)
-      ;; For Eglot versions that have eglot--executable-find
       (progn
         (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
-        (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
         (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
-    ;; For Eglot 1.17
-    (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-for-1.17-advice)
-    (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)))
+    (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-for-1.17-advice)))
 
 
 (defvar dape-command)
