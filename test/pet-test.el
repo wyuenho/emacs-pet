@@ -1,4 +1,4 @@
-;; -*- lisp-indent-offset: 2; lexical-binding: t; -*-
+;; -*- lexical-binding: t; -*-
 
 (unless (< emacs-major-version 27)
   (load-file "test/undercover-init.el"))
@@ -140,8 +140,8 @@
 
 (describe "pet-locate-dominating-file"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME"))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
@@ -155,36 +155,36 @@
   (it "should find file from `default-directory'"
     (spy-on 'locate-dominating-file :and-return-value "~/project/src/package")
     (spy-on 'file-expand-wildcards :and-call-fake
-      (lambda (pattern &optional full)
-        (cond
-          ((and full (equal pattern "/home/user/project/src/package/.pylintrc"))
-            (list (expand-file-name pattern)))
-          ((and (not full) (equal pattern "~/project/src/package/.pylintrc"))
-            (list pattern)))))
+            (lambda (pattern &optional full)
+              (cond
+               ((and full (equal pattern "/home/user/project/src/package/.pylintrc"))
+                (list (expand-file-name pattern)))
+               ((and (not full) (equal pattern "~/project/src/package/.pylintrc"))
+                (list pattern)))))
     (expect (pet-locate-dominating-file ".pylintrc") :to-equal "/home/user/project/src/package/.pylintrc"))
 
   (it "should find file from parent directory"
     (spy-on 'locate-dominating-file :and-return-value "~/project/src/")
     (spy-on 'file-expand-wildcards :and-call-fake
-      (lambda (pattern &optional full)
-        (cond
-          ((and full (equal pattern "/home/user/project/src/.pylintrc"))
-            (list (expand-file-name pattern)))
-          ((and (not full) (equal pattern "~/project/src/.pylintrc"))
-            (list pattern)))))
+            (lambda (pattern &optional full)
+              (cond
+               ((and full (equal pattern "/home/user/project/src/.pylintrc"))
+                (list (expand-file-name pattern)))
+               ((and (not full) (equal pattern "~/project/src/.pylintrc"))
+                (list pattern)))))
     (expect (pet-locate-dominating-file ".pylintrc") :to-equal "/home/user/project/src/.pylintrc"))
 
   (it "should return `nil' if found file is outside of project root"
     (spy-on 'file-expand-wildcards :and-call-fake
-      (lambda (dir &optional _)
-        (when (equal dir "~/")
-          (list "~/"))))
+            (lambda (dir &optional _)
+              (when (equal dir "~/")
+                (list "~/"))))
     (expect (pet-locate-dominating-file ".pylintrc") :to-be nil)))
 
 (describe "pet-find-file-from-project-root-recursively"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME"))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
@@ -231,7 +231,7 @@
 
   (describe "when using `directory-files-recursively'"
     :var ((projectile-dir-files-def (symbol-function 'projectile-dir-files))
-           (project-files-def (symbol-function 'project-files)))
+          (project-files-def (symbol-function 'project-files)))
 
     (before-each
       (fset 'projectile-dir-files nil)
@@ -259,15 +259,15 @@
 
 (describe "pet-parse-config-file"
   :var* ((yaml-content "foo: bar\nbaz:\n  - buz\n  - 1\n")
-          (toml-content "foo = \"bar\"\nbaz = [\"buz\", 1]\n")
-          (json-content "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}")
-          (yaml-file (make-temp-file "pet-test" nil ".yaml" yaml-content))
-          (toml-file (make-temp-file "pet-test" nil ".toml" toml-content))
-          (json-file (make-temp-file "pet-test" nil ".json" json-content))
-          (toml-file-sans-ext (make-temp-file "pet-test" nil nil toml-content))
-          (yaml-file-sans-ext (make-temp-file "pet-test" nil nil yaml-content))
-          (json-file-sans-ext (make-temp-file "pet-test" nil nil json-content))
-          (jsonian-file-sans-ext (make-temp-file "pet-test" nil nil json-content)))
+         (toml-content "foo = \"bar\"\nbaz = [\"buz\", 1]\n")
+         (json-content "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}")
+         (yaml-file (make-temp-file "pet-test" nil ".yaml" yaml-content))
+         (toml-file (make-temp-file "pet-test" nil ".toml" toml-content))
+         (json-file (make-temp-file "pet-test" nil ".json" json-content))
+         (toml-file-sans-ext (make-temp-file "pet-test" nil nil toml-content))
+         (yaml-file-sans-ext (make-temp-file "pet-test" nil nil yaml-content))
+         (json-file-sans-ext (make-temp-file "pet-test" nil nil json-content))
+         (jsonian-file-sans-ext (make-temp-file "pet-test" nil nil json-content)))
 
   (after-all
     (delete-file yaml-file)
@@ -329,8 +329,8 @@
 
   (describe "when received deleted event"
     :var* ((descriptor 1)
-            (file "/home/user/project/tox.ini")
-            (event `((,file . ,descriptor))))
+           (file "/home/user/project/tox.ini")
+           (event `((,file . ,descriptor))))
 
     (before-each
       (spy-on 'file-notify-rm-watch)
@@ -714,8 +714,8 @@
 
 (describe "pet-pre-commit-config-has-hook-p"
   :var ((pre-commit-config-content
-          '((repos
-              ((hooks ((id . "black"))) (repo . "https://github.com/psf/black") (rev . "22.6.0"))))))
+         '((repos
+            ((hooks ((id . "black"))) (repo . "https://github.com/psf/black") (rev . "22.6.0"))))))
 
   (before-each
     (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
@@ -735,38 +735,38 @@
 
   (it "should parse `pre-commit' database to alist"
     (expect (pet-parse-pre-commit-db "some.db") :to-equal '(((repo . "https://github.com/pycqa/flake8")
-                                                              (ref . "5.0.0")
-                                                              (path . "/home/user/project/flake8"))))))
+                                                             (ref . "5.0.0")
+                                                             (path . "/home/user/project/flake8"))))))
 
 (describe "pet-pre-commit-virtualenv-path"
   :var ((pre-commit-db-content '(((repo . "https://github.com/pycqa/flake8:flake8-comprehensions==3.10.0,flake8-no-implicit-concat==0.3.3")
-                                   (ref . "bd1656c")
-                                   (path . "/home/user/.cache/pre-commit/repofurqd1rq"))
-                                  ((repo . "https://github.com/psf/black")
-                                    (ref . "22.6.0")
-                                    (path . "/home/user/.cache/pre-commit/repo85no_p81"))))
-         (pre-commit-config-content '((repos
-                                        ((hooks
-                                           ((additional_dependencies "flake8-no-implicit-concat==0.3.3" "flake8-comprehensions==3.10.0")
-                                             (id . "flake8")))
-                                          (repo . "https://github.com/pycqa/flake8")
-                                          (rev . "bd1656c"))
-                                        ((hooks
-                                           ((id . "black")))
-                                          (repo . "https://github.com/psf/black")
-                                          (rev . "22.6.0")))))
-         (old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (orig-getenv (symbol-function 'getenv))
-         (process-environment (copy-sequence process-environment)))
+                                  (ref . "bd1656c")
+                                  (path . "/home/user/.cache/pre-commit/repofurqd1rq"))
+                                 ((repo . "https://github.com/psf/black")
+                                  (ref . "22.6.0")
+                                  (path . "/home/user/.cache/pre-commit/repo85no_p81"))))
+        (pre-commit-config-content '((repos
+                                      ((hooks
+                                        ((additional_dependencies "flake8-no-implicit-concat==0.3.3" "flake8-comprehensions==3.10.0")
+                                         (id . "flake8")))
+                                       (repo . "https://github.com/pycqa/flake8")
+                                       (rev . "bd1656c"))
+                                      ((hooks
+                                        ((id . "black")))
+                                       (repo . "https://github.com/psf/black")
+                                       (rev . "22.6.0")))))
+        (old-default-directory default-directory)
+        (home (getenv "HOME"))
+        (orig-getenv (symbol-function 'getenv))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "~/project/src/")
     (spy-on 'getenv :and-call-fake
-      (lambda (name)
-        (unless (member name '("PRE_COMMIT_HOME" "XDG_CACHE_HOME"))
-          (funcall orig-getenv name))))
+            (lambda (name)
+              (unless (member name '("PRE_COMMIT_HOME" "XDG_CACHE_HOME"))
+                (funcall orig-getenv name))))
     (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
 
   (after-each
@@ -781,7 +781,7 @@
 
     (it "should return absolute path to the virtualenv of a `pre-commit' hook with additional dependencies"
       (spy-on 'file-expand-wildcards :and-return-value '("/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.9"
-                                                          "/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.10"))
+                                                         "/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.10"))
       (expect (pet-pre-commit-virtualenv-path "flake8") :to-equal "/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.10"))
 
     (it "should return absolute path to the virtualenv of a `pre-commit' hook with no additional dependencies"
@@ -797,7 +797,7 @@
 
     (it "should return absolute path to the virtualenv of a `pre-commit' hook with additional dependencies"
       (spy-on 'file-expand-wildcards :and-return-value '("/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.9"
-                                                          "/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.10"))
+                                                         "/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.10"))
       (expect (pet-pre-commit-virtualenv-path "flake8") :to-equal "/home/user/.cache/pre-commit/repofurqd1rq/py_env-python3.10"))
 
     (it "should return absolute path to the virtualenv of a `pre-commit' hook with no additional dependencies"
@@ -928,23 +928,23 @@
 
 (describe "pet-virtualenv-root"
   :var ((project-root "/home/user/project/")
-         (conda-path "/usr/bin/conda")
-         (conda-virtualenv "/home/user/miniforge3/envs/project/")
-         (mamba-path "/usr/bin/micromamba")
-         (mamba-virtualenv "/home/user/micromamba/envs/project/")
-         (pixi-path "/usr/bin/pixi")
-         (pixi-virtualenv "/home/user/project/.pixi/envs/default/")
-         (poetry-path "/usr/bin/poetry")
-         (poetry-virtualenv "/home/user/.cache/pypoetry/virtualenvs/project/")
-         (pipenv-path "/usr/bin/pipenv")
-         (pipenv-virtualenv "/home/user/.local/share/virtualenvs/project/")
-         (venv-virtualenv "/home/user/project/.venv/")
-         (pyenv-path "/usr/bin/pyenv")
-         (pyenv-virtualenv "/home/user/.pyenv/versions/project/")
-         (pyenv-virtualenv-truename "/home/user/.pyenv/versions/3.8/envs/project/")
-         (old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (process-environment (copy-sequence process-environment)))
+        (conda-path "/usr/bin/conda")
+        (conda-virtualenv "/home/user/miniforge3/envs/project/")
+        (mamba-path "/usr/bin/micromamba")
+        (mamba-virtualenv "/home/user/micromamba/envs/project/")
+        (pixi-path "/usr/bin/pixi")
+        (pixi-virtualenv "/home/user/project/.pixi/envs/default/")
+        (poetry-path "/usr/bin/poetry")
+        (poetry-virtualenv "/home/user/.cache/pypoetry/virtualenvs/project/")
+        (pipenv-path "/usr/bin/pipenv")
+        (pipenv-virtualenv "/home/user/.local/share/virtualenvs/project/")
+        (venv-virtualenv "/home/user/project/.venv/")
+        (pyenv-path "/usr/bin/pyenv")
+        (pyenv-virtualenv "/home/user/.pyenv/versions/project/")
+        (pyenv-virtualenv-truename "/home/user/.pyenv/versions/3.8/envs/project/")
+        (old-default-directory default-directory)
+        (home (getenv "HOME"))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
@@ -1049,32 +1049,32 @@
 
     (it "should return list of environment prefixes on success"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{\"environments_info\": [{\"prefix\": \"/home/user/project/.pixi/envs/default\"}, {\"prefix\": \"/home/user/project/.pixi/envs/test\"}]}")
-          0))
+              (lambda (&rest _)
+                (insert "{\"environments_info\": [{\"prefix\": \"/home/user/project/.pixi/envs/default\"}, {\"prefix\": \"/home/user/project/.pixi/envs/test\"}]}")
+                0))
       (expect (pet-pixi-environments) :to-equal '("/home/user/project/.pixi/envs/default" "/home/user/project/.pixi/envs/test")))
 
     (it "should return empty list when no environments exist"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{\"environments_info\": []}")
-          0))
+              (lambda (&rest _)
+                (insert "{\"environments_info\": []}")
+                0))
       (expect (pet-pixi-environments) :to-equal '()))
 
     (it "should return nil on command failure"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "pixi: command not found")
-          1))
+              (lambda (&rest _)
+                (insert "pixi: command not found")
+                1))
       (spy-on 'pet-report-error)
       (expect (pet-pixi-environments) :to-equal nil)
       (expect 'pet-report-error :to-have-been-called-with '(user-error "pixi: command not found")))
 
     (it "should handle malformed JSON gracefully"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{invalid json")
-          0))
+              (lambda (&rest _)
+                (insert "{invalid json")
+                0))
       (spy-on 'pet-report-error)
       (expect (pet-pixi-environments) :to-be nil)
       (expect 'pet-report-error :to-have-been-called)))
@@ -1093,32 +1093,32 @@
 
     (it "should return list of environment paths on success"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{\"envs\": [\"/home/user/miniforge3/envs/myenv\", \"/home/user/miniforge3/envs/test\"]}")
-          0))
+              (lambda (&rest _)
+                (insert "{\"envs\": [\"/home/user/miniforge3/envs/myenv\", \"/home/user/miniforge3/envs/test\"]}")
+                0))
       (expect (pet-conda-environments) :to-equal '("/home/user/miniforge3/envs/myenv" "/home/user/miniforge3/envs/test")))
 
     (it "should return empty list when no environments exist"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{\"envs\": []}")
-          0))
+              (lambda (&rest _)
+                (insert "{\"envs\": []}")
+                0))
       (expect (pet-conda-environments) :to-equal '()))
 
     (it "should return nil on command failure"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "conda: command not found")
-          1))
+              (lambda (&rest _)
+                (insert "conda: command not found")
+                1))
       (spy-on 'pet-report-error)
       (expect (pet-conda-environments) :to-equal nil)
       (expect 'pet-report-error :to-have-been-called-with '(user-error "conda: command not found")))
 
     (it "should handle malformed JSON gracefully"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{invalid json")
-          0))
+              (lambda (&rest _)
+                (insert "{invalid json")
+                0))
       (spy-on 'pet-report-error)
       (expect (pet-conda-environments) :to-be nil)
       (expect 'pet-report-error :to-have-been-called)))
@@ -1137,32 +1137,32 @@
 
     (it "should return list of environment paths on success"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{\"envs\": [\"/home/user/micromamba/envs/myenv\", \"/home/user/micromamba/envs/test\"]}")
-          0))
+              (lambda (&rest _)
+                (insert "{\"envs\": [\"/home/user/micromamba/envs/myenv\", \"/home/user/micromamba/envs/test\"]}")
+                0))
       (expect (pet-mamba-environments) :to-equal '("/home/user/micromamba/envs/myenv" "/home/user/micromamba/envs/test")))
 
     (it "should return empty list when no environments exist"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{\"envs\": []}")
-          0))
+              (lambda (&rest _)
+                (insert "{\"envs\": []}")
+                0))
       (expect (pet-mamba-environments) :to-equal '()))
 
     (it "should signal user-error on command failure"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "mamba: command not found")
-          1))
+              (lambda (&rest _)
+                (insert "mamba: command not found")
+                1))
       (spy-on 'pet-report-error)
       (expect (pet-mamba-environments) :to-equal nil)
       (expect 'pet-report-error :to-have-been-called-with '(user-error "mamba: command not found")))
 
     (it "should handle malformed JSON gracefully"
       (spy-on 'process-file :and-call-fake
-        (lambda (&rest _)
-          (insert "{invalid json")
-          0))
+              (lambda (&rest _)
+                (insert "{invalid json")
+                0))
       (spy-on 'pet-report-error)
       (expect (pet-mamba-environments) :to-be nil)
       (expect 'pet-report-error :to-have-been-called)))
@@ -1176,16 +1176,16 @@
 
 (describe "pet-pixi-switch-environment"
   :var ((project-root "/home/user/project/")
-         (env-path "/home/user/project/.pixi/envs/test/")
-         (other-env-path "/home/user/project/.pixi/envs/default/")
-         (buffer-a nil)
-         (buffer-b nil)
-         (other-project-buffer nil))
+        (env-path "/home/user/project/.pixi/envs/test/")
+        (other-env-path "/home/user/project/.pixi/envs/default/")
+        (buffer-a nil)
+        (buffer-b nil)
+        (other-project-buffer nil))
 
   (before-each
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-pixi-environments :and-return-value
-      (list other-env-path env-path))
+            (list other-env-path env-path))
 
     ;; Create test buffers in the project
     (setq buffer-a (get-buffer-create "test-a.py"))
@@ -1220,7 +1220,7 @@
       (pet-pixi-switch-environment env-path)
 
       (expect (assoc-default project-root pet-project-virtualenv-cache)
-        :to-equal env-path))
+              :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
       (spy-on 'pet-buffer-local-vars-teardown)
@@ -1241,7 +1241,7 @@
       (pet-pixi-switch-environment env-path)
 
       (expect 'message :to-have-been-called-with
-        "Switched to %s environment: %s" "pixi" env-path)))
+              "Switched to %s environment: %s" "pixi" env-path)))
 
   (describe "environment variable handling"
     (it "should set CONDA_PREFIX environment variable in project buffers"
@@ -1290,9 +1290,9 @@
       (call-interactively #'pet-pixi-switch-environment)
 
       (expect 'completing-read :to-have-been-called-with
-        "Please select a pixi environment: "
-        (list other-env-path env-path)
-        nil t))
+              "Please select a pixi environment: "
+              (list other-env-path env-path)
+              nil t))
 
     (it "should use the selected environment"
       (spy-on 'completing-read :and-return-value other-env-path)
@@ -1302,7 +1302,7 @@
       (call-interactively #'pet-pixi-switch-environment)
 
       (expect (assoc-default project-root pet-project-virtualenv-cache)
-        :to-equal other-env-path)))
+              :to-equal other-env-path)))
 
   (describe "error handling"
     (it "should handle when no project root is found"
@@ -1327,16 +1327,16 @@
 
 (describe "pet-conda-switch-environment"
   :var ((project-root "/home/user/project/")
-         (env-path "/home/user/miniforge3/envs/test/")
-         (other-env-path "/home/user/miniforge3/envs/default/")
-         (buffer-a nil)
-         (buffer-b nil)
-         (other-project-buffer nil))
+        (env-path "/home/user/miniforge3/envs/test/")
+        (other-env-path "/home/user/miniforge3/envs/default/")
+        (buffer-a nil)
+        (buffer-b nil)
+        (other-project-buffer nil))
 
   (before-each
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-conda-environments :and-return-value
-      (list other-env-path env-path))
+            (list other-env-path env-path))
 
     ;; Create test buffers in the project
     (setq buffer-a (get-buffer-create "test-a.py"))
@@ -1371,7 +1371,7 @@
       (pet-conda-switch-environment env-path)
 
       (expect (assoc-default project-root pet-project-virtualenv-cache)
-        :to-equal env-path))
+              :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
       (spy-on 'pet-buffer-local-vars-teardown)
@@ -1391,7 +1391,7 @@
       (pet-conda-switch-environment env-path)
 
       (expect 'message :to-have-been-called-with
-        "Switched to %s environment: %s" "conda" env-path)))
+              "Switched to %s environment: %s" "conda" env-path)))
 
   (describe "environment variable handling"
     (it "should set CONDA_PREFIX environment variable in project buffers"
@@ -1440,9 +1440,9 @@
       (call-interactively #'pet-conda-switch-environment)
 
       (expect 'completing-read :to-have-been-called-with
-        "Please select a conda environment: "
-        (list other-env-path env-path)
-        nil t))
+              "Please select a conda environment: "
+              (list other-env-path env-path)
+              nil t))
 
     (it "should use the selected environment"
       (spy-on 'completing-read :and-return-value other-env-path)
@@ -1452,7 +1452,7 @@
       (call-interactively #'pet-conda-switch-environment)
 
       (expect (assoc-default project-root pet-project-virtualenv-cache)
-        :to-equal other-env-path)))
+              :to-equal other-env-path)))
 
   (describe "error handling"
     (it "should handle when no project root is found"
@@ -1477,16 +1477,16 @@
 
 (describe "pet-mamba-switch-environment"
   :var ((project-root "/home/user/project/")
-         (env-path "/home/user/micromamba/envs/test/")
-         (other-env-path "/home/user/micromamba/envs/default/")
-         (buffer-a nil)
-         (buffer-b nil)
-         (other-project-buffer nil))
+        (env-path "/home/user/micromamba/envs/test/")
+        (other-env-path "/home/user/micromamba/envs/default/")
+        (buffer-a nil)
+        (buffer-b nil)
+        (other-project-buffer nil))
 
   (before-each
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-mamba-environments :and-return-value
-      (list other-env-path env-path))
+            (list other-env-path env-path))
 
     ;; Create test buffers in the project
     (setq buffer-a (get-buffer-create "test-a.py"))
@@ -1521,7 +1521,7 @@
       (pet-mamba-switch-environment env-path)
 
       (expect (assoc-default project-root pet-project-virtualenv-cache)
-        :to-equal env-path))
+              :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
       (spy-on 'pet-buffer-local-vars-teardown)
@@ -1541,7 +1541,7 @@
       (pet-mamba-switch-environment env-path)
 
       (expect 'message :to-have-been-called-with
-        "Switched to %s environment: %s" "mamba" env-path)))
+              "Switched to %s environment: %s" "mamba" env-path)))
 
   (describe "environment variable handling"
     (it "should set CONDA_PREFIX environment variable in project buffers"
@@ -1590,9 +1590,9 @@
       (call-interactively #'pet-mamba-switch-environment)
 
       (expect 'completing-read :to-have-been-called-with
-        "Please select a mamba environment: "
-        (list other-env-path env-path)
-        nil t))
+              "Please select a mamba environment: "
+              (list other-env-path env-path)
+              nil t))
 
     (it "should use the selected environment"
       (spy-on 'completing-read :and-return-value other-env-path)
@@ -1602,7 +1602,7 @@
       (call-interactively #'pet-mamba-switch-environment)
 
       (expect (assoc-default project-root pet-project-virtualenv-cache)
-        :to-equal other-env-path)))
+              :to-equal other-env-path)))
 
   (describe "error handling"
     (it "should handle when no project root is found"
@@ -1627,9 +1627,9 @@
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (orig-getenv (symbol-function 'getenv))
-         (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME"))
+        (orig-getenv (symbol-function 'getenv))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
@@ -1659,7 +1659,7 @@
     (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/project/pyproject.toml")))
     (spy-on 'getenv :and-call-fake (lambda (name)
                                      (if (equal name "PYLINTRC")
-                                       "/home/user/project/pyproject.toml"
+                                         "/home/user/project/pyproject.toml"
                                        (funcall orig-getenv name))))
 
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/project/pyproject.toml"))
@@ -1669,7 +1669,7 @@
     (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/.config/pylintrc")))
     (spy-on 'getenv :and-call-fake (lambda (name)
                                      (if (equal name "XDG_CONFIG_HOME")
-                                       "/home/user/.config"
+                                         "/home/user/.config"
                                        (funcall orig-getenv name))))
 
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/.config/pylintrc"))
@@ -1684,18 +1684,18 @@
 
 (describe "pet-flycheck-toggle-local-vars"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (orig-getenv (symbol-function 'getenv))
-         (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME"))
+        (orig-getenv (symbol-function 'getenv))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/")
     (defvar flycheck-mode t)
     (spy-on 'getenv :and-call-fake
-      (lambda (name)
-        (unless (member name '("XDG_CONFIG_HOME"))
-          (funcall orig-getenv name)))))
+            (lambda (name)
+              (unless (member name '("XDG_CONFIG_HOME"))
+                (funcall orig-getenv name)))))
 
   (after-each
     (setenv "HOME" home)
@@ -1753,8 +1753,8 @@
 
 (describe "pet-flycheck-setup"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME"))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
@@ -1774,8 +1774,8 @@
   (it "should advice `flycheck-python-find-project-root'"
     (pet-flycheck-setup)
     (expect
-      (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
-      :to-be-truthy)))
+     (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
+     :to-be-truthy)))
 
 (describe "pet-flycheck-teardown"
   (before-each
@@ -1789,8 +1789,8 @@
 
   (it "should remove advice on `flycheck-python-find-project-root'"
     (expect
-      (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
-      :not :to-be-truthy))
+     (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
+     :not :to-be-truthy))
 
   (it "should remove `pet-flycheck-toggle-local-vars' from `flycheck-mode-hook'"
     (expect (member 'pet-flycheck-toggle-local-vars flycheck-mode-hook) :not :to-be-truthy))
@@ -1842,8 +1842,8 @@
     (spy-on 'file-directory-p :and-return-value t)
 
     (pet-eglot--workspace-configuration-plist-advice
-      'mock-eglot--workspace-configuration-plist
-      "server" "/home/users/project")
+     'mock-eglot--workspace-configuration-plist
+     "server" "/home/users/project")
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called-with "server" "/home/users/project/"))
 
@@ -1853,8 +1853,8 @@
     (spy-on 'file-directory-p :and-return-value nil)
 
     (pet-eglot--workspace-configuration-plist-advice
-      'mock-eglot--workspace-configuration-plist
-      "server" "/home/users/project/file")
+     'mock-eglot--workspace-configuration-plist
+     "server" "/home/users/project/file")
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called-with "server" "/home/users/project/file"))
 
@@ -1863,9 +1863,9 @@
     (spy-on 'process-command :and-return-value '("/usr/bin/some-lsp-server"))
 
     (expect (pet-eglot--workspace-configuration-plist-advice
-              'mock-eglot--workspace-configuration-plist
-              "server")
-      :not :to-be-truthy)
+             'mock-eglot--workspace-configuration-plist
+             "server")
+            :not :to-be-truthy)
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called))
 
@@ -1873,207 +1873,207 @@
     (spy-on 'mock-eglot--workspace-configuration-plist)
     (spy-on 'process-command :and-return-value '("/usr/bin/pyright-langserver"))
     (spy-on 'pet-lookup-eglot-server-initialization-options
-      :and-return-value
-      '(:python
-         (:pythonPath
-           "/usr/bin/python"
-           :venvPath
-           "/home/user/project/")))
+            :and-return-value
+            '(:python
+              (:pythonPath
+               "/usr/bin/python"
+               :venvPath
+               "/home/user/project/")))
 
     (expect (pet-eglot--workspace-configuration-plist-advice
-              'mock-eglot--workspace-configuration-plist
-              "server")
-      :to-equal '(:python
-                   (:pythonPath
-                     "/usr/bin/python"
-                     :venvPath
-                     "/home/user/project/")))
+             'mock-eglot--workspace-configuration-plist
+             "server")
+            :to-equal '(:python
+                        (:pythonPath
+                         "/usr/bin/python"
+                         :venvPath
+                         "/home/user/project/")))
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called))
 
   (it "should return dir local variables when pet server initialization options"
     (spy-on 'mock-eglot--workspace-configuration-plist
-      :and-return-value
-      '(:python
-         (:pythonPath
-           "/usr/bin/python"
-           :venvPath
-           "/home/user/project/")))
+            :and-return-value
+            '(:python
+              (:pythonPath
+               "/usr/bin/python"
+               :venvPath
+               "/home/user/project/")))
     (spy-on 'process-command :and-return-value '("/usr/bin/pyright-langserver"))
     (spy-on 'pet-lookup-eglot-server-initialization-options)
 
     (expect (pet-eglot--workspace-configuration-plist-advice
-              'mock-eglot--workspace-configuration-plist
-              "server")
-      :to-equal '(:python
-                   (:pythonPath
-                     "/usr/bin/python"
-                     :venvPath
-                     "/home/user/project/")))
+             'mock-eglot--workspace-configuration-plist
+             "server")
+            :to-equal '(:python
+                        (:pythonPath
+                         "/usr/bin/python"
+                         :venvPath
+                         "/home/user/project/")))
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called))
 
   (it "should return dir local variables and pet server initialization options when both available"
     (spy-on 'mock-eglot--workspace-configuration-plist
-      :and-return-value
-      '(:python
-         (:pythonPath
-           "/usr/bin/python")))
+            :and-return-value
+            '(:python
+              (:pythonPath
+               "/usr/bin/python")))
     (spy-on 'process-command :and-return-value '("/usr/bin/pyright-langserver"))
     (spy-on 'pet-lookup-eglot-server-initialization-options
-      :and-return-value
-      '(:python
-         (:venvPath
-           "/home/user/project/")))
+            :and-return-value
+            '(:python
+              (:venvPath
+               "/home/user/project/")))
 
     (expect (pet-eglot--workspace-configuration-plist-advice
-              'mock-eglot--workspace-configuration-plist
-              "server")
-      :to-equal '(:python
-                   (:pythonPath
-                     "/usr/bin/python"
-                     :venvPath
-                     "/home/user/project/")))
+             'mock-eglot--workspace-configuration-plist
+             "server")
+            :to-equal '(:python
+                        (:pythonPath
+                         "/usr/bin/python"
+                         :venvPath
+                         "/home/user/project/")))
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called)))
 
 (describe "pet-eglot--guess-contact-advice"
   (it "should return output unchanged when there's no pet server initialization"
     (spy-on 'eglot--guess-contact :and-return-value
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("pyright-langserver" "--stdio")
-         "python-ts"))
+            '((python-mode python-ts-mode)
+              "project"
+              'eglot-lsp-server
+              ("pyright-langserver" "--stdio")
+              "python-ts"))
 
     (spy-on 'pet-lookup-eglot-server-initialization-options)
 
     (expect
-      (pet-eglot--guess-contact-advice 'eglot--guess-contact)
-      :to-equal
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("pyright-langserver" "--stdio")
-         "python-ts")))
+     (pet-eglot--guess-contact-advice 'eglot--guess-contact)
+     :to-equal
+     '((python-mode python-ts-mode)
+       "project"
+       'eglot-lsp-server
+       ("pyright-langserver" "--stdio")
+       "python-ts")))
 
   (it "should return contact with default server initialization when there's no pet server initialization"
     (spy-on 'eglot--guess-contact :and-return-value
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("jedi-language-server"
-           :initializationOptions
-           (:jedi
-             (:executable
-               (:args ["--ws"]))))
-         "python-ts"))
+            '((python-mode python-ts-mode)
+              "project"
+              'eglot-lsp-server
+              ("jedi-language-server"
+               :initializationOptions
+               (:jedi
+                (:executable
+                 (:args ["--ws"]))))
+              "python-ts"))
 
     (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value
-      '(:jedi
-         (:executable
-           (:command
-             "/home/user/project/env/bin/jedi-language-server")
-           :workspace
-           (:environmentPath
-             "/home/user/project/env/bin/python"))))
-
-    (expect
-      (pet-eglot--guess-contact-advice 'eglot--guess-contact)
-      :to-equal
-      '((python-mode python-ts-mode)
-         "project"
-         'eglot-lsp-server
-         ("jedi-language-server"
-           :initializationOptions
-           (:jedi
-             (:executable
-               (:args
-                 ["--ws"]
-                 :command
-                 "/home/user/project/env/bin/jedi-language-server")
+            '(:jedi
+              (:executable
+               (:command
+                "/home/user/project/env/bin/jedi-language-server")
                :workspace
                (:environmentPath
-                 "/home/user/project/env/bin/python"))))
-         "python-ts"))))
+                "/home/user/project/env/bin/python"))))
+
+    (expect
+     (pet-eglot--guess-contact-advice 'eglot--guess-contact)
+     :to-equal
+     '((python-mode python-ts-mode)
+       "project"
+       'eglot-lsp-server
+       ("jedi-language-server"
+        :initializationOptions
+        (:jedi
+         (:executable
+          (:args
+           ["--ws"]
+           :command
+           "/home/user/project/env/bin/jedi-language-server")
+          :workspace
+          (:environmentPath
+           "/home/user/project/env/bin/python"))))
+       "python-ts"))))
 
 (describe "pet-lookup-eglot-server-initialization-options"
   (before-each
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/")
     (spy-on 'pet-executable-find :and-call-fake
-      (lambda (command)
-        (assoc-default command
-          '(("flake8"                . "/usr/bin/flake8")
-             ("pylint"               . "/usr/bin/pylint")
-             ("python"               . "/usr/bin/python")
-             ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server")
-             ("ruff"                 . "/usr/bin/ruff"))))))
+            (lambda (command)
+              (assoc-default command
+                             '(("flake8"                . "/usr/bin/flake8")
+                               ("pylint"               . "/usr/bin/pylint")
+                               ("python"               . "/usr/bin/python")
+                               ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server")
+                               ("ruff"                 . "/usr/bin/ruff"))))))
 
   (it "should return eglot initialization options for pylsp"
     (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pylsp") :to-equal
-      '(:pylsp
-         (:plugins
-           (:jedi
-             (:environment
-               "/home/user/project/")
-             :ruff
-             (:executable
-               "/usr/bin/ruff")
-             :pylsp_mypy
-             (:overrides
-               ["--python-executable" "/usr/bin/python" t])
-             :flake8
-             (:executable
-               "/usr/bin/flake8")
-             :pylint
-             (:executable
-               "/usr/bin/pylint"))))))
+            '(:pylsp
+              (:plugins
+               (:jedi
+                (:environment
+                 "/home/user/project/")
+                :ruff
+                (:executable
+                 "/usr/bin/ruff")
+                :pylsp_mypy
+                (:overrides
+                 ["--python-executable" "/usr/bin/python" t])
+                :flake8
+                (:executable
+                 "/usr/bin/flake8")
+                :pylint
+                (:executable
+                 "/usr/bin/pylint"))))))
 
   (it "should return eglot initialization options for pyls"
     (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pyls") :to-equal
-      '(:pyls
-         (:plugins
-           (:jedi
-             (:environment
-               "/home/user/project/")
-             :pylint
-             (:executable
-               "/usr/bin/pylint"))))))
+            '(:pyls
+              (:plugins
+               (:jedi
+                (:environment
+                 "/home/user/project/")
+                :pylint
+                (:executable
+                 "/usr/bin/pylint"))))))
 
   (it "should return eglot initialization options for pyright"
     (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pyright-langserver") :to-equal
-      `(:python
-         (:pythonPath
-           "/usr/bin/python"
-           :venvPath
-           "/home/user/project/"))))
+            `(:python
+              (:pythonPath
+               "/usr/bin/python"
+               :venvPath
+               "/home/user/project/"))))
 
   (it "should return eglot initialization options for jedi-language-server"
     (expect (pet-lookup-eglot-server-initialization-options "jedi-language-server") :to-equal
-      '(:jedi
-         (:executable
-           (:command
-             "/home/user/.local/bin/jedi-language-server")
-           :workspace
-           (:environmentPath
-             "/usr/bin/python")))))
+            '(:jedi
+              (:executable
+               (:command
+                "/home/user/.local/bin/jedi-language-server")
+               :workspace
+               (:environmentPath
+                "/usr/bin/python")))))
 
   (it "should return eglot initialization options for ruff-lsp"
     (expect (pet-lookup-eglot-server-initialization-options "ruff-lsp") :to-equal
-      '(:settings
-         (:interpreter
-           "/usr/bin/python"
-           :path
-           "/usr/bin/ruff")))))
+            '(:settings
+              (:interpreter
+               "/usr/bin/python"
+               :path
+               "/usr/bin/ruff")))))
 
 (describe "pet-merge-eglot-initialization-options"
   (it "should deeply merge 2 plists"
     (expect
-      (pet-merge-eglot-initialization-options
-        '(:a (:b [1 2] :c 0 :d "hello" :f :json-null))
-        '(:a (:b [3 4] :c 9 :e "world" :g :json-false)))
-      :to-equal
-      '(:a (:b [1 2 3 4] :c 9 :d "hello" :f :json-null :e "world" :g :json-false)))))
+     (pet-merge-eglot-initialization-options
+      '(:a (:b [1 2] :c 0 :d "hello" :f :json-null))
+      '(:a (:b [3 4] :c 9 :e "world" :g :json-false)))
+     :to-equal
+     '(:a (:b [1 2 3 4] :c 9 :d "hello" :f :json-null :e "world" :g :json-false)))))
 
 (describe "pet-eglot-setup"
   (before-each
@@ -2110,9 +2110,9 @@
   (it "should set up buffer local variable dape-command when a __main__.py is found"
     (spy-on 'pet-find-file-from-project-root-recursively :and-return-value "/home/user/project/src/foo/bar/__main__.py")
     (spy-on 'file-exists-p :and-call-fake
-      (lambda (path)
-        (member path
-          '("/home/user/project/src/foo/bar/__init__.py" "/home/user/project/src/foo/__init__.py"))))
+            (lambda (path)
+              (member path
+                      '("/home/user/project/src/foo/bar/__init__.py" "/home/user/project/src/foo/__init__.py"))))
     (pet-dape-setup)
     (expect (local-variable-p 'dape-command) :to-be-truthy)
     (expect dape-command :to-equal '(debugpy-module command "/usr/bin/python" :module "foo.bar")))
@@ -2154,24 +2154,24 @@
 
   (it "should set up all buffer local variables for supported packages"
     (spy-on 'pet-executable-find :and-call-fake
-      (lambda (exec)
-        (pcase exec
-          ("python"
-            "/usr/bin/python")
-          ("jedi-language-server"
-            "/usr/bin/jedi-language-server")
-          ("pytest"
-            "/usr/bin/pytest")
-          ("black"
-            "/usr/bin/black")
-          ("isort"
-            "/usr/bin/isort")
-          ("yapf"
-            "/usr/bin/yapf")
-          ("ruff"
-            "/usr/bin/ruff")
-          ("autopep8"
-            "/usr/bin/autopep8"))))
+            (lambda (exec)
+              (pcase exec
+                ("python"
+                 "/usr/bin/python")
+                ("jedi-language-server"
+                 "/usr/bin/jedi-language-server")
+                ("pytest"
+                 "/usr/bin/pytest")
+                ("black"
+                 "/usr/bin/black")
+                ("isort"
+                 "/usr/bin/isort")
+                ("yapf"
+                 "/usr/bin/yapf")
+                ("ruff"
+                 "/usr/bin/ruff")
+                ("autopep8"
+                 "/usr/bin/autopep8"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'pet-flycheck-setup)
     (spy-on 'pet-eglot-setup)
@@ -2230,7 +2230,7 @@
     (spy-on 'pet-dape-setup)
 
     (let* ((calls 0)
-            (test-func (lambda () (cl-incf calls (1+ calls)))))
+           (test-func (lambda () (cl-incf calls (1+ calls)))))
       (add-hook 'pet-after-buffer-local-vars-setup test-func)
       (pet-buffer-local-vars-setup)
       (expect calls :to-equal 1)
@@ -2263,7 +2263,7 @@
     (spy-on 'pet-dape-teardown)
 
     (let* ((calls 0)
-            (test-func (lambda () (cl-incf calls (1+ calls)))))
+           (test-func (lambda () (cl-incf calls (1+ calls)))))
       (add-hook 'pet-before-buffer-local-vars-teardown test-func)
       (pet-buffer-local-vars-teardown)
       (expect calls :to-equal 1)
@@ -2302,9 +2302,9 @@
 
 (describe "pet-verify-setup"
   :var ((old-default-directory default-directory)
-         (home (getenv "HOME"))
-         (orig-getenv (symbol-function 'getenv))
-         (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME"))
+        (orig-getenv (symbol-function 'getenv))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
@@ -2322,20 +2322,20 @@
       (python-mode)
       (pet-verify-setup)
       (expect
-        (with-current-buffer "*pet info*"
-          (re-search-forward "lsp-jedi-executable-command:\s+\\(.+\\)")
-          (match-string 1))
-        :to-equal "unbound")))
+       (with-current-buffer "*pet info*"
+         (re-search-forward "lsp-jedi-executable-command:\s+\\(.+\\)")
+         (match-string 1))
+       :to-equal "unbound")))
 
   (it "should display bound values"
     (with-temp-buffer
       (python-mode)
       (pet-verify-setup)
       (expect
-        (with-current-buffer "*pet info*"
-          (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
-          (match-string 1))
-        :to-equal (if (< emacs-major-version 28) "python" "python3"))))
+       (with-current-buffer "*pet info*"
+         (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
+         (match-string 1))
+       :to-equal (if (< emacs-major-version 28) "python" "python3"))))
 
   (it "should display list as comma-separated values"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc)
@@ -2349,11 +2349,11 @@
       (pet-flycheck-toggle-local-vars)
       (pet-verify-setup)
       (expect
-        (split-string (with-current-buffer "*pet info*"
-                        (re-search-forward "flycheck-python-mypy-config:\s+\\(.+\\)")
-                        (match-string 1))
-          "," t split-string-default-separators)
-        :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config" "/home/user/.mypy.ini")))))
+       (split-string (with-current-buffer "*pet info*"
+                       (re-search-forward "flycheck-python-mypy-config:\s+\\(.+\\)")
+                       (match-string 1))
+                     "," t split-string-default-separators)
+       :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config" "/home/user/.mypy.ini")))))
 
 (describe "pet-mode"
   (before-each
@@ -2414,8 +2414,8 @@
 (describe "pet-cleanup-watchers-and-caches"
   (describe "when pre-conditions are not met"
     :var ((project-root-a "/home/user/project-a/")
-           (config-file-a "/home/user/project-a/pyproject.toml")
-           (mock-watcher-a 'mock-watcher-a))
+          (config-file-a "/home/user/project-a/pyproject.toml")
+          (mock-watcher-a 'mock-watcher-a))
 
     (before-each
       (setq pet-config-cache-vars '(pet-pyproject-cache pet-environment-cache))
@@ -2462,13 +2462,13 @@
 
   (describe "when pre-conditions are met"
     :var ((project-root-a "/home/user/project-a/")
-           (project-root-b "/home/user/project-b/")
-           (config-file-a "/home/user/project-a/pyproject.toml")
-           (config-file-b "/home/user/project-b/environment.yml")
-           (mock-watcher-a 'mock-watcher-a)
-           (mock-watcher-b 'mock-watcher-b)
-           (other-buffer-a nil)
-           (other-buffer-b nil))
+          (project-root-b "/home/user/project-b/")
+          (config-file-a "/home/user/project-a/pyproject.toml")
+          (config-file-b "/home/user/project-b/environment.yml")
+          (mock-watcher-a 'mock-watcher-a)
+          (mock-watcher-b 'mock-watcher-b)
+          (other-buffer-a nil)
+          (other-buffer-b nil))
 
     (before-each
       (setq pet-config-cache-vars '(pet-pyproject-cache pet-environment-cache))
@@ -2527,7 +2527,7 @@
             (python-mode))
 
           (setq pet-project-virtualenv-cache
-            `((,project-root-a . "/venv/a") (,project-root-b . "/venv/b")))
+                `((,project-root-a . "/venv/a") (,project-root-b . "/venv/b")))
 
           (pet-cleanup-watchers-and-caches)
 
@@ -2547,7 +2547,7 @@
             (python-mode))
 
           (setq pet-watched-config-files
-            `((,config-file-a . ,mock-watcher-a) (,config-file-b . ,mock-watcher-b)))
+                `((,config-file-a . ,mock-watcher-a) (,config-file-b . ,mock-watcher-b)))
 
           (pet-cleanup-watchers-and-caches)
 
@@ -2569,9 +2569,9 @@
             (python-mode))
 
           (setq pet-pyproject-cache
-            `((,config-file-a . test-data-a) (,config-file-b . test-data-b)))
+                `((,config-file-a . test-data-a) (,config-file-b . test-data-b)))
           (setq pet-environment-cache
-            `((,config-file-a . env-data-a) (,config-file-b . env-data-b)))
+                `((,config-file-a . env-data-a) (,config-file-b . env-data-b)))
 
           (pet-cleanup-watchers-and-caches)
 
