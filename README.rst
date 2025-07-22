@@ -280,6 +280,169 @@ Complete Example
                    (python-isort-on-save-mode)))))
 
 
+Performance
+-----------
+
+``pet`` performs most work during initial setup when opening Python
+files. Understanding its behavior helps optimize performance:
+
+Caching Behavior
+++++++++++++++++
+
+- Virtualenv paths are cached by project root and persist until Emacs restart
+- Configuration files (``pyproject.toml``, ``environment.yml``, etc.) are cached
+  with automatic file watchers
+- **First open**: Full detection runs, **subsequent opens**: cached results used
+
+File Search Strategy
+++++++++++++++++++++
+
+``pet`` searches for configuration files in this order (configurable via ``pet-find-file-functions``):
+
+1. **Project root check** - Instant for files at project root
+2. **Directory walking** - Fast, walks up from ``default-directory``
+3. **Native ``fd`` search** - Very fast for large projects if ``fd`` is installed
+4. **Recursive search** - Can be slow on large projects (100k+ files)
+
+When Performance Issues Occur
++++++++++++++++++++++++++++++
+
+- Large projects (Linux kernel scale) may hang during recursive search
+- Projects with deep directory nesting, and/or config files in subdirectories of
+  the project root
+- Network filesystems or slow storage
+
+Optimize File Search Order
+++++++++++++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; Skip slow recursive search for large projects
+   (setq pet-find-file-functions '(pet-find-file-from-project-root
+                                   pet-locate-dominating-file
+                                   pet-find-file-from-project-root-natively))
+
+   ;; Or use only the fastest methods
+   (setq pet-find-file-functions '(pet-find-file-from-project-root
+                                   pet-locate-dominating-file))
+
+   ;; Or supply your own project-specific file search function
+   (setq pet-find-file-functions '(pet-find-file-from-project-root
+                                   pet-locate-dominating-file
+                                   my-superfast-find-file))
+
+Install Fd
+++++++++++
+
+.. code-block:: bash
+
+   # Install fd for much faster file searches in large projects
+   # pet automatically detects and uses fd if available
+   brew install fd        # macOS
+   sudo apt install fd-find  # Ubuntu/Debian
+
+Debug Slow Performance
+++++++++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; Enable debug mode to see what's taking time
+   (setq pet-debug t)
+
+   ;; Time pet-mode activation
+   (benchmark-run 1 (pet-mode))
+
+   ;; Profile pet-mode
+   M-x eval-expression RET (progn (profiler-start 'cpu) (pet-mode) (profiler-stop) (profiler-report)) RET
+
+   ;; Check what was detected
+   M-x pet-verify-setup
+
+Project-specific Tuning
++++++++++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; In .dir-locals.el for projects with performance issues:
+   ((python-mode . ((pet-find-file-functions . (pet-find-file-from-project-root
+                                                pet-locate-dominating-file)))))
+
+
+Customization
+-------------
+
+``pet`` provides several customization variables that you can adjust to fit your needs:
+
+File Search Configuration
++++++++++++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; Control the order and methods used to search for configuration files
+   (setq pet-find-file-functions '(pet-find-file-from-project-root
+                                   pet-locate-dominating-file
+                                   pet-find-file-from-project-root-natively
+                                   pet-find-file-from-project-root-recursively))
+
+   ;; Directory names to search for when looking for virtualenvs at project root
+   (setq pet-venv-dir-names '(".venv" "venv" "env"))
+
+External Tool Configuration
++++++++++++++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; TOML to JSON converter (default: "dasel")
+   (setq pet-toml-to-json-program "tomljson")  ; or "dasel"
+   (setq pet-toml-to-json-program-arguments '("-"))
+
+   ;; YAML to JSON converter (default: "dasel")
+   (setq pet-yaml-to-json-program "yq")  ; or "dasel"
+   (setq pet-yaml-to-json-program-arguments '("-o=json"))
+
+   ;; fd command configuration for fast file searches
+   (setq pet-fd-command "fd")
+   (setq pet-fd-command-args '("-tf" "-cnever" "-H" "-a" "-g"))
+
+Search Behavior
++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; Whether pet-executable-find should search outside project virtualenvs
+   ;; Set to nil to only search within detected virtualenvs
+   (setq pet-search-globally t)
+
+   ;; Enable debug messages to troubleshoot issues
+   (setq pet-debug t)
+
+Hooks
++++++
+
+.. code-block:: elisp
+
+   ;; Functions to run after buffer local variables are set up
+   (add-hook 'pet-after-buffer-local-vars-setup
+             (lambda () (message "pet setup complete")))
+
+   ;; Functions to run before buffer local variables are torn down
+   (add-hook 'pet-before-buffer-local-vars-teardown
+             (lambda () (lsp-shutdown-workspace)))
+
+Project-specific Settings
++++++++++++++++++++++++++
+
+You can set any of these variables on a per-project basis using ``.dir-locals.el``:
+
+.. code-block:: elisp
+
+   ;; Example .dir-locals.el for a large project
+   ((python-mode . ((pet-find-file-functions . (pet-find-file-from-project-root
+                                                pet-locate-dominating-file))
+                    (pet-search-globally . nil)
+                    (pet-debug . t))))
+
+
 FAQ
 ---
 
