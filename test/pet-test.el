@@ -1686,13 +1686,12 @@
   :var ((old-default-directory default-directory)
         (home (getenv "HOME"))
         (orig-getenv (symbol-function 'getenv))
-        (process-environment (copy-sequence process-environment))
-        (flycheck-mode nil))
+        (process-environment (copy-sequence process-environment)))
 
   (before-each
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/")
-    (setq-local flycheck-mode t)
+    (defvar flycheck-mode t)
     (spy-on 'getenv :and-call-fake
             (lambda (name)
               (unless (member name '("XDG_CONFIG_HOME"))
@@ -1701,7 +1700,8 @@
   (after-each
     (setenv "HOME" home)
     (setq-local default-directory old-default-directory)
-    (setq-local flycheck-mode nil))
+    (makunbound 'flycheck-mode)
+    (unintern 'flycheck-mode obarray))
 
   (it "should set `flycheck' Python checkers variables to buffer-local when `flycheck-mode' is t"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
