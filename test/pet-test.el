@@ -342,9 +342,9 @@
     (after-each
       (kill-local-variable 'pet-watched-config-files)
       (makunbound 'cache)
-      (unintern 'cache)
+      (unintern 'cache obarray)
       (makunbound 'callback)
-      (unintern 'callback))
+      (unintern 'callback obarray))
 
     (it "should remove file watcher"
       (expect 'file-notify-rm-watch :to-have-been-called-with descriptor))
@@ -370,11 +370,11 @@
 
     (after-each
       (makunbound 'cache)
-      (unintern 'cache)
+      (unintern 'cache obarray)
       (fmakunbound 'parser)
-      (unintern 'parser)
+      (unintern 'parser obarray)
       (makunbound 'callback)
-      (unintern 'callback))
+      (unintern 'callback obarray))
 
     (it "parse the file again"
       (expect 'parser :to-have-been-called-with file)
@@ -409,9 +409,9 @@
 
     (after-each
       (makunbound 'pet-tox-ini-cache)
-      (unintern 'pet-tox-ini-cache)
+      (unintern 'pet-tox-ini-cache obarray)
       (fmakunbound 'parser)
-      (unintern 'parser))
+      (unintern 'parser obarray))
 
     (it "should add an entry to the watched files cache"
       (pet-watch-config-file file 'pet-tox-ini-cache 'parser)
@@ -425,16 +425,16 @@
 
   (after-all
     (fmakunbound 'parser)
-    (unintern 'parser))
+    (unintern 'parser obarray))
 
   (before-each
     (pet-def-config-accessor tox-ini :file-name "tox.ini" :parser parser))
 
   (after-each
     (fmakunbound 'pet-tox-ini)
-    (unintern 'pet-tox-ini)
+    (unintern 'pet-tox-ini obarray)
     (makunbound 'pet-tox-ini-cache)
-    (unintern 'pet-tox-ini-cache))
+    (unintern 'pet-tox-ini-cache obarray))
 
   (it "should create cache variable"
     (expect (boundp 'pet-tox-ini-cache) :to-be t))
@@ -1686,12 +1686,13 @@
   :var ((old-default-directory default-directory)
         (home (getenv "HOME"))
         (orig-getenv (symbol-function 'getenv))
-        (process-environment (copy-sequence process-environment)))
+        (process-environment (copy-sequence process-environment))
+        (flycheck-mode nil))
 
   (before-each
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/")
-    (defvar flycheck-mode t)
+    (setq-local flycheck-mode t)
     (spy-on 'getenv :and-call-fake
             (lambda (name)
               (unless (member name '("XDG_CONFIG_HOME"))
@@ -1700,8 +1701,7 @@
   (after-each
     (setenv "HOME" home)
     (setq-local default-directory old-default-directory)
-    (makunbound 'flycheck-mode)
-    (unintern 'flycheck-mode))
+    (setq-local flycheck-mode nil))
 
   (it "should set `flycheck' Python checkers variables to buffer-local when `flycheck-mode' is t"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc :and-return-value "/etc/pylintrc")
@@ -1765,7 +1765,7 @@
     (setenv "HOME" home)
     (setq-local default-directory old-default-directory)
     (fmakunbound 'flycheck-checker-get)
-    (unintern 'flycheck-checker-get))
+    (unintern 'flycheck-checker-get obarray))
 
   (it "should add `pet-flycheck-toggle-local-vars' to `flycheck-mode-hook'"
     (pet-flycheck-setup)
@@ -1785,7 +1785,7 @@
 
   (after-each
     (fmakunbound 'flycheck-checker-get)
-    (unintern 'flycheck-checker-get))
+    (unintern 'flycheck-checker-get obarray))
 
   (it "should remove advice on `flycheck-python-find-project-root'"
     (expect
