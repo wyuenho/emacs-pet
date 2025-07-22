@@ -806,6 +806,37 @@
 
 (describe "pet-executable-find"
 
+  (describe "when given an absolute path"
+    (it "should return the absolute path if the file exists and is executable"
+      (spy-on 'file-remote-p :and-return-value nil)
+      (spy-on 'file-name-absolute-p :and-return-value t)
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/python")
+      (expect (pet-executable-find "/usr/bin/python") :to-equal "/usr/bin/python"))
+
+    (it "should return nil if the absolute path file does not exist or is not executable"
+      (spy-on 'file-remote-p :and-return-value nil)
+      (spy-on 'file-name-absolute-p :and-return-value t)
+      (spy-on 'pet--executable-find :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (expect (pet-executable-find "/nonexistent/path") :to-be nil))
+
+    (it "should not use absolute path optimization for remote files"
+      (spy-on 'file-remote-p :and-return-value "/ssh:user@host:")
+      (spy-on 'file-name-absolute-p :and-return-value t)
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find :and-return-value nil)
+      (expect (pet-executable-find "/ssh:user@host:/usr/bin/python") :to-be nil))
+
+    (it "should not use absolute path optimization for relative paths"
+      (spy-on 'file-remote-p :and-return-value nil)
+      (spy-on 'file-name-absolute-p :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find :and-return-value nil)
+      (expect (pet-executable-find "python") :to-be nil)))
+
   (describe "when using `pre-commit'"
     (before-each
       (spy-on 'pet-use-pre-commit-p :and-return-value "/usr/bin/pre-commit")

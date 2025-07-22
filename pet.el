@@ -624,7 +624,11 @@ continues to look in `pyenv', then finally from the variable
 `exec-path'."
 
   (catch 'done
-    (cond ((and (pet-use-pre-commit-p)
+    (cond ((and (not (file-remote-p executable))
+                (file-name-absolute-p executable)
+                (pet--executable-find executable))
+           executable)
+          ((and (pet-use-pre-commit-p)
                 (not (string-prefix-p "python" executable))
                 (pet-pre-commit-config-has-hook-p executable))
            (condition-case err
