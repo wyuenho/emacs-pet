@@ -2246,7 +2246,13 @@
                 ("ruff"
                  "/usr/bin/ruff")
                 ("autopep8"
-                 "/usr/bin/autopep8"))))
+                 "/usr/bin/autopep8")
+                ("pyls"
+                 "/usr/bin/pyls")
+                ("pylsp"
+                 "/usr/bin/pylsp")
+                ("ty"
+                 "/usr/bin/ty"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'pet-flycheck-setup)
     (spy-on 'pet-eglot-setup)
@@ -2263,6 +2269,9 @@
     (expect (local-variable-p 'lsp-jedi-executable-command) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyls-plugins-jedi-environment) :to-be-truthy)
     (expect (local-variable-p 'lsp-pylsp-plugins-jedi-environment) :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyls-server-command) :to-be-truthy)
+    (expect (local-variable-p 'lsp-pylsp-server-command) :to-be-truthy)
+    (expect (local-variable-p 'lsp-python-ty-clients-server-command) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-venv-path) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :to-be-truthy)
     (expect (local-variable-p 'lsp-ruff-server-command) :to-be-truthy)
@@ -2284,6 +2293,9 @@
     (expect lsp-jedi-executable-command :to-equal "/usr/bin/jedi-language-server")
     (expect lsp-pyls-plugins-jedi-environment :to-equal "/home/user/project/.venv/")
     (expect lsp-pylsp-plugins-jedi-environment :to-equal "/home/user/project/.venv/")
+    (expect lsp-pyls-server-command :to-equal '("/usr/bin/pyls"))
+    (expect lsp-pylsp-server-command :to-equal '("/usr/bin/pylsp"))
+    (expect lsp-python-ty-clients-server-command :to-equal '("/usr/bin/ty" "server"))
     (expect lsp-pyright-venv-path :to-equal "/home/user/project/.venv/")
     (expect lsp-pyright-python-executable-cmd :to-equal "/usr/bin/python")
     (expect lsp-ruff-server-command :to-equal '("/usr/bin/ruff" "server"))

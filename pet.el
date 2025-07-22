@@ -1128,9 +1128,12 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 (defvar lsp-jedi-executable-command)
 (defvar lsp-pyls-plugins-jedi-environment)
+(defvar lsp-pyls-server-command)
 (defvar lsp-pylsp-plugins-jedi-environment)
+(defvar lsp-pylsp-server-command)
 (defvar lsp-pyright-python-executable-cmd)
 (defvar lsp-pyright-venv-path)
+(defvar lsp-python-ty-clients-server-command)
 (defvar lsp-ruff-server-command)
 (defvar lsp-ruff-python-path)
 (defvar dap-python-executable)
@@ -1159,9 +1162,12 @@ buffer local values."
     (setq-local lsp-jedi-executable-command
                 (pet-executable-find "jedi-language-server"))
     (setq-local lsp-pyls-plugins-jedi-environment python-shell-virtualenv-root)
+    (setq-local lsp-pyls-server-command (list (pet-executable-find "pyls")))
     (setq-local lsp-pylsp-plugins-jedi-environment python-shell-virtualenv-root)
+    (setq-local lsp-pylsp-server-command (list (pet-executable-find "pylsp")))
     (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
     (setq-local lsp-pyright-python-executable-cmd python)
+    (setq-local lsp-python-ty-clients-server-command (list (pet-executable-find "ty") "server"))
     (setq-local lsp-ruff-server-command (list ruff "server"))
     (setq-local lsp-ruff-python-path python)
     (setq-local dap-python-executable python)
@@ -1191,9 +1197,12 @@ buffer local values."
 
   (kill-local-variable 'lsp-jedi-executable-command)
   (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
+  (kill-local-variable 'lsp-pyls-server-command)
   (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
+  (kill-local-variable 'lsp-pylsp-server-command)
   (kill-local-variable 'lsp-pyright-venv-path)
   (kill-local-variable 'lsp-pyright-python-executable-cmd)
+  (kill-local-variable 'lsp-python-ty-clients-server-command)
   (kill-local-variable 'lsp-ruff-python-path)
   (kill-local-variable 'lsp-ruff-server-command)
   (kill-local-variable 'dap-python-executable)
@@ -1243,9 +1252,12 @@ has assigned to."
                        flycheck-python-ruff-executable
                        lsp-jedi-executable-command
                        lsp-pyls-plugins-jedi-environment
+                       lsp-pyls-server-command
                        lsp-pylsp-plugins-jedi-environment
+                       lsp-pylsp-server-command
                        lsp-pyright-python-executable-cmd
                        lsp-pyright-venv-path
+                       lsp-python-ty-clients-server-command
                        lsp-ruff-server-command
                        lsp-ruff-python-path
                        dap-python-executable
