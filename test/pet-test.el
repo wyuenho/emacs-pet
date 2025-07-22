@@ -2200,6 +2200,8 @@
               (pcase exec
                 ("python"
                  "/usr/bin/python")
+                ("python3"
+                 "/usr/bin/python3")
                 ("jedi-language-server"
                  "/usr/bin/jedi-language-server")
                 ("pytest"
@@ -2244,7 +2246,9 @@
     (expect (local-variable-p 'ruff-format-command) :to-be-truthy)
     (expect (local-variable-p 'py-autopep8-command) :to-be-truthy)
 
-    (expect python-shell-interpreter :to-equal "/usr/bin/python")
+    (expect python-shell-interpreter :to-equal (pcase (default-value 'python-shell-interpreter)
+                                                 ("python3" "/usr/bin/python3")
+                                                 ("python" "/usr/bin/python")))
     (expect python-shell-virtualenv-root :to-equal "/home/user/project/.venv/")
     (expect lsp-jedi-executable-command :to-equal "/usr/bin/jedi-language-server")
     (expect lsp-pyls-plugins-jedi-environment :to-equal "/home/user/project/.venv/")
