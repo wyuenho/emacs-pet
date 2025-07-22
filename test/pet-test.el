@@ -1817,12 +1817,20 @@
     (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyls")
     (expect 'eglot--executable-find :not :to-have-been-called)
 
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "basedpyright-langserver") :to-equal "basedpyright-langserver")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "basedpyright-langserver")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
     (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyright-langserver") :to-equal "pyright-langserver")
     (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyright-langserver")
     (expect 'eglot--executable-find :not :to-have-been-called)
 
     (expect (pet-eglot--executable-find-advice 'eglot--executable-find "jedi-language-server") :to-equal "jedi-language-server")
     (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "jedi-language-server")
+    (expect 'eglot--executable-find :not :to-have-been-called)
+
+    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "ruff") :to-equal "ruff")
+    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "ruff")
     (expect 'eglot--executable-find :not :to-have-been-called)
 
     (expect (pet-eglot--executable-find-advice 'eglot--executable-find "ruff-lsp") :to-equal "ruff-lsp")
@@ -1938,64 +1946,82 @@
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called)))
 
 (describe "pet-eglot--guess-contact-advice"
-  (it "should return output unchanged when there's no pet server initialization"
-    (spy-on 'eglot--guess-contact :and-return-value
-            '((python-mode python-ts-mode)
-              "project"
-              'eglot-lsp-server
-              ("pyright-langserver" "--stdio")
-              "python-ts"))
+  (before-each
+    (spy-on 'pet-executable-find :and-return-value "/home/user/project/.venv/bin/pylsp")
+    (spy-on 'project-current :and-return-value (if (< emacs-major-version 29) (cons 'vc "/home/user/project/") '(vc Git "/home/user/project/")))
+    (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
+    (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
 
-    (spy-on 'pet-lookup-eglot-server-initialization-options)
+  (after-each
+    (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
+    (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
 
-    (expect
-     (pet-eglot--guess-contact-advice 'eglot--guess-contact)
-     :to-equal
-     '((python-mode python-ts-mode)
-       "project"
-       'eglot-lsp-server
-       ("pyright-langserver" "--stdio")
-       "python-ts")))
+  (it "should use pet-executable-find path for Python LSP servers"
+    (assume (and (require 'eglot nil t)
+                 (fboundp 'eglot--executable-find))
+            "Unsupported `eglot' version")
 
-  (it "should return contact with default server initialization when there's no pet server initialization"
-    (spy-on 'eglot--guess-contact :and-return-value
-            '((python-mode python-ts-mode)
-              "project"
-              'eglot-lsp-server
-              ("jedi-language-server"
-               :initializationOptions
-               (:jedi
-                (:executable
-                 (:args ["--ws"]))))
-              "python-ts"))
+    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '("pylsp"))))))
+      (spy-on 'pet-lookup-eglot-server-initialization-options)
+      (with-temp-buffer
+        (setq default-directory "/home/user/project")
+        (setq buffer-file-name "/home/user/project/file.py")
+        (python-mode)
+        (let* ((result (eglot--guess-contact))
+               (contact (nth 3 result))
+               (program (car contact)))
+          (expect program :to-equal "/home/user/project/.venv/bin/pylsp")))))
 
-    (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value
-            '(:jedi
-              (:executable
-               (:command
-                "/home/user/project/env/bin/jedi-language-server")
-               :workspace
-               (:environmentPath
-                "/home/user/project/env/bin/python"))))
+  (it "should add pet initialization options when none exist"
+    (assume (and (require 'eglot nil t)
+                 (fboundp 'eglot--executable-find))
+            "Unsupported `eglot' version")
 
-    (expect
-     (pet-eglot--guess-contact-advice 'eglot--guess-contact)
-     :to-equal
-     '((python-mode python-ts-mode)
-       "project"
-       'eglot-lsp-server
-       ("jedi-language-server"
-        :initializationOptions
-        (:jedi
-         (:executable
-          (:args
-           ["--ws"]
-           :command
-           "/home/user/project/env/bin/jedi-language-server")
-          :workspace
-          (:environmentPath
-           "/home/user/project/env/bin/python"))))
-       "python-ts"))))
+    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '("pylsp"))))))
+      (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:test-option t))
+      (with-temp-buffer
+        (setq default-directory "/home/user/project")
+        (setq buffer-file-name "/home/user/project/file.py")
+        (python-mode)
+        (let* ((result (eglot--guess-contact))
+               (contact (nth 3 result))
+               (probe (cl-position-if #'keywordp contact))
+               (init-opts (and probe (cl-subseq contact probe))))
+          (expect (plist-get init-opts :initializationOptions) :to-equal '(:test-option t))))))
+
+  (it "should merge pet initialization options with existing ones"
+    (assume (and (require 'eglot nil t)
+                 (fboundp 'eglot--executable-find))
+            "Unsupported `eglot' version")
+
+    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '(("pylsp" :initializationOptions (:existing-option t))))))))
+      (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:pet-option t))
+      (with-temp-buffer
+        (setq default-directory "/home/user/project")
+        (setq buffer-file-name "/home/user/project/file.py")
+        (python-mode)
+        (let* ((result (eglot--guess-contact))
+               (contact (nth 3 result))
+               (probe (cl-position-if #'keywordp contact))
+               (init-opts (and probe (cl-subseq contact probe))))
+          (expect (plist-get init-opts :initializationOptions) :to-equal '(:existing-option t :pet-option t))))))
+
+  (it "should preserve existing options when pet has no initialization options"
+    (assume (and (require 'eglot nil t)
+                 (fboundp 'eglot--executable-find))
+            "Unsupported `eglot' version")
+
+    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '(("pylsp" :initializationOptions (:existing-option t))))))))
+      (spy-on 'pet-lookup-eglot-server-initialization-options)
+      (with-temp-buffer
+        (setq default-directory "/home/user/project")
+        (setq buffer-file-name "/home/user/project/file.py")
+        (python-mode)
+        (let* ((result (eglot--guess-contact))
+               (contact (nth 3 result))
+               (probe (cl-position-if #'keywordp contact))
+               (init-opts (and probe (cl-subseq contact probe))))
+          (expect (plist-get init-opts :initializationOptions) :to-equal '(:existing-option t)))))))
 
 (describe "pet-lookup-eglot-server-initialization-options"
   (before-each
@@ -2003,7 +2029,7 @@
     (spy-on 'pet-executable-find :and-call-fake
             (lambda (command)
               (assoc-default command
-                             '(("flake8"                . "/usr/bin/flake8")
+                             '(("flake8"               . "/usr/bin/flake8")
                                ("pylint"               . "/usr/bin/pylint")
                                ("python"               . "/usr/bin/python")
                                ("jedi-language-server" . "/home/user/.local/bin/jedi-language-server")
@@ -2040,6 +2066,14 @@
                 (:executable
                  "/usr/bin/pylint"))))))
 
+  (it "should return eglot initialization options for based-pyright"
+    (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/basedpyright-langserver") :to-equal
+            `(:python
+              (:pythonPath
+               "/usr/bin/python"
+               :venvPath
+               "/home/user/project/"))))
+
   (it "should return eglot initialization options for pyright"
     (expect (pet-lookup-eglot-server-initialization-options "/home/user/.local/bin/pyright-langserver") :to-equal
             `(:python
@@ -2057,6 +2091,14 @@
                :workspace
                (:environmentPath
                 "/usr/bin/python")))))
+
+  (it "should return eglot initialization options for ruff"
+    (expect (pet-lookup-eglot-server-initialization-options "ruff") :to-equal
+            '(:settings
+              (:interpreter
+               "/usr/bin/python"
+               :path
+               "/usr/bin/ruff"))))
 
   (it "should return eglot initialization options for ruff-lsp"
     (expect (pet-lookup-eglot-server-initialization-options "ruff-lsp") :to-equal

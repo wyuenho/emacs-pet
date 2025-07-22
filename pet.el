@@ -1068,8 +1068,9 @@ FN is `eglot--guess-contact', ARGS is the arguments to
          (probe (seq-position contact :initializationOptions))
          (program-with-args (seq-subseq contact 0 (or probe (length contact))))
          (program (car program-with-args))
-         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions)))
-    (if init-opts
+         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions))
+         (pet-config (pet-lookup-eglot-server-initialization-options program)))
+    (if (or init-opts pet-config)
         (append (seq-subseq result 0 3)
                 (list
                  (append
@@ -1078,8 +1079,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
                    :initializationOptions
                    (pet-merge-eglot-initialization-options
                     init-opts
-                    (pet-lookup-eglot-server-initialization-options
-                     program)))))
+                    pet-config))))
                 (seq-subseq result 4))
       result)))
 

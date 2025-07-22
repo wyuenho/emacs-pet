@@ -321,11 +321,11 @@ the user to customize when it takes effect. This requirement rules out
 Which version of ``eglot`` is supported?
 ++++++++++++++++++++++++++++++++++++++++
 
-The only version of ``eglot`` that doesn't work with ``pet`` is 1.17.*, which
+The only version of ``eglot`` that doesn't work with ``pet`` is 1.17.30, which
 unfortunately is the version that comes with Emacs 30.  There is no easy way to
 support it without massively complicating the already complex advices required.
-The easiest thing to do is to upgrade to 1.18, which has reverted the change the
-broken change that prevents ``pet`` from working.
+The easiest thing to do is to upgrade to 1.18+, which has reverted the broken
+change that prevents ``pet`` from working.
 
 
 .. _virtualenvwrapper caveats:
