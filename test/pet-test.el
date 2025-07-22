@@ -2377,7 +2377,10 @@
        (with-current-buffer "*pet info*"
          (re-search-forward "python-shell-interpreter:\s+\\(.+\\)")
          (match-string 1))
-       :to-equal (if (< emacs-major-version 28) "python" "python3"))))
+       :to-equal (if (or (< emacs-major-version 28)
+                         (>= emacs-major-version 31))
+                     "python"
+                   "python3"))))
 
   (it "should display list as comma-separated values"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc)
