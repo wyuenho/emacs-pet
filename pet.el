@@ -1175,6 +1175,8 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar blacken-executable)
 (defvar yapfify-executable)
 (defvar py-autopep8-command)
+(defvar format-all--executable-table)
+(defvar apheleia-formatters)
 
 (defun pet-buffer-local-vars-setup ()
   "Set up the buffer local variables for Python tools.
@@ -1188,7 +1190,10 @@ buffer local values."
 
   (let ((python (pet-executable-find "python"))
         (black (pet-executable-find "black"))
-        (ruff (pet-executable-find "ruff")))
+        (isort (pet-executable-find "isort"))
+        (ruff (pet-executable-find "ruff"))
+        (yapf (pet-executable-find "yapf")))
+
     (setq-local lsp-jedi-executable-command
                 (pet-executable-find "jedi-language-server"))
     (setq-local lsp-pyls-plugins-jedi-environment python-shell-virtualenv-root)
@@ -1204,11 +1209,27 @@ buffer local values."
     (setq-local dap-variables-project-root-function #'pet-project-root)
     (setq-local python-pytest-executable (pet-executable-find "pytest"))
     (setq-local python-black-command black)
-    (setq-local python-isort-command (pet-executable-find "isort"))
+    (setq-local python-isort-command isort)
     (setq-local ruff-format-command ruff)
     (setq-local blacken-executable black)
-    (setq-local yapfify-executable (pet-executable-find "yapf"))
-    (setq-local py-autopep8-command (pet-executable-find "autopep8")))
+    (setq-local yapfify-executable yapf)
+    (setq-local py-autopep8-command (pet-executable-find "autopep8"))
+
+    (when (boundp 'format-all--executable-table)
+      (setq-local format-all--executable-table
+                  (copy-hash-table format-all--executable-table))
+      (puthash 'black black format-all--executable-table)
+      (puthash 'isort isort format-all--executable-table)
+      (puthash 'ruff ruff format-all--executable-table)
+      (puthash 'yapf yapf format-all--executable-table))
+
+    (when (boundp 'apheleia-formatters)
+      (setq-local apheleia-formatters (copy-tree apheleia-formatters))
+      (setcar (alist-get 'black apheleia-formatters) black)
+      (setcar (alist-get 'isort apheleia-formatters) isort)
+      (setcar (alist-get 'ruff apheleia-formatters) ruff)
+      (setcar (alist-get 'ruff-isort apheleia-formatters) ruff)
+      (setcar (alist-get 'yapf apheleia-formatters) yapf)))
 
   (pet-eglot-setup)
   (pet-dape-setup)
@@ -1244,6 +1265,8 @@ buffer local values."
   (kill-local-variable 'blacken-executable)
   (kill-local-variable 'yapfify-executable)
   (kill-local-variable 'py-autopep8-command)
+  (kill-local-variable 'format-all--executable-table)
+  (kill-local-variable 'apheleia-formatters)
 
   (pet-eglot-teardown)
   (pet-dape-teardown))

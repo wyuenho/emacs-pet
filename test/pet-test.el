@@ -2239,6 +2239,24 @@
     (expect (local-variable-p 'dape-cwd-function) :not :to-be-truthy)))
 
 (describe "pet-buffer-local-vars-setup"
+  (before-each
+    (defvar format-all--executable-table
+      (let ((tab (make-hash-table)))
+        (puthash 'black "black" tab)
+        (puthash 'isort "isort" tab)
+        (puthash 'ruff "ruff" tab)
+        (puthash 'yapf "yapf" tab)
+        tab))
+    (defvar apheleia-formatters
+      '((black      . ("black"))
+        (isort      . ("isort"))
+        (ruff       . ("ruff"))
+        (ruff-isort . ("ruff"))
+        (yapf       . ("yapf"))))
+    (spy-on 'pet-flycheck-setup)
+    (spy-on 'pet-eglot-setup)
+    (spy-on 'pet-dape-setup))
+
   (after-each
     (kill-local-variable 'python-shell-interpreter)
     (kill-local-variable 'python-shell-virtualenv-root)
@@ -2257,7 +2275,14 @@
     (kill-local-variable 'blacken-executable)
     (kill-local-variable 'yapfify-executable)
     (kill-local-variable 'ruff-format-command)
-    (kill-local-variable 'py-autopep8-command))
+    (kill-local-variable 'py-autopep8-command)
+    (kill-local-variable 'format-all--executable-table)
+    (kill-local-variable 'apheleia-formatters)
+
+    (makunbound 'format-all--executable-table)
+    (unintern 'format-all--executable-table obarray)
+    (makunbound 'apheleia-formatters)
+    (unintern 'apheleia-formatters obarray))
 
   (it "should set up all buffer local variables for supported packages"
     (spy-on 'pet-executable-find :and-call-fake
@@ -2288,10 +2313,6 @@
                 ("ty"
                  "/usr/bin/ty"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
-    (spy-on 'pet-flycheck-setup)
-    (spy-on 'pet-eglot-setup)
-    (spy-on 'pet-dape-setup)
-
     (pet-buffer-local-vars-setup)
 
     (expect 'pet-flycheck-setup :to-have-been-called)
@@ -2319,6 +2340,8 @@
     (expect (local-variable-p 'yapfify-executable) :to-be-truthy)
     (expect (local-variable-p 'ruff-format-command) :to-be-truthy)
     (expect (local-variable-p 'py-autopep8-command) :to-be-truthy)
+    (expect (local-variable-p 'format-all--executable-table) :to-be-truthy)
+    (expect (local-variable-p 'apheleia-formatters) :to-be-truthy)
 
     (expect python-shell-interpreter :to-equal (pcase (default-value 'python-shell-interpreter)
                                                  ("python3" "/usr/bin/python3")
@@ -2343,14 +2366,20 @@
     (expect yapfify-executable :to-equal "/usr/bin/yapf")
     (expect ruff-format-command :to-equal "/usr/bin/ruff")
     (expect yapfify-executable :to-equal "/usr/bin/yapf")
-    (expect py-autopep8-command :to-equal "/usr/bin/autopep8"))
+    (expect py-autopep8-command :to-equal "/usr/bin/autopep8")
+    (expect (gethash 'black format-all--executable-table) :to-equal "/usr/bin/black")
+    (expect (gethash 'isort format-all--executable-table) :to-equal "/usr/bin/isort")
+    (expect (gethash 'ruff format-all--executable-table) :to-equal "/usr/bin/ruff")
+    (expect (gethash 'yapf format-all--executable-table) :to-equal "/usr/bin/yapf")
+    (expect (car (alist-get 'black apheleia-formatters)) :to-equal "/usr/bin/black")
+    (expect (car (alist-get 'isort apheleia-formatters)) :to-equal "/usr/bin/isort")
+    (expect (car (alist-get 'ruff apheleia-formatters)) :to-equal "/usr/bin/ruff")
+    (expect (car (alist-get 'ruff-isort apheleia-formatters)) :to-equal "/usr/bin/ruff")
+    (expect (car (alist-get 'yapf apheleia-formatters)) :to-equal "/usr/bin/yapf"))
 
   (it "should run the hook `pet-after-buffer-local-vars-setup'"
     (spy-on 'pet-executable-find)
     (spy-on 'pet-virtualenv-root)
-    (spy-on 'pet-flycheck-setup)
-    (spy-on 'pet-eglot-setup)
-    (spy-on 'pet-dape-setup)
 
     (let* ((calls 0)
            (test-func (lambda () (cl-incf calls (1+ calls)))))
@@ -2360,6 +2389,11 @@
       (remove-hook 'pet-after-buffer-local-vars-setup test-func))))
 
 (describe "pet-buffer-local-vars-teardown"
+  (before-each
+    (spy-on 'pet-flycheck-teardown)
+    (spy-on 'pet-eglot-teardown)
+    (spy-on 'pet-dape-teardown))
+
   (after-each
     (kill-local-variable 'python-shell-interpreter)
     (kill-local-variable 'python-shell-virtualenv-root)
@@ -2378,13 +2412,11 @@
     (kill-local-variable 'blacken-executable)
     (kill-local-variable 'yapfify-executable)
     (kill-local-variable 'ruff-format-command)
-    (kill-local-variable 'py-autopep8-command))
+    (kill-local-variable 'py-autopep8-command)
+    (kill-local-variable 'format-all--executable-table)
+    (kill-local-variable 'apheleia-formatters))
 
   (it "should run the hook `pet-before-buffer-local-vars-teardown'"
-    (spy-on 'pet-flycheck-teardown)
-    (spy-on 'pet-eglot-teardown)
-    (spy-on 'pet-dape-teardown)
-
     (let* ((calls 0)
            (test-func (lambda () (cl-incf calls (1+ calls)))))
       (add-hook 'pet-before-buffer-local-vars-teardown test-func)
@@ -2393,10 +2425,6 @@
       (remove-hook 'pet-before-buffer-local-vars-teardown test-func)))
 
   (it "should reset all buffer local variables for supported packages to default"
-    (spy-on 'pet-flycheck-teardown)
-    (spy-on 'pet-eglot-teardown)
-    (spy-on 'pet-dape-teardown)
-
     (pet-buffer-local-vars-setup)
     (pet-buffer-local-vars-teardown)
 
@@ -2421,7 +2449,9 @@
     (expect (local-variable-p 'blacken-executable) :not :to-be-truthy)
     (expect (local-variable-p 'yapfify-executable) :not :to-be-truthy)
     (expect (local-variable-p 'ruff-format-command) :not :to-be-truthy)
-    (expect (local-variable-p 'py-autopep8-command) :not :to-be-truthy)))
+    (expect (local-variable-p 'py-autopep8-command) :not :to-be-truthy)
+    (expect (local-variable-p 'format-all--executable-table) :not :to-be-truthy)
+    (expect (local-variable-p 'apheleia-formatters) :not :to-be-truthy)))
 
 (describe "pet-verify-setup"
   :var ((old-default-directory default-directory)
