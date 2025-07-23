@@ -36,4 +36,10 @@ assignees: ''
 - toml [e.g. v2.0.2]
 
 **Additional context**
-<!-- Add any other context such as stack trace or the result of M-x (pet-verify-setup) here. -->
+<!--
+    Add any other context such as stack trace or the result of M-x pet-verify-setup here.
+
+    If you are debugging eglot, please look at the FAQ first to see if your
+    version is supported. If so, please attach the output of M-x
+    eglot-show-workspace-configuration here.
+-->
