@@ -2137,7 +2137,41 @@
               (:interpreter
                "/usr/bin/python"
                :path
-               "/usr/bin/ruff")))))
+               "/usr/bin/ruff"))))
+
+  (it "should return eglot initialization options for pylsp when given as command list"
+    (expect (pet-lookup-eglot-server-initialization-options '("/home/user/.local/bin/pylsp" "--arg1" "--arg2")) :to-equal
+            '(:pylsp
+              (:plugins
+               (:jedi
+                (:environment
+                 "/home/user/project/")
+                :ruff
+                (:executable
+                 "/usr/bin/ruff")
+                :pylsp_mypy
+                (:overrides
+                 ["--python-executable" "/usr/bin/python" t])
+                :flake8
+                (:executable
+                 "/usr/bin/flake8")
+                :pylint
+                (:executable
+                 "/usr/bin/pylint"))))))
+
+  (it "should return first matching server when command list has multiple servers"
+    (expect (pet-lookup-eglot-server-initialization-options '("/usr/bin/unknown-server" "/home/user/.local/bin/pyright-langserver")) :to-equal
+            '(:python
+              (:pythonPath
+               "/usr/bin/python"
+               :venvPath
+               "/home/user/project/"))))
+
+  (it "should return nil when command list has no recognized servers"
+    (expect (pet-lookup-eglot-server-initialization-options '("/usr/bin/unknown-server" "/usr/bin/another-unknown")) :to-be nil))
+
+  (it "should handle empty command list"
+    (expect (pet-lookup-eglot-server-initialization-options '()) :to-be nil)))
 
 (describe "pet-merge-eglot-initialization-options"
   (it "should deeply merge 2 plists"
