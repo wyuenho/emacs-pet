@@ -487,9 +487,21 @@ Which version of ``eglot`` is supported?
 The only version of ``eglot`` that doesn't work with ``pet`` is 1.17.30, which
 unfortunately is the version that comes with Emacs 30.  There is no easy way to
 support it without massively complicating the already complex advices required.
-The easiest thing to do is to upgrade to 1.18+, which has reverted the broken
+The easiest thing to do is to upgrade to > 1.18, which has reverted the breaking
 change that prevents ``pet`` from working.
 
+.. code-block:: elisp
+
+   ;; Using straight is the easiest way to do it for now because
+   ;; `package-vc-install` cannot upgrade built-in packages currently.
+   (straight-use-package eglot)
+
+   ;; When a new version is released on GNU ELPA, you may prefer this instead.
+   (setq package-install-upgrade-built-in t)
+   (setq load-prefer-newer t)
+   (package-initialize)
+
+   ;; M-x list-packages, pick the latest version of eglot, install and restart
 
 .. _virtualenvwrapper caveats:
 
