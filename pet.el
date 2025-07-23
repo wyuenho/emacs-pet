@@ -953,68 +953,93 @@ FN is `eglot--executable-find', ARGS is the arguments to
         (pet-executable-find command)
       (apply fn args))))
 
+(eval-when-compile
+  (if (functionp 'ensure-list)
+      (defalias 'pet--ensure-list 'ensure-list)
+    (defun pet--ensure-list (object)
+      (declare (side-effect-free error-free))
+      (if (listp object)
+          object
+        (list object)))))
+
 (defun pet-lookup-eglot-server-initialization-options (command)
   "Return LSP initializationOptions for Eglot.
 
-COMMAND is the name of the Python language server command."
-  (cond
-   ((not
-     (stringp command))
-    'nil)
-   ((string-match "pylsp" command)
-    (let nil
-      `(:pylsp
-        (:plugins
-         (:jedi
-          (:environment ,(pet-virtualenv-root))
-          :ruff
-          (:executable ,(pet-executable-find "ruff"))
-          :pylsp_mypy
-          (:overrides
-           ["--python-executable"
-            (\,
-             (pet-executable-find "python"))
-            t])
-          :flake8
-          (:executable ,(pet-executable-find "flake8"))
-          :pylint
-          (:executable ,(pet-executable-find "pylint")))))))
-   ((string-match "pyls" command)
-    (let nil
-      `(:pyls
-        (:plugins
-         (:jedi
-          (:environment ,(pet-virtualenv-root))
-          :pylint
-          (:executable ,(pet-executable-find "pylint")))))))
-   ((string-match "basedpyright-langserver" command)
-    (let nil
-      `(:python
-        (:pythonPath ,(pet-executable-find "python")
-                     :venvPath ,(pet-virtualenv-root)))))
-   ((string-match "pyright-langserver" command)
-    (let nil
-      `(:python
-        (:pythonPath ,(pet-executable-find "python")
-                     :venvPath ,(pet-virtualenv-root)))))
-   ((string-match "jedi-language-server" command)
-    (let nil
-      `(:jedi
-        (:executable
-         (:command ,(pet-executable-find "jedi-language-server"))
-         :workspace
-         (:environmentPath ,(pet-executable-find "python"))))))
-   ((string-match "ruff" command)
-    (let nil
-      `(:settings
-        (:interpreter ,(pet-executable-find "python")
-                      :path ,(pet-executable-find "ruff")))))
-   ((string-match "ruff-lsp" command)
-    (let nil
-      `(:settings
-        (:interpreter ,(pet-executable-find "python")
-                      :path ,(pet-executable-find "ruff")))))
-   (t 'nil)))
+COMMAND is the name of the Python language server command.
+
+COMMAND can be a list of strings.  If this is the case, each string is
+searched for a supported LSP server command."
+  (seq-find
+   'identity
+   (mapcar
+    (lambda (command)
+      (cond
+       ((not
+         (stringp command))
+        'nil)
+       ((string-match "pylsp" command)
+        (let nil
+          `(:pylsp
+            (:plugins
+             (:jedi
+              (:environment ,(pet-virtualenv-root))
+              :ruff
+              (:executable ,(pet-executable-find "ruff"))
+              :pylsp_mypy
+              (:overrides
+               ["--python-executable"
+                (\,
+                 (pet-executable-find "python"))
+                t])
+              :flake8
+              (:executable ,(pet-executable-find "flake8"))
+              :pylint
+              (:executable ,(pet-executable-find "pylint")))))))
+       ((string-match "pyls" command)
+        (let nil
+          `(:pyls
+            (:plugins
+             (:jedi
+              (:environment ,(pet-virtualenv-root))
+              :pylint
+              (:executable ,(pet-executable-find "pylint")))))))
+       ((string-match "basedpyright-langserver" command)
+        (let nil
+          `(:python
+            (:pythonPath
+             ,(pet-executable-find "python")
+             :venvPath
+             ,(pet-virtualenv-root)))))
+       ((string-match "pyright-langserver" command)
+        (let nil
+          `(:python
+            (:pythonPath
+             ,(pet-executable-find "python")
+             :venvPath
+             ,(pet-virtualenv-root)))))
+       ((string-match "jedi-language-server" command)
+        (let nil
+          `(:jedi
+            (:executable
+             (:command ,(pet-executable-find "jedi-language-server"))
+             :workspace
+             (:environmentPath ,(pet-executable-find "python"))))))
+       ((string-match "ruff" command)
+        (let nil
+          `(:settings
+            (:interpreter
+             ,(pet-executable-find "python")
+             :path
+             ,(pet-executable-find "ruff")))))
+       ((string-match "ruff-lsp" command)
+        (let nil
+          `(:settings
+            (:interpreter
+             ,(pet-executable-find "python")
+             :path
+             ,(pet-executable-find "ruff")))))
+       (t 'nil)))
+    (pet--ensure-list command))))
 
 (defalias 'pet--proper-list-p 'proper-list-p)
 (eval-when-compile
@@ -1052,13 +1077,13 @@ COMMAND is the name of the Python language server command."
 FN is `eglot--workspace-configuration-plist', ARGS is the
 arguments to `eglot--workspace-configuration-plist'."
   (let* ((path (cadr args))
+         ;; Ensure directory paths have trailing slash. See: https://github.com/joaotavora/eglot/pull/1281
          (canonical-path (if (and path (file-directory-p path))
                              (file-name-as-directory path)
                            path))
          (server (car args))
          (command (process-command (jsonrpc--process server)))
-         (program (and (listp command) (car command)))
-         (pet-config (pet-lookup-eglot-server-initialization-options program))
+         (pet-config (pet-lookup-eglot-server-initialization-options command))
          (user-config (apply fn server (and canonical-path (cons canonical-path (cddr args))))))
     (pet-merge-eglot-initialization-options user-config pet-config)))
 
@@ -1071,10 +1096,15 @@ FN is `eglot--guess-contact', ARGS is the arguments to
          (contact (nth 3 result))
          (probe (seq-position contact :initializationOptions))
          (program-with-args (seq-subseq contact 0 (or probe (length contact))))
-         (program (car program-with-args))
          (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions))
-         (pet-config (pet-lookup-eglot-server-initialization-options program)))
-    (if (or init-opts pet-config)
+         (pet-config (pet-lookup-eglot-server-initialization-options program-with-args)))
+    (if (or (and init-opts
+                 ;; Technically init opts can still be a function here (see
+                 ;; `eglot-initialization-options'), but I haven't seen any use
+                 ;; of this in the wild, so I'm not supporting it now until
+                 ;; someone complains.
+                 (not (functionp init-opts)))
+            pet-config)
         (append (seq-subseq result 0 3)
                 (list
                  (append
