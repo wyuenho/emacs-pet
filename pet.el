@@ -953,9 +953,9 @@ FN is `eglot--executable-find', ARGS is the arguments to
         (pet-executable-find command)
       (apply fn args))))
 
+(defalias 'pet--ensure-list 'ensure-list)
 (eval-when-compile
-  (if (functionp 'ensure-list)
-      (defalias 'pet--ensure-list 'ensure-list)
+  (unless (functionp 'ensure-list)
     (defun pet--ensure-list (object)
       (declare (side-effect-free error-free))
       (if (listp object)
