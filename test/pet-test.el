@@ -2263,6 +2263,7 @@
     (kill-local-variable 'lsp-jedi-executable-command)
     (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
     (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
+    (kill-local-variable 'lsp-pyright-langserver-command)
     (kill-local-variable 'lsp-pyright-venv-path)
     (kill-local-variable 'lsp-pyright-python-executable-cmd)
     (kill-local-variable 'lsp-ruff-server-command)
@@ -2310,6 +2311,8 @@
                  "/usr/bin/pyls")
                 ("pylsp"
                  "/usr/bin/pylsp")
+                ("pyright"
+                 "/usr/bin/pyright")
                 ("ty"
                  "/usr/bin/ty"))))
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
@@ -2327,6 +2330,7 @@
     (expect (local-variable-p 'lsp-pyls-server-command) :to-be-truthy)
     (expect (local-variable-p 'lsp-pylsp-server-command) :to-be-truthy)
     (expect (local-variable-p 'lsp-python-ty-clients-server-command) :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyright-langserver-command) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-venv-path) :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :to-be-truthy)
     (expect (local-variable-p 'lsp-ruff-server-command) :to-be-truthy)
@@ -2353,6 +2357,7 @@
     (expect lsp-pyls-server-command :to-equal '("/usr/bin/pyls"))
     (expect lsp-pylsp-server-command :to-equal '("/usr/bin/pylsp"))
     (expect lsp-python-ty-clients-server-command :to-equal '("/usr/bin/ty" "server"))
+    (expect lsp-pyright-langserver-command :to-equal "/usr/bin/pyright")
     (expect lsp-pyright-venv-path :to-equal "/home/user/project/.venv/")
     (expect lsp-pyright-python-executable-cmd :to-equal "/usr/bin/python")
     (expect lsp-ruff-server-command :to-equal '("/usr/bin/ruff" "server"))
@@ -2400,6 +2405,7 @@
     (kill-local-variable 'lsp-jedi-executable-command)
     (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
     (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
+    (kill-local-variable 'lsp-pyright-langserver-command)
     (kill-local-variable 'lsp-pyright-venv-path)
     (kill-local-variable 'lsp-pyright-python-executable-cmd)
     (kill-local-variable 'lsp-ruff-server-command)
@@ -2437,6 +2443,7 @@
     (expect (local-variable-p 'lsp-jedi-executable-command) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-pyls-plugins-jedi-environment) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-pylsp-plugins-jedi-environment) :not :to-be-truthy)
+    (expect (local-variable-p 'lsp-pyright-langserver-command) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-venv-path) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-pyright-python-executable-cmd) :not :to-be-truthy)
     (expect (local-variable-p 'lsp-ruff-server-command) :not :to-be-truthy)
