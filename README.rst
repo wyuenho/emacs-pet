@@ -494,16 +494,18 @@ change that prevents ``pet`` from working.
 
 .. code-block:: elisp
 
-   ;; Using straight is the easiest way to do it for now because
-   ;; `package-vc-install` cannot upgrade built-in packages currently.
-   (straight-use-package eglot)
+   ;; If you are using package.el, make sure GNU ELPA devel is `package-archives`
+   (add-to-list package-archived "https://elpa.gnu.org/devel/")
 
-   ;; When a new version is released on GNU ELPA, you may prefer this instead.
-   (setq package-install-upgrade-built-in t)
+   ;; You must set this to have a newer version of a package shadow an older
+   ;; version
    (setq load-prefer-newer t)
-   (package-initialize)
 
-   ;; M-x list-packages, pick the latest version of eglot, install and restart
+   ;; M-x list-package, select eglot, install then restart emacs
+
+   ;; OTOH, using Straight is just as easy
+   ;; https://github.com/radian-software/straight.el
+   (straight-use-package eglot)
 
 .. _virtualenvwrapper caveats:
 
