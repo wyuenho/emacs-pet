@@ -1325,6 +1325,7 @@ has assigned to."
                        dape-command
                        dape-cwd-function
                        python-pytest-executable
+                       pytest-global-name
                        python-black-command
                        blacken-executable
                        python-isort-command
