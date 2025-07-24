@@ -286,31 +286,33 @@ Complete Example
 Performance
 -----------
 
-``pet`` performs most work during initial setup when opening Python
-files. Understanding its behavior helps optimize performance:
+``pet`` performs most of the work when opening the first Python file in a
+project. Understanding this behavior helps optimizing performance:
 
 Caching Behavior
 ++++++++++++++++
 
-- Virtualenv paths are cached by project root and persist until Emacs restart
+- Virtualenv paths are cached by project roots and persist until Emacs restarts
+  or when the last project buffer is killed.
 - Configuration files (``pyproject.toml``, ``environment.yml``, etc.) are cached
-  with automatic file watchers
-- **First open**: Full detection runs, **subsequent opens**: cached results used
+  and watched so they are always kept up to date.
+- First open: Full detection runs, subsequent opens: cached results used
 
 File Search Strategy
 ++++++++++++++++++++
 
 ``pet`` searches for configuration files in this order (configurable via ``pet-find-file-functions``):
 
-1. **Project root check** - Instant for files at project root
-2. **Directory walking** - Fast, walks up from ``default-directory``
-3. **Native ``fd`` search** - Very fast for large projects if ``fd`` is installed
-4. **Recursive search** - Can be slow on large projects (100k+ files)
+1. Project root check - Instant for files at project root
+2. Directory walking - Fast, walks up from ``default-directory``
+3. Native ``fd`` search - Fast even for large projects if ``fd`` is installed
+4. Recursive search - Can be slow on large projects
 
 When Performance Issues Occur
 +++++++++++++++++++++++++++++
 
-- Large projects (Linux kernel scale) may hang during recursive search
+- Large projects (Linux kernel scale) may take many seconds during recursive
+  search
 - Projects with deep directory nesting, and/or config files in subdirectories of
   the project root
 - Network filesystems or slow storage
@@ -357,9 +359,6 @@ Debug Slow Performance
 
    ;; Profile pet-mode
    M-x eval-expression RET (progn (profiler-start 'cpu) (pet-mode) (profiler-stop) (profiler-report)) RET
-
-   ;; Check what was detected
-   M-x pet-verify-setup
 
 Project-specific Tuning
 +++++++++++++++++++++++
