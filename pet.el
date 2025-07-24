@@ -1178,6 +1178,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 (defvar py-autopep8-command)
 (defvar format-all--executable-table)
 (defvar apheleia-formatters)
+(defvar pytest-global-name)
 
 (defun pet-buffer-local-vars-setup ()
   "Set up the buffer local variables for Python tools.
@@ -1193,7 +1194,8 @@ buffer local values."
         (black (pet-executable-find "black"))
         (isort (pet-executable-find "isort"))
         (ruff (pet-executable-find "ruff"))
-        (yapf (pet-executable-find "yapf")))
+        (yapf (pet-executable-find "yapf"))
+        (pytest (pet-executable-find "pytest")))
 
     (setq-local lsp-jedi-executable-command
                 (pet-executable-find "jedi-language-server"))
@@ -1209,7 +1211,8 @@ buffer local values."
     (setq-local lsp-ruff-python-path python)
     (setq-local dap-python-executable python)
     (setq-local dap-variables-project-root-function #'pet-project-root)
-    (setq-local python-pytest-executable (pet-executable-find "pytest"))
+    (setq-local python-pytest-executable pytest)
+    (setq-local pytest-global-name pytest)
     (setq-local python-black-command black)
     (setq-local python-isort-command isort)
     (setq-local ruff-format-command ruff)
@@ -1270,6 +1273,7 @@ buffer local values."
   (kill-local-variable 'py-autopep8-command)
   (kill-local-variable 'format-all--executable-table)
   (kill-local-variable 'apheleia-formatters)
+  (kill-local-variable 'pytest-global-name)
 
   (pet-eglot-teardown)
   (pet-dape-teardown))

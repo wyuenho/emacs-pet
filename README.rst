@@ -93,6 +93,7 @@ Supported Emacs Packages
 - `python-black <https://github.com/wbolster/emacs-python-black>`_
 - `python-isort <https://github.com/wyuenho/emacs-python-isort>`_
 - `python-pytest <https://github.com/wbolster/emacs-python-pytest>`_
+- `pytest-el <https://github.com/ionrock/pytest-el>`_
 - `ruff-format <https://melpa.org/#/ruff-format>`_
 - `py-autopep8 <https://github.com/emacsmirror/py-autopep8>`_
 - `auto-virtualenvwrapper <https://github.com/robert-zaremba/auto-virtualenvwrapper.el/>`_
