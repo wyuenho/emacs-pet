@@ -96,6 +96,8 @@ Supported Emacs Packages
 - `pytest-el <https://github.com/ionrock/pytest-el>`_
 - `ruff-format <https://melpa.org/#/ruff-format>`_
 - `py-autopep8 <https://github.com/emacsmirror/py-autopep8>`_
+- `format-all <https://github.com/lassik/emacs-format-all-the-code>`_
+- `apheleia <https://github.com/radian-software/apheleia>`_
 - `auto-virtualenvwrapper <https://github.com/robert-zaremba/auto-virtualenvwrapper.el/>`_
 
 
