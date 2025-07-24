@@ -1331,14 +1331,47 @@ has assigned to."
                        python-isort-command
                        ruff-format-command
                        yapfify-executable
-                       py-autopep8-command))))
+                       py-autopep8-command)))
+        (buf (current-buffer)))
 
     (with-current-buffer-window "*pet info*" nil nil
+      (insert (propertize (format "%-40s" "(pet-project-root):") 'face 'font-lock-variable-name-face))
+      (insert (concat (pet-project-root) "\n"))
+
+      (insert (propertize (format "%-40s" "(pet-virtualenv-root):") 'face 'font-lock-variable-name-face))
+      (insert (concat (pet-virtualenv-root) "\n"))
+
       (mapc (pcase-lambda (`(,key . ,value))
               (insert (propertize (format "%-40s" (concat (symbol-name key) ":")) 'face 'font-lock-variable-name-face))
               (insert (format "%s" value))
               (insert "\n"))
             kvp)
+
+      (insert (propertize (format "%-40s" "apheleia-formatters:")
+                          'face 'font-lock-variable-name-face) "\n")
+      (insert
+       (pp-to-string
+        (with-current-buffer buf
+          (if (boundp 'apheleia-formatters)
+              (mapcar (lambda (key) (alist-get key apheleia-formatters))
+                      '(black isort ruff ruff-isort yapf))
+            'unbound))))
+
+      (insert (propertize (format "%-40s" "format-all--executable-table:")
+                          'face 'font-lock-variable-name-face) "\n")
+      (insert
+       (pp-to-string
+        (with-current-buffer buf
+          (if (boundp 'format-all--executable-table)
+              (mapcar (lambda (key)
+                        (cons key (gethash key format-all--executable-table)))
+                      '(black isort ruff yapf))
+            'unbound))))
+
+      (when (with-current-buffer buf (fboundp 'eglot--guess-contact))
+        (insert (propertize (format "%-40s" "(eglot--guess-contact):") 'face 'font-lock-variable-name-face) "\n")
+        (insert (pp-to-string (with-current-buffer buf (eglot--guess-contact)))))
+
       (insert (propertize (format "%-40s"
                                   (concat (symbol-name (if (file-remote-p default-directory)
                                                            'tramp-remote-path

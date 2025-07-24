@@ -2473,7 +2473,22 @@
 
   (before-each
     (setenv "HOME" "/home/user/")
-    (setq-local default-directory "~/project/"))
+    (setq-local default-directory "~/project/")
+    (spy-on 'pet-project-root :and-return-value "/home/user/project/")
+    (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
+    (spy-on 'eglot--guess-contact
+            :and-return-value
+            '((python-mode python-ts-mode)
+              (projectile . "/home/user/project/")
+              eglot-lsp-server
+              ("/home/user/project/.venv/bin/pyright-langserver" "--stdio"
+               :initializationOptions
+               (:python
+                (:pythonPath
+                 "/home/user/project/.venv/bin/python"
+                 :venvPath
+                 "/home/user/project/.venv/")))
+              ("python" "python"))))
 
   (after-each
     (setenv "HOME" home)
@@ -2484,6 +2499,7 @@
 
   (it "should display unbound values"
     (with-temp-buffer
+      (setq buffer-file-name "test.py")
       (python-mode)
       (pet-verify-setup)
       (expect
@@ -2494,6 +2510,7 @@
 
   (it "should display bound values"
     (with-temp-buffer
+      (setq buffer-file-name "test.py")
       (python-mode)
       (pet-verify-setup)
       (expect
@@ -2512,6 +2529,7 @@
                                      (unless (equal name "XDG_CONFIG_HOME")
                                        (funcall orig-getenv name))))
     (with-temp-buffer
+      (setq buffer-file-name "test.py")
       (python-mode)
       (setq-local flycheck-mode t)
       (pet-flycheck-toggle-local-vars)
