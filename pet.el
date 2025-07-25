@@ -1369,9 +1369,12 @@ has assigned to."
                                   '(black isort ruff yapf))))
                  (list (format "%s\n" 'unbound)))))
 
-      (when (with-current-buffer buf (fboundp 'eglot--guess-contact))
-        (insert (propertize (format "%-40s" "(eglot--guess-contact):") 'face 'font-lock-variable-name-face) "\n")
-        (insert (pp-to-string (with-current-buffer buf (eglot--guess-contact)))))
+      (insert (propertize (format "%-40s" "(eglot--guess-contact):") 'face 'font-lock-variable-name-face))
+      (apply 'insert
+             (with-current-buffer buf
+               (if (fboundp 'eglot--guess-contact)
+                   (list "\n" (pp-to-string (eglot--guess-contact)))
+                 (list (format "%s\n" 'unbound)))))
 
       (insert (propertize (format "%-40s"
                                   (concat (symbol-name (if (file-remote-p default-directory)
