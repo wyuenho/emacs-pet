@@ -146,6 +146,12 @@ the project directory."
   :type 'hook
   :group 'pet)
 
+(defcustom pet-memoization-ttl 300
+  "The time-to-live for memoized functions in seconds."
+  :type 'integer
+  :group 'pet)
+
+
 
 
 (defun pet--executable-find (command &optional remote)
@@ -448,7 +454,32 @@ in a Python project and the value is the parsed content.
   :file-name "pixi.toml"
   :parser pet-parse-config-file)
 
-(defun pet-use-pre-commit-p ()
+(defvar pet--env-tool-path-cache (make-hash-table :test 'equal)
+  "Hash table for memoized `pet-use-*-p' function results.")
+
+(defmacro pet-def-use-env-tool (tool docstring &rest body)
+  "Define a memoized pet-use-TOOL-p function with DOCSTRING and BODY."
+  (declare (indent defun))
+  (let ((func-name (intern (format "pet-use-%s-p" tool))))
+    `(defun ,func-name ()
+       ,docstring
+       (when-let* ((project-root (pet-project-root)))
+         ;; Create cache key from function name and project root
+         (let ((key (cons ',func-name project-root)))
+           (or (when-let* ((entry (gethash key pet--env-tool-path-cache)))
+                 ;; Check if cached entry has expired
+                 (if (> (time-to-seconds (time-since (car entry))) pet-memoization-ttl)
+                     ;; Expired: remove from cache and return nil to fall through
+                     (remhash key pet--env-tool-path-cache)
+                   ;; Not expired: return cached value (cdr of timestamp+value pair)
+                   (cdr entry)))
+               ;; Cache miss or expired: compute new value
+               (let ((value (progn ,@body)))
+                 ;; Store in cache as (timestamp . value) pair
+                 (puthash key (cons (current-time) value) pet--env-tool-path-cache)
+                 value)))))))
+
+(pet-def-use-env-tool pre-commit
   "Whether the current project is using `pre-commit'.
 
 Returns the path to the `pre-commit' executable."
@@ -460,14 +491,14 @@ Returns the path to the `pre-commit' executable."
                   (setenv "PATH" (string-join exec-path path-separator))
                   (pet--executable-find "pre-commit" t))))))
 
-(defun pet-use-conda-p ()
+(pet-def-use-env-tool conda
   "Whether the current project is using `conda'.
 
 Returns the path to the `conda' executable found."
   (and (pet-environment)
        (pet--executable-find "conda" t)))
 
-(defun pet-use-mamba-p ()
+(pet-def-use-env-tool mamba
   "Whether the current project is using `mamba' or `micromamba'.
 
 Returns the path to the `mamba' executable variant found."
@@ -475,7 +506,7 @@ Returns the path to the `mamba' executable variant found."
        (or (pet--executable-find "mamba" t)
            (pet--executable-find "micromamba" t))))
 
-(defun pet-use-pixi-p ()
+(pet-def-use-env-tool pixi
   "Whether the current project is using `pixi'.
 
 Returns the path to the `pixi' executable."
@@ -484,7 +515,7 @@ Returns the path to the `pixi' executable."
              .tool.pixi))
        (pet--executable-find "pixi" t)))
 
-(defun pet-use-poetry-p ()
+(pet-def-use-env-tool poetry
   "Whether the current project is using `poetry'.
 
 Returns the path to the `poetry' executable."
@@ -495,14 +526,14 @@ Returns the path to the `poetry' executable."
             ""))
        (pet--executable-find "poetry" t)))
 
-(defun pet-use-pyenv-p ()
+(pet-def-use-env-tool pyenv
   "Whether the current project is using `pyenv'.
 
 Returns the path to the `pyenv' executable."
   (and (pet-python-version)
        (pet--executable-find "pyenv" t)))
 
-(defun pet-use-pipenv-p ()
+(pet-def-use-env-tool pipenv
   "Whether the current project is using `pipenv'.
 
 Returns the path to the `pipenv' executable."
@@ -686,8 +717,8 @@ Selects a virtualenv in the follow order:
                                                    (pet-use-mamba-p))
                                                (getenv "CONDA_PREFIX")))))
                         (expand-file-name ev)))
-                     ((when-let*((program (pet-use-poetry-p))
-                                 (default-directory (file-name-directory (pet-pyproject-path))))
+                     ((when-let* ((program (pet-use-poetry-p))
+                                  (default-directory (file-name-directory (pet-pyproject-path))))
                         (condition-case err
                             (with-temp-buffer
                               (let ((exit-code (process-file program nil t nil "env" "info" "--no-ansi" "--path"))
@@ -696,8 +727,8 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let*((program (pet-use-pipenv-p))
-                                 (default-directory (file-name-directory (pet-pipfile-path))))
+                     ((when-let* ((program (pet-use-pipenv-p))
+                                  (default-directory (file-name-directory (pet-pipfile-path))))
                         (condition-case err
                             (with-temp-buffer
                               (let ((exit-code (process-file program nil '(t nil) nil "--quiet" "--venv"))
@@ -706,13 +737,13 @@ Selects a virtualenv in the follow order:
                                     output
                                   (user-error (buffer-string)))))
                           (error (pet-report-error err)))))
-                     ((when-let*((dir (cl-loop for name in pet-venv-dir-names
-                                               with dir = nil
-                                               if (setq dir (locate-dominating-file default-directory name))
-                                               return (file-name-as-directory (concat dir name)))))
+                     ((when-let* ((dir (cl-loop for name in pet-venv-dir-names
+                                                with dir = nil
+                                                if (setq dir (locate-dominating-file default-directory name))
+                                                return (file-name-as-directory (concat dir name)))))
                         (expand-file-name dir)))
-                     ((when-let*((program (pet-use-pyenv-p))
-                                 (default-directory (file-name-directory (pet-python-version-path))))
+                     ((when-let* ((program (pet-use-pyenv-p))
+                                  (default-directory (file-name-directory (pet-python-version-path))))
                         (condition-case err
                             (with-temp-buffer
                               (let ((exit-code (process-file program nil t nil "prefix"))
@@ -1237,7 +1268,6 @@ buffer local values."
       (setcar (alist-get 'yapf apheleia-formatters) yapf)))
 
   (pet-eglot-setup)
-  (pet-dape-setup)
 
   (run-hooks 'pet-after-buffer-local-vars-setup))
 
@@ -1275,8 +1305,7 @@ buffer local values."
   (kill-local-variable 'apheleia-formatters)
   (kill-local-variable 'pytest-global-name)
 
-  (pet-eglot-teardown)
-  (pet-dape-teardown))
+  (pet-eglot-teardown))
 
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.
