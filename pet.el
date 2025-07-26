@@ -1268,7 +1268,6 @@ buffer local values."
       (setcar (alist-get 'yapf apheleia-formatters) yapf)))
 
   (pet-eglot-setup)
-  (pet-dape-setup)
 
   (run-hooks 'pet-after-buffer-local-vars-setup))
 
@@ -1306,8 +1305,7 @@ buffer local values."
   (kill-local-variable 'apheleia-formatters)
   (kill-local-variable 'pytest-global-name)
 
-  (pet-eglot-teardown)
-  (pet-dape-teardown))
+  (pet-eglot-teardown))
 
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.

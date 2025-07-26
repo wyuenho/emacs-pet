@@ -2383,8 +2383,7 @@
         (ruff-isort . ("ruff"))
         (yapf       . ("yapf"))))
     (spy-on 'pet-flycheck-setup)
-    (spy-on 'pet-eglot-setup)
-    (spy-on 'pet-dape-setup))
+    (spy-on 'pet-eglot-setup))
 
   (after-each
     (kill-local-variable 'python-shell-interpreter)
@@ -2450,7 +2449,6 @@
 
     (expect 'pet-flycheck-setup :to-have-been-called)
     (expect 'pet-eglot-setup :to-have-been-called)
-    (expect 'pet-dape-setup :to-have-been-called)
 
     (expect (local-variable-p 'python-shell-interpreter) :to-be-truthy)
     (expect (local-variable-p 'python-shell-virtualenv-root) :to-be-truthy)
@@ -2528,8 +2526,7 @@
 (describe "pet-buffer-local-vars-teardown"
   (before-each
     (spy-on 'pet-flycheck-teardown)
-    (spy-on 'pet-eglot-teardown)
-    (spy-on 'pet-dape-teardown))
+    (spy-on 'pet-eglot-teardown))
 
   (after-each
     (kill-local-variable 'python-shell-interpreter)
@@ -2569,7 +2566,6 @@
 
     (expect 'pet-flycheck-teardown :to-have-been-called)
     (expect 'pet-eglot-teardown :to-have-been-called)
-    (expect 'pet-dape-teardown :to-have-been-called)
 
     (expect (local-variable-p 'python-shell-interpreter) :not :to-be-truthy)
     (expect (local-variable-p 'python-shell-virtualenv-root) :not :to-be-truthy)
