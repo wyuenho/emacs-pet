@@ -495,7 +495,7 @@ change that prevents ``pet`` from working.
 .. code-block:: elisp
 
    ;; If you are using package.el, make sure GNU ELPA devel is `package-archives`
-   (setf (alist-get 'gnu-devel package-archives) "https://elpa.gnu.org/devel/")
+   (add-to-list package-archives (cons "gnu-devel" "https://elpa.gnu.org/devel/"))
 
    ;; You must set this to have a newer version of a package shadow an older
    ;; version
