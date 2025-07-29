@@ -1,59 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(unless (< emacs-major-version 27)
-  (load-file "test/undercover-init.el"))
-
 (require 'pet)
-
-(xdescribe "pet-def-config-accessor"
-  (before-each
-    (defun parser (file) "content")
-    (spy-on 'pet-project-root :and-return-value "/home/user/project/")
-    (spy-on 'file-notify-add-watch)
-    (pet-def-config-accessor tox-ini :file-name "tox.ini" :parser parser))
-
-  (after-each
-    (fmakunbound 'pet-tox-ini)
-    (unintern 'pet-tox-ini obarray)
-    (fmakunbound 'pet-tox-ini-path)
-    (unintern 'pet-tox-ini-path obarray)
-    (fmakunbound 'parser)
-    (unintern 'parser obarray))
-
-  (it "should create config accessor function"
-    (expect (fboundp 'pet-tox-ini) :to-be t))
-
-  (it "should create path accessor function"
-    (expect (fboundp 'pet-tox-ini-path) :to-be t))
-
-  (describe "the config accessor function"
-    (before-each
-      (setq-local pet-cache nil)
-      (spy-on 'pet-find-file-from-project :and-return-value "/home/user/project/tox.ini")
-      (spy-on 'file-notify-add-watch :and-return-value 'mock-watcher)
-      (spy-on 'parser :and-call-through))
-
-    (after-each
-      (kill-local-variable 'pet-cache))
-
-    (it "should return cached value if it exists"
-      (pet-cache-put (list "/home/user/project/" :configs "/home/user/project/tox.ini") "cached content")
-      (expect (pet-tox-ini) :to-equal "cached content")
-      (expect 'pet-setup-config-cache-and-watcher :not :to-have-been-called)
-      (expect 'parser :not :to-have-been-called))
-
-    (describe "when the config file content has not been cached"
-      (it "should return parsed file content"
-        (expect (pet-tox-ini) :to-equal "content"))
-
-      (it "should setup cache and watcher"
-        (pet-tox-ini)
-        (expect 'file-notify-add-watch :to-have-been-called)
-        (expect 'parser :to-have-been-called-with "/home/user/project/tox.ini"))
-
-      (it "should cache config file content in unified cache"
-        (pet-tox-ini)
-        (expect (pet-cache-get (list "/home/user/project/" :configs "/home/user/project/tox.ini")) :to-equal "content")))))
 
 (describe "pet-def-config-accessor"
   :var ((project-a-root "/home/user/project-a/")

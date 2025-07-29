@@ -1,8 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(unless (< emacs-major-version 27)
-  (load-file "test/undercover-init.el"))
-
 (require 'pet)
 
 (describe "pet-cache"

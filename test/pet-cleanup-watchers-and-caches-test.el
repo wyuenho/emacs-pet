@@ -1,10 +1,8 @@
 ;; -*- lexical-binding: t; -*-
 
-(unless (< emacs-major-version 27)
-  (load-file "test/undercover-init.el"))
-
 (require 'pet)
 
+(setq python-indent-guess-indent-offset nil)
 (describe "pet-cleanup-watchers-and-caches"
   :var ((project-root "/home/user/project/")
         (pyproject-file "/home/user/project/pyproject.toml")
