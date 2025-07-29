@@ -126,7 +126,7 @@ and nil otherwise."
   :group 'pet)
 
 (defcustom pet-search-globally t
-  "Whether `pet-executable-find' should search outside of the project's virtualenvs.
+  "Whether PET should search executables beyond the project's virtualenvs.
 
 If you need to configure this value, it is likely that you'd want a
 different value depending the project you are working on.  If so, you
@@ -182,37 +182,41 @@ Only reports to the minibuffer if `pet-debug' is non-nil."
 (defvar pet-cache nil
   "Unified cache for project-scoped pet data.
 
-Structure: nested alists accessible by path lists.
-All paths start with project root, followed by category and optional key.
+Structure: nested alists accessible by path lists.  All paths start with project
+root, followed by category and optional key.
 
 Project-scoped categories:
-- :virtualenv - direct value (project virtualenv path)
-- :files - (file-pattern . resolved-path) pairs
-- :configs - (config-file-path . parsed-content) pairs
-- :file-watchers - (config-file-path . watcher-descriptor) pairs
+- `:virtualenv' - direct value (project virtualenv path)
+- `:files' - (file-pattern . resolved-path) pairs
+- `:configs' - (config-file-path . parsed-content) pairs
+- `:file-watchers' - (config-file-path . watcher-descriptor) pairs
 
 Examples:
-- (pet-cache-get '(\"/project\" :virtualenv))
-- (pet-cache-get '(\"/project\" :configs \"pyproject.toml\"))
-- (pet-cache-get '(\"/project\" :files \"*.py\"))
+- (pet-cache-get \='(\"/project\" :virtualenv))
+- (pet-cache-get \='(\"/project\" :configs \"pyproject.toml\"))
+- (pet-cache-get \='(\"/project\" :files \"*.py\"))
 
 Cache Invariant Rules:
-1. Strong Invariant (bidirectional): :configs ↔ :file-watchers
-   - If an entry exists in :configs, it MUST have a corresponding entry in :file-watchers
-   - If an entry exists in :file-watchers, it MUST have a corresponding entry in :configs
+1. Strong Invariant (bidirectional): `:configs' ↔ `:file-watchers'
+   - If an entry exists in `:configs', it MUST have a corresponding entry in
+     `:file-watchers'
+   - If an entry exists in `:file-watchers', it MUST have a corresponding entry
+     in `:configs'
 
-2. Weak Invariant (unidirectional): :configs → :files
-   - If an entry exists in :configs, the file path MUST exist as a value in some :files entry
-   - But :files entries can exist without corresponding :configs entries
+2. Weak Invariant (unidirectional): `:configs' → `:files'
+   - If an entry exists in `:configs', the file path MUST exist as a value in
+     some `:files' entry
+   - But `:files' entries can exist without corresponding `:configs' entries
 
 3. No Invariant: :files entries are independent
-   - :files can contain any discovered file paths, regardless of parsing needs
+   - `:files' can contain any discovered file paths, regardless of parsing needs
 
 Note: System-wide data like pre-commit database uses dedicated variables,
 not this cache.")
 
 (defun pet-cache-get (path)
   "Get value at PATH in cache.  PATH is a list of keys."
+
   (let ((keys path)
         (subtree pet-cache))
     (while keys
@@ -226,7 +230,7 @@ not this cache.")
 
   (let ((section pet-cache)
         (keys path)
-        key parent subtree)
+        key parent)
     ;; Navigate as far as possible through existing cache structure
     ;; Stop when we hit the end of the path or a key where its value is nil
     (while (and keys (alist-get (car keys) section nil nil 'equal))
@@ -263,6 +267,7 @@ not this cache.")
 
 (defun pet-cache-rem (path)
   "Remove value at PATH in cache.
+
 Removes the entry completely from the alist structure."
   (let* ((keys path)
          (section pet-cache)
@@ -289,14 +294,17 @@ Removes the entry completely from the alist structure."
 
 (defun pet-setup-config-cache-and-watcher (absolute-path parser)
   "Parse and cache config file content, set up file watcher.
-ABSOLUTE-PATH is the absolute path to the config file.
-PARSER is the function to parse the file content.
 
-This function maintains the strong cache invariant between :configs and :file-watchers:
-1. Parsing and caching the content in :configs category
-2. Setting up file watcher and caching handle in :file-watchers category
+ABSOLUTE-PATH is the absolute path to the config file.  PARSER is the
+function to parse the file content.
 
-Note: File path should already be cached in :files category by pet-find-file-from-project."
+This function maintains the strong cache invariant between `:configs' and
+`:file-watchers':
+1. Parsing and caching the content in `:configs' category
+2. Setting up file watcher and caching handle in `:file-watchers' category
+
+Note: File path should already be cached in `:files' category by
+`pet-find-file-from-project'."
   (when-let ((root (pet-project-root)))
     (pet-cache-put (list root :configs absolute-path) (funcall parser absolute-path))
 
@@ -308,14 +316,17 @@ Note: File path should already be cached in :files category by pet-find-file-fro
         (pet-cache-put (list root :file-watchers absolute-path) watcher)))))
 
 (defun pet-teardown-config-cache-and-watcher (absolute-path)
-  "Remove config cache and file watcher, maintaining strong cache invariant.
+  "Remove config cache and file watcher.
+
 ABSOLUTE-PATH is the absolute path to the config file to remove.
 
-This function maintains the strong cache invariant between :configs and :file-watchers:
-1. Removing file watcher and cleaning up handle from :file-watchers category
-2. Removing parsed content from :configs category
+This function maintains the strong cache invariant between `:configs' and
+`:file-watchers':
+1. Removing file watcher and cleaning up handle from `:file-watchers' category
+2. Removing parsed content from `:configs' category
 
-Note: :files entries are left intact as they can exist independently of config parsing."
+Note: `:files' entries are left intact as they can exist independently
+of config parsing."
   (when-let ((root (pet-project-root)))
     (when-let ((watcher (pet-cache-get (list root :file-watchers absolute-path))))
       (file-notify-rm-watch watcher)
@@ -862,22 +873,21 @@ Selects a virtualenv in the follow order:
           venv-path))))
 
 (cl-defmacro pet-def-env-list (name &key args parse-output)
-  "Define a function to get a list of environments from a Python environment manager.
+  "Define an environment listing function.
 
-NAME is the environment manager name.  It will be used to look up a
+NAME is the environment manager's name.  It will be used to look up a
 `pet-use-NAME-p' function that determines whether this environment
 manager is applicable to the current project, and the path of the
 environment manager program.
 
 The other required keyboard arguments are:
 
-:args - a list of strings.  Command-line arguments to the environment
-manager program that contains a listing of environments.
+ARGS is a list of command-line argument strings to the environment
+manager program to display a listing of environments.
 
-:parse-output - sexp.  Expression that parses the output of the
-environment manager program, made available as the variable `output',
-for a list of environments.  This expression must return a list of
-strings."
+PARSE-OUTPUT is an expression that parses the output of the environment
+manager program, made available as the variable `output', for a list of
+environments.  This expression must return a list of strings."
   (declare (indent defun))
   (let ((env-list-fn (intern (format "pet-%s-environments" name)))
         (use-prog-fn (intern (format "pet-use-%s-p" name)))
@@ -911,15 +921,15 @@ strings."
   (let-alist (pet-parse-json output) .envs))
 
 (cl-defmacro pet-def-env-switch (name &key env-list-fn prompt-text (env-var "CONDA_PREFIX"))
-  "Define an environment switching function for different Python environment managers.
+  "Define a environment switching function.
 
 NAME is the environment manager name.
 
 The following are the keyword arguments:
 
-:env-list-fn is the function name that returns available environments.
-:prompt-text is the text to display in the completion prompt.
-:env-var is the environment variable to set."
+`ENV-LIST-FN' is the function name that returns available environments.
+`PROMPT-TEXT' is the text to display in the completion prompt.
+`ENV-VAR' is the environment variable to set."
   (declare (indent defun))
   (let ((switch-fn (intern (format "pet-%s-switch-environment" name)))
         (name-str (symbol-name name))
