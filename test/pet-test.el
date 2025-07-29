@@ -2114,7 +2114,7 @@
 
 (describe "pet-dape-setup"
   (before-each
-    (spy-on 'pet-find-file-from-project-root)
+    (spy-on 'pet-find-file-from-project)
     (spy-on 'pet-executable-find :and-return-value "/usr/bin/python"))
 
   (it "should set up buffer local variable dape-command when no __main__.py is found"
@@ -2123,7 +2123,7 @@
     (expect dape-command :to-equal '(debugpy command "/usr/bin/python")))
 
   (it "should set up buffer local variable dape-command when a __main__.py is found"
-    (spy-on 'pet-find-file-from-project-root :and-return-value "/home/user/project/src/foo/bar/__main__.py")
+    (spy-on 'pet-find-file-from-project :and-return-value "/home/user/project/src/foo/bar/__main__.py")
     (spy-on 'file-exists-p :and-call-fake
             (lambda (path)
               (member path
