@@ -67,6 +67,7 @@
     (spy-on 'project-current)
     (expect (pet-project-root) :to-be nil)))
 
+
 (describe "pet-find-file-from-project-root"
   (it "should find file from project root"
     (spy-on 'pet-project-root :and-return-value "/etc")
@@ -119,12 +120,12 @@
               '("-t" "f" "--hidden" "test.txt" "/home/user/project/"))))
 
   (it "should return nil when fd is not available"
-    (spy-on 'executable-find :and-return-value nil)
+    (spy-on 'executable-find )
     (expect (pet-find-file-from-project-root-natively "file.txt") :to-be nil))
 
   (it "should return nil when fd finds no matches"
     (spy-on 'executable-find :and-return-value "/usr/bin/fd")
-    (spy-on 'process-lines :and-return-value nil)
+    (spy-on 'process-lines )
     (expect (pet-find-file-from-project-root-natively "nonexistent.txt") :to-be nil))
 
   (it "should handle fd command errors gracefully"
@@ -135,7 +136,7 @@
     (expect 'pet-report-error :to-have-been-called))
 
   (it "should return nil when not in a project"
-    (spy-on 'pet-project-root :and-return-value nil)
+    (spy-on 'pet-project-root )
     (expect (pet-find-file-from-project-root-natively "file.txt") :to-be nil)))
 
 (describe "pet-locate-dominating-file"
@@ -201,7 +202,7 @@
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
 
     (it "should return `nil' if the project is empty"
-      (spy-on 'projectile-dir-files :and-return-value nil)
+      (spy-on 'projectile-dir-files )
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
 
     (it "should return `nil' if no file in the project matches the file wildcard"
@@ -222,7 +223,7 @@
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
 
     (it "should return `nil' if the project is empty"
-      (spy-on 'project-files :and-return-value nil)
+      (spy-on 'project-files )
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
 
     (it "should return `nil' if no file in the project matches the file wildcard"
@@ -246,7 +247,7 @@
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
 
     (it "should return `nil' if the project is empty"
-      (spy-on 'directory-files-recursively :and-return-value nil)
+      (spy-on 'directory-files-recursively )
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
 
     (it "should return `nil' if no file in the project matches the file wildcard"
@@ -325,7 +326,7 @@
 
 (describe "pet-make-config-file-change-callback"
   (it "should return a function"
-    (expect (functionp (pet-make-config-file-change-callback 'cache 'parser)) :to-be-truthy))
+    (expect (functionp (pet-make-config-file-change-callback #'identity)) :to-be-truthy))
 
   (describe "when received deleted event"
     :var* ((descriptor 1)
@@ -333,141 +334,46 @@
            (event `((,file . ,descriptor))))
 
     (before-each
-      (spy-on 'file-notify-rm-watch)
-      (setq-local pet-watched-config-files event)
-      (defvar cache `((,file . "content")))
-      (defvar callback (pet-make-config-file-change-callback 'cache nil))
+      (setq-local pet-cache nil)
+      (spy-on 'pet-project-root :and-return-value "/home/user/project/")
+      (spy-on 'pet-teardown-config-cache-and-watcher)
+      (pet-cache-put (list "/home/user/project/" :configs file) "content")
+      (pet-cache-put (list "/home/user/project/" :file-watchers file) descriptor)
+      (defvar callback (pet-make-config-file-change-callback nil))
       (funcall callback `(,descriptor deleted ,file)))
 
     (after-each
-      (kill-local-variable 'pet-watched-config-files)
-      (makunbound 'cache)
-      (unintern 'cache obarray)
+      (kill-local-variable 'pet-cache)
       (makunbound 'callback)
       (unintern 'callback obarray))
 
-    (it "should remove file watcher"
-      (expect 'file-notify-rm-watch :to-have-been-called-with descriptor))
-
-    (it "should remove entry from cache"
-      (expect (assoc-default file cache) :not :to-be-truthy))
-
-    (it "should remove entry from `pet-watched-config-files'"
-      (expect (assoc-default file pet-watched-config-files) :not :to-be-truthy)))
+    (it "should call teardown function to maintain cache invariant"
+      (expect 'pet-teardown-config-cache-and-watcher :to-have-been-called-with file)))
 
   (describe "when received changed event"
     :var ((file "/home/user/project/tox.ini"))
 
     (before-each
-      (defvar cache nil)
+      (setq-local pet-cache nil)
+      (spy-on 'pet-project-root :and-return-value "/home/user/project/")
       (defun parser (file)
         "content")
 
       (spy-on 'parser :and-call-through)
 
-      (defvar callback (pet-make-config-file-change-callback 'cache 'parser))
+      (defvar callback (pet-make-config-file-change-callback #'parser))
       (funcall callback `(1 changed ,file)))
 
     (after-each
-      (makunbound 'cache)
-      (unintern 'cache obarray)
+      (kill-local-variable 'pet-cache)
       (fmakunbound 'parser)
       (unintern 'parser obarray)
       (makunbound 'callback)
       (unintern 'callback obarray))
 
-    (it "parse the file again"
+    (it "should parse the file again and update unified cache"
       (expect 'parser :to-have-been-called-with file)
-      (expect (spy-context-return-value (spy-calls-most-recent 'parser)) :to-equal "content"))
-
-    (it "should set parsed value to cache"
-      (expect (assoc-default file cache) :to-equal "content"))))
-
-(describe "pet-watch-config-file"
-  :var ((file "/home/user/project/tox.ini"))
-
-  (describe "when the file is being watched"
-    (before-each
-      (spy-on 'file-notify-add-watch)
-      (setq-local pet-watched-config-files `((,file . 1))))
-
-    (after-each
-      (kill-local-variable 'pet-watched-config-files))
-
-    (it "should do nothing"
-      (expect (pet-watch-config-file file nil nil) :to-be nil)
-      (expect 'file-notify-add-watch :not :to-have-been-called)))
-
-  (describe "when the file isn't being watched"
-    :var ((callback (lambda ())))
-
-    (before-each
-      (spy-on 'file-notify-add-watch :and-return-value 1)
-      (spy-on 'pet-make-config-file-change-callback :and-return-value callback)
-      (defvar pet-tox-ini-cache nil)
-      (defun parser (file) "content"))
-
-    (after-each
-      (makunbound 'pet-tox-ini-cache)
-      (unintern 'pet-tox-ini-cache obarray)
-      (fmakunbound 'parser)
-      (unintern 'parser obarray))
-
-    (it "should add an entry to the watched files cache"
-      (pet-watch-config-file file 'pet-tox-ini-cache 'parser)
-      (expect 'file-notify-add-watch :to-have-been-called-with file '(change) callback)
-      (expect 'pet-make-config-file-change-callback :to-have-been-called-with 'pet-tox-ini-cache 'parser)
-      (expect (assoc-default file pet-watched-config-files) :to-equal 1))))
-
-(describe "pet-def-config-accessor"
-  (before-each
-    (defun parser (file) "content"))
-
-  (after-all
-    (fmakunbound 'parser)
-    (unintern 'parser obarray))
-
-  (before-each
-    (pet-def-config-accessor tox-ini :file-name "tox.ini" :parser parser))
-
-  (after-each
-    (fmakunbound 'pet-tox-ini)
-    (unintern 'pet-tox-ini obarray)
-    (makunbound 'pet-tox-ini-cache)
-    (unintern 'pet-tox-ini-cache obarray))
-
-  (it "should create cache variable"
-    (expect (boundp 'pet-tox-ini-cache) :to-be t))
-
-  (it "should create cache access function"
-    (expect (fboundp 'pet-tox-ini) :to-be t))
-
-  (describe "the cache access function"
-    (before-each
-      (spy-on 'pet-find-file-from-project :and-return-value "/home/user/project/tox.ini")
-      (spy-on 'pet-watch-config-file :and-call-fake (lambda (_ __ ___)))
-      (spy-on 'parser :and-call-through))
-
-    (after-each
-      (setq pet-tox-ini-cache nil))
-
-    (it "should return cached value if it exists"
-      (push (cons "/home/user/project/tox.ini" "cached content") pet-tox-ini-cache)
-      (expect (pet-tox-ini) :to-equal "cached content")
-      (expect 'pet-watch-config-file :not :to-have-been-called)
-      (expect 'parser :not :to-have-been-called))
-
-    (describe "when the config file content has not been cached"
-      (it "should return parsed file content"
-        (expect (pet-tox-ini) :to-equal "content"))
-
-      (it "should watch file"
-        (pet-tox-ini)
-        (expect 'pet-watch-config-file :to-have-been-called-with "/home/user/project/tox.ini" 'pet-tox-ini-cache 'parser))
-
-      (it "should cache config file content"
-        (pet-tox-ini)
-        (expect (assoc-default "/home/user/project/tox.ini" pet-tox-ini-cache) :to-equal "content")))))
+      (expect (pet-cache-get (list "/home/user/project/" :configs file)) :to-equal "content"))))
 
 (describe "pet-use-pre-commit-p"
   (describe "when the project has a `.pre-commit-config.yaml' file"
@@ -776,7 +682,7 @@
   (describe "when `pre-commit' database content is not cached"
     (before-each
       (spy-on 'file-exists-p :and-call-fake (lambda (name) (equal name "/home/user/.cache/pre-commit/db.db")))
-      (spy-on 'pet-watch-config-file)
+      (spy-on 'file-notify-add-watch)
       (spy-on 'pet-parse-pre-commit-db :and-return-value pre-commit-db-content))
 
     (it "should return absolute path to the virtualenv of a `pre-commit' hook with additional dependencies"
@@ -790,7 +696,7 @@
 
   (describe "when `pre-commit' database content is cached"
     (before-each
-      (setq-local pet-pre-commit-database-cache `(("/home/user/.cache/pre-commit/db.db" ,@pre-commit-db-content))))
+      (setq-local pet-pre-commit-database-cache pre-commit-db-content))
 
     (after-each
       (kill-local-variable 'pet-pre-commit-database-cache))
@@ -808,39 +714,39 @@
 
   (describe "when given an absolute path"
     (it "should return the absolute path if the file exists and is executable"
-      (spy-on 'file-remote-p :and-return-value nil)
+      (spy-on 'file-remote-p )
       (spy-on 'file-name-absolute-p :and-return-value t)
       (spy-on 'pet--executable-find :and-return-value "/usr/bin/python")
       (expect (pet-executable-find "/usr/bin/python") :to-equal "/usr/bin/python"))
 
     (it "should return nil if the absolute path file does not exist or is not executable"
-      (spy-on 'file-remote-p :and-return-value nil)
+      (spy-on 'file-remote-p )
       (spy-on 'file-name-absolute-p :and-return-value t)
-      (spy-on 'pet--executable-find :and-return-value nil)
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet--executable-find )
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
       (expect (pet-executable-find "/nonexistent/path") :to-be nil))
 
     (it "should not use absolute path optimization for remote files"
       (spy-on 'file-remote-p :and-return-value "/ssh:user@host:")
       (spy-on 'file-name-absolute-p :and-return-value t)
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
-      (spy-on 'pet--executable-find :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
+      (spy-on 'pet--executable-find )
       (expect (pet-executable-find "/ssh:user@host:/usr/bin/python") :to-be nil))
 
     (it "should not use absolute path optimization for relative paths"
-      (spy-on 'file-remote-p :and-return-value nil)
-      (spy-on 'file-name-absolute-p :and-return-value nil)
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
-      (spy-on 'pet--executable-find :and-return-value nil)
+      (spy-on 'file-remote-p )
+      (spy-on 'file-name-absolute-p )
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
+      (spy-on 'pet--executable-find )
       (expect (pet-executable-find "python") :to-be nil)))
 
   (describe "when using `pre-commit'"
     (before-each
       (spy-on 'pet-use-pre-commit-p :and-return-value "/usr/bin/pre-commit")
-      (spy-on 'pet--executable-find :and-return-value nil))
+      (spy-on 'pet--executable-find ))
 
     (it "should return the absolute path to the executable if hook and hook repo are found and the executable is found in hook repo"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
@@ -849,12 +755,12 @@
       (expect (pet-executable-find "black") :to-equal "/home/user/.cache/pre-commit/repoblack/bin/black"))
 
     (it "should return nil if the hook is not found in config"
-      (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value nil)
+      (spy-on 'pet-pre-commit-config-has-hook-p )
       (expect (pet-executable-find "black") :to-be nil))
 
     (it "should return nil if the hook repo is not found"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
-      (spy-on 'pet-pre-commit-virtualenv-path :and-return-value nil)
+      (spy-on 'pet-pre-commit-virtualenv-path )
       (expect (pet-executable-find "black") :to-be nil))
 
     (it "should return nil if the executable is not found in hook repo"
@@ -865,16 +771,16 @@
 
   (describe "when on *nix"
     (it "should return the absolute path to the python executable for a project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
       (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
-      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'pet-use-conda-p )
       (spy-on 'pet-system-bin-dir)
       (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
       (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1))
 
     (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
       (spy-on 'pet-virtualenv-root :and-return-value "/home/user/anaconda/envs/project/")
       (spy-on 'pet-use-conda-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
@@ -890,16 +796,16 @@
       (kill-local-variable 'system-type))
 
     (it "should return the absolute path to the python executable for a project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/project/.venv/")
-      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'pet-use-conda-p )
       (spy-on 'pet-system-bin-dir)
       (spy-on 'executable-find :and-return-value "C:/Users/user/project/.venv/bin/python")
       (expect (pet-executable-find "python") :to-equal "C:/Users/user/project/.venv/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1))
 
     (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/Anaconda3/envs/project/")
       (spy-on 'pet-use-conda-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
@@ -909,8 +815,8 @@
 
   (describe "when `pet-search-globally' is t"
     (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
@@ -920,8 +826,8 @@
       (expect 'pet--executable-find :to-have-been-called-times 1))
 
     (it "should return the absolute path the executable for a project from `exec-path'"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "black")
                                                        "/home/user/project/.venv/bin/black")))
@@ -936,8 +842,8 @@
       (kill-local-variable 'pet-search-globally))
 
     (it "should not return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
@@ -948,8 +854,8 @@
       (expect 'pet--executable-find :to-have-been-called-times 0))
 
     (it "should not return the absolute path the executable for a project from `exec-path'"
-      (spy-on 'pet-use-pre-commit-p :and-return-value nil)
-      (spy-on 'pet-virtualenv-root :and-return-value nil)
+      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-virtualenv-root )
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "black")
                                                        "/home/user/project/.venv/bin/black")))
@@ -981,96 +887,96 @@
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/project")
     (spy-on 'pet-project-root :and-return-value project-root)
-    (setq pet-project-virtualenv-cache nil))
+    (setq-local pet-cache nil))
 
   (after-each
     (setenv "HOME" home)
     (setq-local default-directory old-default-directory)
-    (setq pet-project-virtualenv-cache nil))
+    (kill-local-variable 'pet-cache))
 
   (it "should not cache nil when not in a project"
-    (spy-on 'pet-project-root :and-return-value nil)
+    (spy-on 'pet-project-root )
     (expect (pet-virtualenv-root) :to-be nil)
-    (expect pet-project-virtualenv-cache :to-be nil))
+    (expect pet-cache :to-be nil))
 
   (it "should return the absolute path of the virtualenv for a project from `VIRTUAL_ENV'"
     (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "VIRTUAL_ENV") "/home/user/.venvs/project")))
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/project"))
 
   (it "should return the absolute path of the virtualenv for a project using `conda'"
-    (spy-on 'pet-use-pixi-p :and-return-value nil)
+    (spy-on 'pet-use-pixi-p )
     (spy-on 'pet-use-conda-p :and-return-value conda-path)
-    (spy-on 'pet-use-mamba-p :and-return-value nil)
+    (spy-on 'pet-use-mamba-p )
     (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") conda-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal conda-virtualenv))
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal conda-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `mamba'"
-    (spy-on 'pet-use-pixi-p :and-return-value nil)
-    (spy-on 'pet-use-conda-p :and-return-value nil)
+    (spy-on 'pet-use-pixi-p )
+    (spy-on 'pet-use-conda-p )
     (spy-on 'pet-use-mamba-p :and-return-value mamba-path)
     (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") mamba-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal mamba-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal mamba-virtualenv))
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal mamba-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `pixi'"
     (spy-on 'pet-use-pixi-p :and-return-value pixi-path)
-    (spy-on 'pet-use-conda-p :and-return-value nil)
-    (spy-on 'pet-use-mamba-p :and-return-value nil)
+    (spy-on 'pet-use-conda-p )
+    (spy-on 'pet-use-mamba-p )
     (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") pixi-virtualenv)))
     (expect (pet-virtualenv-root) :to-equal pixi-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pixi-virtualenv))
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal pixi-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
-    (spy-on 'pet-use-pixi-p :and-return-value nil)
-    (spy-on 'pet-use-conda-p :and-return-value nil)
-    (spy-on 'pet-use-mamba-p :and-return-value nil)
+    (spy-on 'pet-use-pixi-p )
+    (spy-on 'pet-use-conda-p )
+    (spy-on 'pet-use-mamba-p )
     (spy-on 'pet-use-poetry-p :and-return-value poetry-path)
     (spy-on 'pet-pyproject-path :and-return-value "/home/user/project/pyproject.toml")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert poetry-virtualenv) 0))
     (expect (pet-virtualenv-root) :to-equal poetry-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal poetry-virtualenv)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal poetry-virtualenv)
     (expect 'call-process :to-have-been-called-with poetry-path nil t nil "env" "info" "--no-ansi" "--path"))
 
   (it "should return the absolute path of the virtualenv for a project using `pipenv'"
-    (spy-on 'pet-use-pixi-p :and-return-value nil)
-    (spy-on 'pet-use-conda-p :and-return-value nil)
-    (spy-on 'pet-use-mamba-p :and-return-value nil)
-    (spy-on 'pet-use-poetry-p :and-return-value nil)
+    (spy-on 'pet-use-pixi-p )
+    (spy-on 'pet-use-conda-p )
+    (spy-on 'pet-use-mamba-p )
+    (spy-on 'pet-use-poetry-p )
     (spy-on 'pet-use-pipenv-p :and-return-value pipenv-path)
     (spy-on 'pet-pipfile-path :and-return-value "/home/user/project/Pipfile")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pipenv-virtualenv) 0))
     (expect (pet-virtualenv-root) :to-equal pipenv-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pipenv-virtualenv)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal pipenv-virtualenv)
     (expect 'call-process :to-have-been-called-with pipenv-path nil '(t nil) nil "--quiet" "--venv"))
 
   (it "should return the absolute path of the `.venv' or `venv' directory in a project"
-    (spy-on 'pet-use-pixi-p :and-return-value nil)
-    (spy-on 'pet-use-conda-p :and-return-value nil)
-    (spy-on 'pet-use-mamba-p :and-return-value nil)
-    (spy-on 'pet-use-poetry-p :and-return-value nil)
-    (spy-on 'pet-use-pipenv-p :and-return-value nil)
+    (spy-on 'pet-use-pixi-p )
+    (spy-on 'pet-use-conda-p )
+    (spy-on 'pet-use-mamba-p )
+    (spy-on 'pet-use-poetry-p )
+    (spy-on 'pet-use-pipenv-p )
     (spy-on 'locate-dominating-file :and-return-value project-root)
     (expect (pet-virtualenv-root) :to-equal venv-virtualenv)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal venv-virtualenv))
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal venv-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `pyenv'"
-    (spy-on 'pet-use-pixi-p :and-return-value nil)
-    (spy-on 'pet-use-conda-p :and-return-value nil)
-    (spy-on 'pet-use-mamba-p :and-return-value nil)
-    (spy-on 'pet-use-poetry-p :and-return-value nil)
-    (spy-on 'pet-use-pipenv-p :and-return-value nil)
-    (spy-on 'locate-dominating-file :and-return-value nil)
+    (spy-on 'pet-use-pixi-p )
+    (spy-on 'pet-use-conda-p )
+    (spy-on 'pet-use-mamba-p )
+    (spy-on 'pet-use-poetry-p )
+    (spy-on 'pet-use-pipenv-p )
+    (spy-on 'locate-dominating-file )
     (spy-on 'pet-use-pyenv-p :and-return-value pyenv-path)
     (spy-on 'pet-python-version-path :and-return-value "/home/user/project/.python-version")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pyenv-virtualenv) 0))
     (spy-on 'file-truename :and-call-fake (lambda (name) (when (equal name pyenv-virtualenv) pyenv-virtualenv-truename)))
     (expect (pet-virtualenv-root) :to-equal pyenv-virtualenv-truename)
-    (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal pyenv-virtualenv-truename)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal pyenv-virtualenv-truename)
     (expect 'call-process :to-have-been-called-with pyenv-path nil t nil "prefix"))
 
   (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
-    (setq pet-project-virtualenv-cache `((,project-root . "/home/user/.venvs/env/")))
+    (pet-cache-put (list project-root :virtualenv) "/home/user/.venvs/env/")
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/")))
 
 (describe "pet-pixi-environments"
@@ -1112,7 +1018,7 @@
 
   (describe "when pixi is not available"
     (before-each
-      (spy-on 'pet-use-pixi-p :and-return-value nil))
+      (spy-on 'pet-use-pixi-p ))
 
     (it "should return nil"
       (expect (pet-pixi-environments) :to-be nil))))
@@ -1156,7 +1062,7 @@
 
   (describe "when conda is not available"
     (before-each
-      (spy-on 'pet-use-conda-p :and-return-value nil))
+      (spy-on 'pet-use-conda-p ))
 
     (it "should return nil"
       (expect (pet-conda-environments) :to-be nil))))
@@ -1200,7 +1106,7 @@
 
   (describe "when mamba is not available"
     (before-each
-      (spy-on 'pet-use-mamba-p :and-return-value nil))
+      (spy-on 'pet-use-mamba-p ))
 
     (it "should return nil"
       (expect (pet-mamba-environments) :to-be nil))))
@@ -1214,6 +1120,7 @@
         (other-project-buffer nil))
 
   (before-each
+    (setq-local pet-cache nil)
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-pixi-environments :and-return-value
             (list other-env-path env-path))
@@ -1241,7 +1148,7 @@
     (when buffer-a (kill-buffer buffer-a))
     (when buffer-b (kill-buffer buffer-b))
     (when other-project-buffer (kill-buffer other-project-buffer))
-    (setq pet-project-virtualenv-cache nil))
+    (kill-local-variable 'pet-cache))
 
   (describe "basic functionality"
     (it "should update virtualenv cache with selected environment"
@@ -1250,7 +1157,7 @@
 
       (pet-pixi-switch-environment env-path)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache)
+      (expect (pet-cache-get (list project-root :virtualenv))
               :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
@@ -1332,12 +1239,12 @@
 
       (call-interactively #'pet-pixi-switch-environment)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache)
+      (expect (pet-cache-get (list project-root :virtualenv))
               :to-equal other-env-path)))
 
   (describe "error handling"
     (it "should handle when no project root is found"
-      (spy-on 'pet-project-root :and-return-value nil)
+      (spy-on 'pet-project-root )
       (spy-on 'pet-buffer-local-vars-teardown)
       (spy-on 'pet-buffer-local-vars-setup)
 
@@ -1353,7 +1260,7 @@
 
       (pet-pixi-switch-environment env-path)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal env-path)
+      (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
       (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
 
 (describe "pet-conda-switch-environment"
@@ -1365,6 +1272,7 @@
         (other-project-buffer nil))
 
   (before-each
+    (setq-local pet-cache nil)
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-conda-environments :and-return-value
             (list other-env-path env-path))
@@ -1392,7 +1300,7 @@
     (when buffer-a (kill-buffer buffer-a))
     (when buffer-b (kill-buffer buffer-b))
     (when other-project-buffer (kill-buffer other-project-buffer))
-    (setq pet-project-virtualenv-cache nil))
+    (kill-local-variable 'pet-cache))
 
   (describe "basic functionality"
     (it "should update virtualenv cache with selected environment"
@@ -1401,7 +1309,7 @@
 
       (pet-conda-switch-environment env-path)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache)
+      (expect (pet-cache-get (list project-root :virtualenv))
               :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
@@ -1482,12 +1390,12 @@
 
       (call-interactively #'pet-conda-switch-environment)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache)
+      (expect (pet-cache-get (list project-root :virtualenv))
               :to-equal other-env-path)))
 
   (describe "error handling"
     (it "should handle when no project root is found"
-      (spy-on 'pet-project-root :and-return-value nil)
+      (spy-on 'pet-project-root )
       (spy-on 'pet-buffer-local-vars-teardown)
       (spy-on 'pet-buffer-local-vars-setup)
 
@@ -1503,7 +1411,7 @@
 
       (pet-conda-switch-environment env-path)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal env-path)
+      (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
       (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
 
 (describe "pet-mamba-switch-environment"
@@ -1515,6 +1423,7 @@
         (other-project-buffer nil))
 
   (before-each
+    (setq-local pet-cache nil)
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-mamba-environments :and-return-value
             (list other-env-path env-path))
@@ -1542,7 +1451,7 @@
     (when buffer-a (kill-buffer buffer-a))
     (when buffer-b (kill-buffer buffer-b))
     (when other-project-buffer (kill-buffer other-project-buffer))
-    (setq pet-project-virtualenv-cache nil))
+    (kill-local-variable 'pet-cache))
 
   (describe "basic functionality"
     (it "should update virtualenv cache with selected environment"
@@ -1551,7 +1460,7 @@
 
       (pet-mamba-switch-environment env-path)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache)
+      (expect (pet-cache-get (list project-root :virtualenv))
               :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
@@ -1632,12 +1541,12 @@
 
       (call-interactively #'pet-mamba-switch-environment)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache)
+      (expect (pet-cache-get (list project-root :virtualenv))
               :to-equal other-env-path)))
 
   (describe "error handling"
     (it "should handle when no project root is found"
-      (spy-on 'pet-project-root :and-return-value nil)
+      (spy-on 'pet-project-root )
       (spy-on 'pet-buffer-local-vars-teardown)
       (spy-on 'pet-buffer-local-vars-setup)
 
@@ -1653,7 +1562,7 @@
 
       (pet-mamba-switch-environment env-path)
 
-      (expect (assoc-default project-root pet-project-virtualenv-cache) :to-equal env-path)
+      (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
       (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
 
 (describe "pet-flycheck-python-pylint-find-pylintrc"
@@ -1710,7 +1619,7 @@
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/.pylintrc"))
 
   (it "should return the absolute path to `pylintrc' from `/etc'"
-    (spy-on 'file-exists-p :and-return-value nil)
+    (spy-on 'file-exists-p )
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/etc/pylintrc")))
 
 (describe "pet-flycheck-toggle-local-vars"
@@ -1889,7 +1798,7 @@
   (it "should pass PATH to FN directly if it's a not directory"
     (spy-on 'mock-eglot--workspace-configuration-plist)
     (spy-on 'process-command :and-return-value '("/usr/bin/jedi-language-server"))
-    (spy-on 'file-directory-p :and-return-value nil)
+    (spy-on 'file-directory-p )
 
     (pet-eglot--workspace-configuration-plist-advice
      'mock-eglot--workspace-configuration-plist
@@ -2205,8 +2114,7 @@
 
 (describe "pet-dape-setup"
   (before-each
-    (spy-on 'pet-find-file-from-project-root-natively)
-    (spy-on 'pet-find-file-from-project-root-recursively)
+    (spy-on 'pet-find-file-from-project)
     (spy-on 'pet-executable-find :and-return-value "/usr/bin/python"))
 
   (it "should set up buffer local variable dape-command when no __main__.py is found"
@@ -2215,7 +2123,7 @@
     (expect dape-command :to-equal '(debugpy command "/usr/bin/python")))
 
   (it "should set up buffer local variable dape-command when a __main__.py is found"
-    (spy-on 'pet-find-file-from-project-root-recursively :and-return-value "/home/user/project/src/foo/bar/__main__.py")
+    (spy-on 'pet-find-file-from-project :and-return-value "/home/user/project/src/foo/bar/__main__.py")
     (spy-on 'file-exists-p :and-call-fake
             (lambda (path)
               (member path
@@ -2557,7 +2465,7 @@
       (expect 'add-hook :to-have-been-called-with 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))
 
     (it "should call pixi environment switch when pixi is detected and no cached virtualenv"
-      (spy-on 'assoc-default :and-return-value nil)
+      (spy-on 'assoc-default )
       (spy-on 'pet-use-pixi-p :and-return-value "/usr/bin/pixi")
       (spy-on 'call-interactively)
       (pet-mode 1)
@@ -2565,8 +2473,8 @@
       (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
     (it "should call conda environment switch when conda is detected and no cached virtualenv and pixi not available"
-      (spy-on 'assoc-default :and-return-value nil)
-      (spy-on 'pet-use-pixi-p :and-return-value nil)
+      (spy-on 'assoc-default )
+      (spy-on 'pet-use-pixi-p )
       (spy-on 'pet-use-conda-p :and-return-value "/usr/bin/conda")
       (spy-on 'call-interactively)
       (pet-mode 1)
@@ -2574,9 +2482,9 @@
       (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
     (it "should call mamba environment switch when mamba is detected and no cached virtualenv and pixi/conda not available"
-      (spy-on 'assoc-default :and-return-value nil)
-      (spy-on 'pet-use-pixi-p :and-return-value nil)
-      (spy-on 'pet-use-conda-p :and-return-value nil)
+      (spy-on 'assoc-default )
+      (spy-on 'pet-use-pixi-p )
+      (spy-on 'pet-use-conda-p )
       (spy-on 'pet-use-mamba-p :and-return-value "/usr/bin/mamba")
       (spy-on 'call-interactively)
       (pet-mode 1)
@@ -2584,10 +2492,10 @@
       (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
     (it "should set up buffer local vars when no environment managers are detected"
-      (spy-on 'assoc-default :and-return-value nil)
-      (spy-on 'pet-use-pixi-p :and-return-value nil)
-      (spy-on 'pet-use-conda-p :and-return-value nil)
-      (spy-on 'pet-use-mamba-p :and-return-value nil)
+      (spy-on 'assoc-default )
+      (spy-on 'pet-use-pixi-p )
+      (spy-on 'pet-use-conda-p )
+      (spy-on 'pet-use-mamba-p )
       (pet-mode 1)
       (expect 'pet-buffer-local-vars-setup :to-have-been-called)))
 
@@ -2597,189 +2505,6 @@
       (expect 'pet-buffer-local-vars-teardown :to-have-been-called)
       (expect 'remove-hook :to-have-been-called-with 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))))
 
-(describe "pet-cleanup-watchers-and-caches"
-  (describe "when pre-conditions are not met"
-    :var ((project-root-a "/home/user/project-a/")
-          (config-file-a "/home/user/project-a/pyproject.toml")
-          (mock-watcher-a 'mock-watcher-a))
-
-    (before-each
-      (setq pet-config-cache-vars '(pet-pyproject-cache pet-environment-cache))
-      ;; Set up initial state that should remain unchanged
-      (setq pet-project-virtualenv-cache `((,project-root-a . "/venv/a")))
-      (setq pet-watched-config-files `((,config-file-a . ,mock-watcher-a)))
-      (setq pet-pyproject-cache `((,config-file-a . test-data))))
-
-    (after-each
-      ;; Reset all caches
-      (setq pet-project-virtualenv-cache nil)
-      (setq pet-watched-config-files nil)
-      (setq pet-pyproject-cache nil)
-      (setq pet-environment-cache nil))
-
-    (it "should not modify anything when buffer has no file name"
-      (with-temp-buffer
-        (pet-cleanup-watchers-and-caches)
-
-        (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
-        (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
-        (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data)))
-
-    (it "should not modify anything when buffer is not python-mode"
-      (with-temp-buffer
-        (setq buffer-file-name "/some/file.txt")
-        (pet-cleanup-watchers-and-caches)
-
-        (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
-        (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
-        (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data)))
-
-    (it "should not modify anything when project root cannot be determined"
-      (with-temp-buffer
-        (setq buffer-file-name "/some/file.py")
-        (python-mode)
-        (spy-on 'pet-project-root :and-return-value nil)
-
-        (pet-cleanup-watchers-and-caches)
-
-        (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
-        (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
-        (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data))))
-
-  (describe "when pre-conditions are met"
-    :var ((project-root-a "/home/user/project-a/")
-          (project-root-b "/home/user/project-b/")
-          (config-file-a "/home/user/project-a/pyproject.toml")
-          (config-file-b "/home/user/project-b/environment.yml")
-          (mock-watcher-a 'mock-watcher-a)
-          (mock-watcher-b 'mock-watcher-b)
-          (other-buffer-a nil)
-          (other-buffer-b nil))
-
-    (before-each
-      (setq pet-config-cache-vars '(pet-pyproject-cache pet-environment-cache))
-      (spy-on 'file-notify-rm-watch))
-
-    (after-each
-      ;; Clean up test buffers
-      (when (and other-buffer-a (buffer-live-p other-buffer-a)) (kill-buffer other-buffer-a))
-      (when (and other-buffer-b (buffer-live-p other-buffer-b)) (kill-buffer other-buffer-b))
-      ;; Reset all caches
-      (setq pet-project-virtualenv-cache nil)
-      (setq pet-watched-config-files nil)
-      (setq pet-pyproject-cache nil)
-      (setq pet-environment-cache nil))
-
-    (describe "when other python buffers exist in project"
-      (it "should not clean up anything"
-        (with-temp-buffer
-          (setq buffer-file-name "/home/user/project-a/main.py")
-          (python-mode)
-          (spy-on 'pet-project-root :and-return-value project-root-a)
-
-          ;; Set up other buffer in same project
-          (setq other-buffer-a (get-buffer-create "other-a"))
-          (with-current-buffer other-buffer-a
-            (setq buffer-file-name "/home/user/project-a/module.py")
-            (python-mode))
-
-          ;; Set up initial cache state
-          (setq pet-project-virtualenv-cache `((,project-root-a . "/venv/a") (,project-root-b . "/venv/b")))
-          (setq pet-watched-config-files `((,config-file-a . ,mock-watcher-a) (,config-file-b . ,mock-watcher-b)))
-          (setq pet-pyproject-cache `((,config-file-a . test-data-a) (,config-file-b . test-data-b)))
-
-          (pet-cleanup-watchers-and-caches)
-
-          ;; Nothing should be cleaned up
-          (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-equal "/venv/a")
-          (expect (assoc-default project-root-b pet-project-virtualenv-cache) :to-equal "/venv/b")
-          (expect (assoc-default config-file-a pet-watched-config-files) :to-equal mock-watcher-a)
-          (expect (assoc-default config-file-b pet-watched-config-files) :to-equal mock-watcher-b)
-          (expect (assoc-default config-file-a pet-pyproject-cache) :to-equal 'test-data-a)
-          (expect (assoc-default config-file-b pet-pyproject-cache) :to-equal 'test-data-b)
-          (expect 'file-notify-rm-watch :not :to-have-been-called))))
-
-    (describe "when no other python buffers exist in project"
-      (it "should clear virtualenv cache for project only"
-        (with-temp-buffer
-          (setq buffer-file-name "/home/user/project-a/main.py")
-          (python-mode)
-          (spy-on 'pet-project-root :and-return-value project-root-a)
-
-          ;; Set up other buffer in different project
-          (setq other-buffer-b (get-buffer-create "other-b"))
-          (with-current-buffer other-buffer-b
-            (setq buffer-file-name "/home/user/project-b/other.py")
-            (python-mode))
-
-          (setq pet-project-virtualenv-cache
-                `((,project-root-a . "/venv/a") (,project-root-b . "/venv/b")))
-
-          (pet-cleanup-watchers-and-caches)
-
-          (expect (assoc-default project-root-a pet-project-virtualenv-cache) :to-be nil)
-          (expect (assoc-default project-root-b pet-project-virtualenv-cache) :to-equal "/venv/b")))
-
-      (it "should remove file watchers for project files only"
-        (with-temp-buffer
-          (setq buffer-file-name "/home/user/project-a/main.py")
-          (python-mode)
-          (spy-on 'pet-project-root :and-return-value project-root-a)
-
-          ;; Set up other buffer in different project
-          (setq other-buffer-b (get-buffer-create "other-b"))
-          (with-current-buffer other-buffer-b
-            (setq buffer-file-name "/home/user/project-b/other.py")
-            (python-mode))
-
-          (setq pet-watched-config-files
-                `((,config-file-a . ,mock-watcher-a) (,config-file-b . ,mock-watcher-b)))
-
-          (pet-cleanup-watchers-and-caches)
-
-          (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-a)
-          (expect 'file-notify-rm-watch :not :to-have-been-called-with mock-watcher-b)
-          (expect (assoc-default config-file-a pet-watched-config-files) :to-be nil)
-          (expect (assoc-default config-file-b pet-watched-config-files) :to-equal mock-watcher-b)))
-
-      (it "should clear all config caches for project only"
-        (with-temp-buffer
-          (setq buffer-file-name "/home/user/project-a/main.py")
-          (python-mode)
-          (spy-on 'pet-project-root :and-return-value project-root-a)
-
-          ;; Set up other buffer in different project
-          (setq other-buffer-b (get-buffer-create "other-b"))
-          (with-current-buffer other-buffer-b
-            (setq buffer-file-name "/home/user/project-b/other.py")
-            (python-mode))
-
-          (setq pet-pyproject-cache
-                `((,config-file-a . test-data-a) (,config-file-b . test-data-b)))
-          (setq pet-environment-cache
-                `((,config-file-a . env-data-a) (,config-file-b . env-data-b)))
-
-          (pet-cleanup-watchers-and-caches)
-
-          (expect (assoc-default config-file-a pet-pyproject-cache) :to-be nil)
-          (expect (assoc-default config-file-b pet-pyproject-cache) :to-equal 'test-data-b)
-          (expect (assoc-default config-file-a pet-environment-cache) :to-be nil)
-          (expect (assoc-default config-file-b pet-environment-cache) :to-equal 'env-data-b)))
-
-      (it "should handle empty caches gracefully"
-        (with-temp-buffer
-          (setq buffer-file-name "/home/user/project-a/main.py")
-          (python-mode)
-          (spy-on 'pet-project-root :and-return-value project-root-a)
-
-          ;; Ensure caches are empty
-          (setq pet-project-virtualenv-cache nil)
-          (setq pet-watched-config-files nil)
-          (setq pet-pyproject-cache nil)
-          (setq pet-environment-cache nil)
-
-          (expect (pet-cleanup-watchers-and-caches) :not :to-throw)
-          (expect 'file-notify-rm-watch :not :to-have-been-called))))))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)

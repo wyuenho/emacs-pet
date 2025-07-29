@@ -104,11 +104,11 @@ Each function should take a file name as its sole argument and
 return an absolute path to the file found in the current project
 and nil otherwise."
   :group 'pet
-  :type '(repeat (choice (const pet-find-file-from-project-root)
-                         (const pet-locate-dominating-file)
-                         (const pet-find-file-from-project-root-natively)
-                         (const pet-find-file-from-project-root-recursively)
-                         function)))
+  :options '(pet-find-file-from-project-root
+             pet-locate-dominating-file
+             pet-find-file-from-project-root-natively
+             pet-find-file-from-project-root-recursively)
+  :type 'hook)
 
 (defcustom pet-venv-dir-names '(".venv" "venv" "env")
   "Directory names to search for when looking for a virtualenv at the project root."
@@ -126,7 +126,7 @@ and nil otherwise."
   :group 'pet)
 
 (defcustom pet-search-globally t
-  "Whether `pet-executable-find' should search outside of the project's virtualenvs.
+  "Whether PET should search executables beyond the project's virtualenvs.
 
 If you need to configure this value, it is likely that you'd want a
 different value depending the project you are working on.  If so, you
@@ -174,6 +174,167 @@ Only reports to the minibuffer if `pet-debug' is non-nil."
   (when pet-debug
     (minibuffer-message (error-message-string err)))
   nil)
+
+
+
+;;; Unified Cache Infrastructure
+
+(defvar pet-cache nil
+  "Unified cache for project-scoped pet data.
+
+Structure: nested alists accessible by path lists.  All paths start with project
+root, followed by category and optional key.
+
+Project-scoped categories:
+- `:virtualenv' - direct value (project virtualenv path)
+- `:files' - (file-pattern . resolved-path) pairs
+- `:configs' - (config-file-path . parsed-content) pairs
+- `:file-watchers' - (config-file-path . watcher-descriptor) pairs
+
+Examples:
+- (pet-cache-get \='(\"/project\" :virtualenv))
+- (pet-cache-get \='(\"/project\" :configs \"pyproject.toml\"))
+- (pet-cache-get \='(\"/project\" :files \"*.py\"))
+
+Cache Invariant Rules:
+1. Strong Invariant (bidirectional): `:configs' ↔ `:file-watchers'
+   - If an entry exists in `:configs', it MUST have a corresponding entry in
+     `:file-watchers'
+   - If an entry exists in `:file-watchers', it MUST have a corresponding entry
+     in `:configs'
+
+2. Weak Invariant (unidirectional): `:configs' → `:files'
+   - If an entry exists in `:configs', the file path MUST exist as a value in
+     some `:files' entry
+   - But `:files' entries can exist without corresponding `:configs' entries
+
+3. No Invariant: :files entries are independent
+   - `:files' can contain any discovered file paths, regardless of parsing needs
+
+Note: System-wide data like pre-commit database uses dedicated variables,
+not this cache.")
+
+(defun pet-cache-get (path)
+  "Get value at PATH in cache.  PATH is a list of keys."
+
+  (let ((keys path)
+        (subtree pet-cache))
+    (while keys
+      (setq subtree (alist-get (pop keys) subtree nil nil 'equal)))
+    subtree))
+
+(defun pet-cache-put (path value)
+  "Put VALUE at PATH in cache, creating intermediate alists as needed."
+  (unless path
+    (error "Path cannot be nil"))
+
+  (let ((section pet-cache)
+        (keys path)
+        key parent)
+    ;; Navigate as far as possible through existing cache structure
+    ;; Stop when we hit the end of the path or a key where its value is nil
+    (while (and keys (alist-get (car keys) section nil nil 'equal))
+      (setq key (pop keys)          ; Remember current key for parent updates
+            parent section          ; Remember parent for later modification
+            section (alist-get key section nil nil 'equal))) ; Move to next level
+
+    ;; Case 1: Full path has non-nil value - just update the value at the end
+    (if (and (not keys) section)
+        ;; Direct update of existing path's value
+        (setf (alist-get key parent nil nil 'equal) value)
+
+      ;; Case 2: Need to create missing structure for remaining keys
+      ;; Build nested structure from the inside out (reverse key order)
+      (let ((keys (reverse keys))
+            (subtree value))
+
+        ;; Build nested alist structure: each key wraps the previous structure
+        ;; Example: keys '(:virtualenv "/project") becomes
+        ;; '("/project" . ((:virtualenv . value)))
+        (while keys
+          (setq subtree (list (cons (pop keys) subtree))))
+
+        ;; Add the new structure to the existing cache
+        ;; subtree is now '((outermost-key . nested-structure))
+        (setf (alist-get (car (car subtree)) section nil nil 'equal) (cdr (car subtree)))
+
+        ;; Update the cache hierarchy: either update parent or global cache
+        (if parent
+            ;; We navigated partway - update the parent to point to modified section
+            (setf (alist-get key parent nil nil 'equal) section)
+          ;; We're at top level - update the global cache variable
+          (setq pet-cache section))))))
+
+(defun pet-cache-rem (path)
+  "Remove value at PATH in cache.
+
+Removes the entry completely from the alist structure."
+  (let* ((keys path)
+         (section pet-cache)
+         key parent)
+    ;; Navigate to the parent of the target entry
+    ;; Stop one level before the final key so we can modify the parent
+    (while (cdr keys)
+      (setq key (pop keys)          ; Remember current key for parent updates
+            parent section          ; Remember parent for later modification
+            section (alist-get key section nil nil 'equal))) ; Move to next level
+
+    ;; Remove the target entry using setf with 't' flag for removal
+    ;; This completely removes the key-value pair from the alist
+    (setf (alist-get (car keys) section nil t 'equal) nil)
+
+    ;; Update the cache hierarchy to reflect the removal
+    (if parent
+        ;; We navigated down - update the parent to point to modified section
+        (setf (alist-get key parent nil nil 'equal) section)
+      ;; We're at top level - update the global cache directly
+      (setf (alist-get (car keys) pet-cache nil t 'equal) nil))))
+
+;;; High-level Cache Management Functions
+
+(defun pet-setup-config-cache-and-watcher (absolute-path parser)
+  "Parse and cache config file content, set up file watcher.
+
+ABSOLUTE-PATH is the absolute path to the config file.  PARSER is the
+function to parse the file content.
+
+This function maintains the strong cache invariant between `:configs' and
+`:file-watchers':
+1. Parsing and caching the content in `:configs' category
+2. Setting up file watcher and caching handle in `:file-watchers' category
+
+Note: File path should already be cached in `:files' category by
+`pet-find-file-from-project'."
+  (when-let ((root (pet-project-root)))
+    (pet-cache-put (list root :configs absolute-path) (funcall parser absolute-path))
+
+    (unless (pet-cache-get (list root :file-watchers absolute-path))
+      (let ((watcher (file-notify-add-watch
+                      absolute-path
+                      '(change)
+                      (pet-make-config-file-change-callback parser))))
+        (pet-cache-put (list root :file-watchers absolute-path) watcher)))))
+
+(defun pet-teardown-config-cache-and-watcher (absolute-path)
+  "Remove config cache and file watcher.
+
+ABSOLUTE-PATH is the absolute path to the config file to remove.
+
+This function maintains the strong cache invariant between `:configs' and
+`:file-watchers':
+1. Removing file watcher and cleaning up handle from `:file-watchers' category
+2. Removing parsed content from `:configs' category
+
+Note: `:files' entries are left intact as they can exist independently
+of config parsing."
+  (when-let ((root (pet-project-root)))
+    (when-let ((watcher (pet-cache-get (list root :file-watchers absolute-path))))
+      (file-notify-rm-watch watcher)
+      (pet-cache-rem (list root :file-watchers absolute-path)))
+
+    (pet-cache-rem (list root :configs absolute-path))))
+
+
 
 (defun pet-project-root ()
   "Return the path of root of the project.
@@ -262,7 +423,11 @@ Return absolute path to FILE if found, nil otherwise."
 Try each function in `pet-find-file-functions' in order and
 return the absolute path found by the first function, nil
 otherwise."
-  (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions))
+  (when-let* ((root (pet-project-root)))
+    (or (pet-cache-get (list root :files file))
+        (when-let* ((result (run-hook-with-args-until-success 'pet-find-file-functions file)))
+          (pet-cache-put (list root :files file) result)
+          result))))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
@@ -322,48 +487,26 @@ otherwise."
 
     (error (pet-report-error err))))
 
-(defvar pet-watched-config-files nil)
 
-(defun pet-make-config-file-change-callback (cache-var parser)
+(defun pet-make-config-file-change-callback (parser)
   "Make callback for `file-notify-add-watch'.
 
-Return a callback with CACHE-VAR and PARSER captured in its environment.
-CACHE-VAR is the symbol to the cache variable to update.  PARSER is the
-symbol to the parser to parse the file.
+Return a callback with PARSER captured in its environment.
+PARSER is the symbol to the parser to parse the file.
+The callback updates the unified cache system.
 
 When invoked, the callback returned will parse the file with
-PARSER and cache the result in CACHE-VAR if the file was changed.
-If the file was deleted or renamed, remove the file's watcher,
-and delete the file entry from CACHE-VAR and
-`pet-watched-config-files'."
+PARSER and update the unified cache if the file was changed.
+If the file was deleted or renamed, remove the file's watcher
+and cache entries while maintaining the cache invariant."
   (lambda (event)
     (pcase-let ((`(,_ ,action ,file . ,_) event))
       (pcase action
         ((or 'deleted 'renamed)
-         (file-notify-rm-watch (assoc-default file pet-watched-config-files))
-         (setf (alist-get file (symbol-value cache-var) nil t 'equal) nil)
-         (setf (alist-get file pet-watched-config-files nil t 'equal) nil))
+         (pet-teardown-config-cache-and-watcher file))
         ('changed
-         (setf (alist-get file (symbol-value cache-var) nil nil 'equal)
-               (funcall parser file)))))))
+         (pet-cache-put (list (pet-project-root) :configs file) (funcall parser file)))))))
 
-(defun pet-watch-config-file (config-file cache-var parser)
-  "Keep cache fresh by watching for change in the config file.
-
-CONFIG-FILE is the path to the configuration file to watch for
-changes.  CACHE-VAR is the symbol to the variable where the
-parsed configuration file content is stored.  PARSER is the
-symbol to a function that takes a file path and parses its
-content into an alist."
-  (unless (assoc-default config-file pet-watched-config-files)
-    (push (cons config-file
-                (file-notify-add-watch
-                 config-file
-                 '(change)
-                 (pet-make-config-file-change-callback cache-var parser)))
-          pet-watched-config-files)))
-
-(defvar pet-config-cache-vars nil)
 
 (cl-defmacro pet-def-config-accessor (name &key file-name parser)
   "Create a function for reading the content of a config file.
@@ -373,53 +516,39 @@ return the content of the configuration file FILE-NAME.  FILE-NAME is
 the name or glob pattern of the configuration file that will be searched
 in the project.
 
-
-The content of the file will be parsed by PARSER and then cached in a
-variable called `pet-NAME-cache'.  Changes to the file will
-automatically update the cached content.  See `pet-watch-config-file'
-for details."
+The content of the file will be parsed by PARSER and then cached in the
+unified cache system.  Changes to the file will automatically update the
+cached content and maintain the cache invariant."
   (declare (indent defun))
   (let* ((accessor-name (concat "pet-" (symbol-name name)))
          (path-accessor-name (concat accessor-name "-path"))
-         (cache-var (intern (concat accessor-name "-cache")))
          (accessor-docstring
           (format "Accessor for `%s' in the current Python project.
 
 If the file is found in the current Python project, cache its content in
-`%s' and return it.
+the unified cache system and return it.
 
-If the file content change, it is parsed again and the cache is
-refreshed automatically.  If it is renamed or deleted, the cache entry
-is deleted.
+If the file content changes, it is parsed again and the cache is
+refreshed automatically while maintaining the cache invariant.  If it is
+renamed or deleted, all related cache entries are cleaned up.
 "
-                  name (symbol-name cache-var)))
+                  name))
          (path-accessor-docstring (format "Path of `%s' in the current Python project.
 
-Return nil if the file is not found." file-name))
-         (cache-var-docstring
-          (format "Cache for `%s'.
-
-This variable is an alist where the key is the absolute path to the `%s'
-in a Python project and the value is the parsed content.
-" name file-name)))
+Return nil if the file is not found." file-name)))
     `(progn
-       (defvar ,cache-var nil ,cache-var-docstring)
-
-       (push ',cache-var pet-config-cache-vars)
-
        (defun ,(intern path-accessor-name) ()
          ,path-accessor-docstring
          (pet-find-file-from-project ,file-name))
 
        (defun ,(intern accessor-name) ()
          ,accessor-docstring
-         (when-let*((config-file (,(intern path-accessor-name))))
-           (if-let* ((cached-content (assoc-default config-file ,cache-var)))
-               cached-content
-             (pet-watch-config-file config-file ',cache-var #',parser)
-             (when-let*((content (funcall #',parser config-file)))
-               (push (cons config-file content) ,cache-var)
-               content)))))))
+         (when-let* ((config-file (,(intern path-accessor-name)))
+                     (root (pet-project-root)))
+           (or (pet-cache-get (list root :configs config-file))
+               (progn
+                 (pet-setup-config-cache-and-watcher config-file #',parser)
+                 (pet-cache-get (list root :configs config-file)))))))))
 
 (pet-def-config-accessor pre-commit-config
   :file-name ".pre-commit-config.yaml"
@@ -544,7 +673,11 @@ Read the pre-commit SQLite database located at DB-FILE into an alist."
           (pet-parse-json (buffer-string)))
       (error (pet-report-error err)))))
 
-(defvar pet-pre-commit-database-cache nil)
+(defvar pet-pre-commit-database-cache nil
+  "Cached pre-commit database content (system-wide).")
+
+(defvar pet-pre-commit-database-watcher nil
+  "File watcher for pre-commit database file (system-wide).")
 
 (defun pet-pre-commit-virtualenv-path (hook-id)
   "Find the virtualenv location from the `pre-commit' database.
@@ -565,13 +698,27 @@ must both be installed into the current project first."
                       "~/.cache/")))
                 (unless (getenv "PRE_COMMIT_HOME") "pre-commit/")
                 "db.db"))
-
               (db
-               (or (assoc-default db-file pet-pre-commit-database-cache)
+               (or pet-pre-commit-database-cache
                    (when (file-exists-p db-file)
-                     (pet-watch-config-file db-file 'pet-pre-commit-database-cache 'pet-parse-pre-commit-db)
-                     (when-let*((content (pet-parse-pre-commit-db db-file)))
-                       (push (cons db-file content) pet-pre-commit-database-cache)
+                     (let ((content (pet-parse-pre-commit-db db-file)))
+                       (setq pet-pre-commit-database-cache content)
+                       ;; Set up file watcher for system database
+                       (unless pet-pre-commit-database-watcher
+                         (setq pet-pre-commit-database-watcher
+                               (file-notify-add-watch
+                                db-file
+                                '(change)
+                                (lambda (event)
+                                  (pcase-let ((`(,_ ,action . ,_) event))
+                                    (pcase action
+                                      ((or 'deleted 'renamed)
+                                       (setq pet-pre-commit-database-cache nil)
+                                       (when pet-pre-commit-database-watcher
+                                         (file-notify-rm-watch pet-pre-commit-database-watcher)
+                                         (setq pet-pre-commit-database-watcher nil)))
+                                      ('changed
+                                       (setq pet-pre-commit-database-cache (pet-parse-pre-commit-db db-file)))))))))
                        content))))
 
               (repo-config
@@ -661,7 +808,6 @@ continues to look in `pyenv', then finally from the variable
           (t (or (pet--executable-find executable t)
                  (pet--executable-find (concat executable "3") t))))))
 
-(defvar pet-project-virtualenv-cache nil)
 
 ;;;###autoload
 (defun pet-virtualenv-root ()
@@ -678,7 +824,7 @@ Selects a virtualenv in the follow order:
 6. If the current project is using `pyenv', return the path to the virtualenv
    directory by looking up the prefix from `.python-version'."
   (let ((root (pet-project-root)))
-    (or (assoc-default root pet-project-virtualenv-cache)
+    (or (pet-cache-get (list root :virtualenv))
         (let ((venv-path
                (cond ((when-let* ((ev (or (getenv "VIRTUAL_ENV")
                                           (and (or (pet-use-pixi-p)
@@ -723,26 +869,25 @@ Selects a virtualenv in the follow order:
                           (error (pet-report-error err))))))))
           ;; root maybe nil when not in a project, this avoids caching a nil
           (when root
-            (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) venv-path))
+            (pet-cache-put (list root :virtualenv) venv-path))
           venv-path))))
 
 (cl-defmacro pet-def-env-list (name &key args parse-output)
-  "Define a function to get a list of environments from a Python environment manager.
+  "Define an environment listing function.
 
-NAME is the environment manager name.  It will be used to look up a
+NAME is the environment manager's name.  It will be used to look up a
 `pet-use-NAME-p' function that determines whether this environment
 manager is applicable to the current project, and the path of the
 environment manager program.
 
 The other required keyboard arguments are:
 
-:args - a list of strings.  Command-line arguments to the environment
-manager program that contains a listing of environments.
+ARGS is a list of command-line argument strings to the environment
+manager program to display a listing of environments.
 
-:parse-output - sexp.  Expression that parses the output of the
-environment manager program, made available as the variable `output',
-for a list of environments.  This expression must return a list of
-strings."
+PARSE-OUTPUT is an expression that parses the output of the environment
+manager program, made available as the variable `output', for a list of
+environments.  This expression must return a list of strings."
   (declare (indent defun))
   (let ((env-list-fn (intern (format "pet-%s-environments" name)))
         (use-prog-fn (intern (format "pet-use-%s-p" name)))
@@ -776,15 +921,15 @@ strings."
   (let-alist (pet-parse-json output) .envs))
 
 (cl-defmacro pet-def-env-switch (name &key env-list-fn prompt-text (env-var "CONDA_PREFIX"))
-  "Define an environment switching function for different Python environment managers.
+  "Define a environment switching function.
 
 NAME is the environment manager name.
 
 The following are the keyword arguments:
 
-:env-list-fn is the function name that returns available environments.
-:prompt-text is the text to display in the completion prompt.
-:env-var is the environment variable to set."
+`ENV-LIST-FN' is the function name that returns available environments.
+`PROMPT-TEXT' is the text to display in the completion prompt.
+`ENV-VAR' is the environment variable to set."
   (declare (indent defun))
   (let ((switch-fn (intern (format "pet-%s-switch-environment" name)))
         (name-str (symbol-name name))
@@ -799,7 +944,7 @@ returned by `%s'." name name env-list-fn)))
          (completing-read ,prompt-text (,env-list-fn) nil t)))
 
        (when-let* ((root (pet-project-root)))
-         (setf (alist-get root pet-project-virtualenv-cache nil nil 'equal) env)
+         (pet-cache-put (list root :virtualenv) env)
 
          (when-let* ((project-buffers (cl-loop for buffer in (buffer-list)
                                                when (with-current-buffer buffer
@@ -1135,8 +1280,7 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 
 (defun pet-dape-setup ()
   "Set up the buffer local variables for `dape'."
-  (if-let* ((main (or (pet-find-file-from-project-root-natively "__main__.py")
-                      (pet-find-file-from-project-root-recursively "__main__.py")))
+  (if-let* ((main (pet-find-file-from-project "__main__.py"))
             (module (let* ((dir (file-name-directory main))
                            (dir-file-name (directory-file-name dir))
                            (module))
@@ -1397,7 +1541,7 @@ has assigned to."
   (if pet-mode
       (progn
         (cl-block nil
-          (unless (assoc-default (pet-project-root) pet-project-virtualenv-cache)
+          (unless (pet-cache-get (list (pet-project-root) :virtualenv))
             (cond ((pet-use-pixi-p)
                    (call-interactively #'pet-pixi-switch-environment)
                    (cl-return))
@@ -1419,25 +1563,32 @@ Delete configuration file caches and watchers when all
 `python-mode' buffers of a project have been closed."
   (when (and (buffer-file-name)
              (derived-mode-p 'python-base-mode 'python-mode))
-    (when-let*((root (pet-project-root)))
+    (when-let* ((root (pet-project-root)))
       (unless (cl-loop for buf in (buffer-list)
                        if (and (not (equal buf (current-buffer)))
+                               (buffer-file-name buf)
                                (string-prefix-p root (buffer-file-name buf))
                                (with-current-buffer buf
                                  (derived-mode-p 'python-base-mode 'python-mode)))
                        return buf)
+        ;; Remove file watchers first (before cache is gone)
+        (when-let* ((watchers-section (pet-cache-get (list root :file-watchers))))
+          (pcase-dolist (`(,_path . ,watcher) watchers-section)
+            (file-notify-rm-watch watcher)))
 
-        (setf (alist-get root pet-project-virtualenv-cache nil t 'equal) nil)
+        ;; Remove entire project cache
+        (pet-cache-rem (list root))))
 
-        (pcase-dolist (`(,config-file . ,watcher) pet-watched-config-files)
-          (when (string-prefix-p root config-file)
-            (file-notify-rm-watch watcher)
-            (setf (alist-get config-file pet-watched-config-files nil t 'equal) nil)))
+    (unless (cl-loop for buf in (buffer-list)
+                     if (and (not (equal buf (current-buffer)))
+                             (with-current-buffer buf
+                               (derived-mode-p 'python-base-mode 'python-mode)))
+                     return buf)
 
-        (dolist (cache pet-config-cache-vars)
-          (pcase-dolist (`(,key . ,_) (symbol-value cache))
-            (when (string-prefix-p root key)
-              (setf (alist-get key (symbol-value cache) nil t 'equal) nil))))))))
+      (setq pet-pre-commit-database-cache nil)
+      (when pet-pre-commit-database-watcher
+        (file-notify-rm-watch pet-pre-commit-database-watcher)
+        (setq pet-pre-commit-database-watcher nil)))))
 
 (provide 'pet)
 
