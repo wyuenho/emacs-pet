@@ -80,7 +80,7 @@ performance.
 
 -  pre-commit, pipx, pyenv, docker, maturin, virtualenvwrapper, and more
 
-See doc/SUPPORTED.rst for the complete list and integration notes.
+See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for the complete list and integration notes.
 
 **************************
  Supported Emacs Packages
@@ -111,7 +111,7 @@ See doc/SUPPORTED.rst for the complete list and integration notes.
    <https://github.com/radian-software/apheleia>`_, `format-all
    <https://github.com/lassik/emacs-format-all-the-code>`_, and more
 
-See doc/SUPPORTED.rst for the complete list and integration caveats.
+See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for the complete list and integration caveats.
 
 *********************
  System Requirements
@@ -218,7 +218,7 @@ For packages pet doesn't support, or when you need fine-grained control:
 
 For flycheck setup: ``(add-hook 'python-mode-hook 'pet-flycheck-setup)``
 
-See doc/SUPPORTED.rst for a complete configuration example with
+See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for a complete configuration example with
 lsp-mode, flycheck, formatters, and testing tools.
 
 *************
@@ -227,7 +227,7 @@ lsp-mode, flycheck, formatters, and testing tools.
 
 ``pet`` caches virtualenv detection results and works efficiently on
 most projects. For large projects or performance issues, see
-doc/PERFORMANCE.rst for detailed optimization strategies.
+`doc/PERFORMANCE.rst <doc/PERFORMANCE.rst>`_ for detailed optimization strategies.
 
 ***************
  Customization
@@ -235,7 +235,7 @@ doc/PERFORMANCE.rst for detailed optimization strategies.
 
 For configuration options including file search methods, external tool
 settings, parser selection, and project-specific settings, see
-doc/CUSTOMIZATION.rst.
+`doc/CUSTOMIZATION.rst <doc/CUSTOMIZATION.rst>`_.
 
 *****************
  Troubleshooting
@@ -264,14 +264,14 @@ Slow performance on large projects
 ==================================
 
 Install ``fd`` for faster file searches: ``brew install fd`` (macOS) or
-``sudo apt install fd-find`` (Ubuntu). See doc/PERFORMANCE.rst for
+``sudo apt install fd-find`` (Ubuntu). See `doc/PERFORMANCE.rst <doc/PERFORMANCE.rst>`_ for
 optimization strategies.
 
 Direnv integration issues
 =========================
 
 Use `envrc <https://github.com/purcell/envrc>`_ instead of other direnv
-packages. See doc/SUPPORTED.rst for detailed integration notes.
+packages. See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for detailed integration notes.
 
 Why doesn't pet use buffer-local exec-path?
 ===========================================
