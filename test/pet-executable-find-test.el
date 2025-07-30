@@ -99,7 +99,7 @@
     (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
       (spy-on 'pet-use-pre-commit-p )
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/Anaconda3/envs/project/")
-      (spy-on 'pet-use-conda-p :and-return-value t)
+      (spy-on 'pet-conda-venv-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
       (spy-on 'executable-find :and-return-value "C:/Users/user/Anaconda3/envs/project/python")
       (expect (pet-executable-find "python") :to-equal "C:/Users/user/Anaconda3/envs/project/python")
