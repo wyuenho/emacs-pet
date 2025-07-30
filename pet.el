@@ -45,6 +45,10 @@
 (require 'subr-x)
 (require 'tramp)
 
+;; optional dependencies
+(require 'tomlparse nil t)
+(require 'yaml nil t)
+
 (when (< emacs-major-version 27)
   (require 'json))
 
@@ -55,6 +59,17 @@
 
 (defcustom pet-debug nil
   "Whether to turn on debug messages."
+  :group 'pet
+  :type 'boolean)
+
+(defcustom pet-prefer-elisp-parsers nil
+  "Whether to prefer Emacs Lisp parsers over external programs.
+
+When non-nil, `pet' will use as Elisp-based TOML or YAML parser directly
+instead of trying `pet-toml-to-json-program' or
+`pet-yaml-to-json-program' first.
+
+This is useful if you want to avoid external dependencies."
   :group 'pet
   :type 'boolean)
 
@@ -436,6 +451,82 @@ otherwise."
     (let ((json-array-type 'list))
       (json-read-from-string str))))
 
+(defun pet-parse-toml-with-elisp (file-path)
+  "Parse TOML file at FILE-PATH with an Elisp parser.
+
+Returns parsed content on success, throws error on parse failure,
+returns `:parser-not-available' if the parser is not available."
+  (if (functionp 'tomlparse-file)
+      (tomlparse-file file-path :object-type 'alist)
+    :parser-not-available))
+
+(defun pet-parse-yaml-with-elisp (file-path)
+  "Parse YAML file at FILE-PATH with an Elisp parser.
+
+Returns parsed content on success, throws error on parse failure,
+returns `:parser-not-available' if the parser is not available."
+  (if (functionp 'yaml-parse-string)
+      (with-temp-buffer
+        (insert-file-contents file-path)
+        (yaml-parse-string (buffer-string) :object-type 'alist :sequence-type 'list))
+    :parser-not-available))
+
+(defun pet-try-elisp-parser (parser-fn file-path)
+  "Try parsing FILE-PATH with PARSER-FN.
+
+Returns (success . result) where success is t/nil and result is the
+parsed data."
+  (condition-case err
+      (let ((result (funcall parser-fn file-path)))
+        (if (eq result :parser-not-available)
+            (cons nil nil)  ; Parser not available
+          (cons t result))) ; Parse succeeded (including nil for empty files)
+    (user-error (pet-report-error err) (cons nil nil))  ; Parse failed
+    (error (pet-report-error err) (cons nil nil))))     ; Parse failed
+
+(defun pet-try-external-parser (file-path program arguments)
+  "Try parsing FILE-PATH with external PROGRAM and ARGUMENTS.
+
+Returns (success . result) where success is t/nil and result is the
+parsed data.  Normalizes :null to nil for consistent empty file
+handling."
+  (if (pet--executable-find program)
+      (let ((output (get-buffer-create " *pet parser output*")))
+        (unwind-protect
+            (let ((exit-code
+                   (condition-case err
+                       (apply #'process-file program file-path output nil arguments)
+                     (error (pet-report-error err)))))
+              (if (and (integerp exit-code) (zerop exit-code))
+                  (with-current-buffer output
+                    (let ((result (pet-parse-json (buffer-string))))
+                      ;; Normalize :null to nil for consistent empty file handling
+                      (cons t (if (eq result :null) nil result))))
+                (cons nil nil)))  ; Parse failed
+          (kill-buffer output)))
+    (cons nil nil)))  ; Program not found
+
+(defun pet-try-parser-with-fallback (file-path elisp-parser-fn external-program external-args error-message)
+  "Try parsing FILE-PATH with preferred parser, fallback to alternative.
+
+ELISP-PARSER-FN is the elisp parser function.
+EXTERNAL-PROGRAM and EXTERNAL-ARGS are for the external parser.
+ERROR-MESSAGE is shown when both parsers fail."
+  (pcase-let ((`(,success . ,result)
+               (if pet-prefer-elisp-parsers
+                   (pet-try-elisp-parser elisp-parser-fn file-path)
+                 (pet-try-external-parser file-path external-program external-args))))
+    (if success
+        result  ; First parser succeeded
+      ;; First parser failed, try fallback
+      (pcase-let ((`(,fallback-success . ,fallback-result)
+                   (if pet-prefer-elisp-parsers
+                       (pet-try-external-parser file-path external-program external-args)
+                     (pet-try-elisp-parser elisp-parser-fn file-path))))
+        (if fallback-success
+            fallback-result  ; Fallback succeeded
+          (error error-message))))))
+
 (defun pet-parse-config-file (file-path)
   "Parse a configuration file at FILE-PATH into JSON alist."
   (condition-case err
@@ -456,34 +547,29 @@ otherwise."
                          (eq 'yaml-mode mode)
                          (eq 'yaml-ts-mode mode))))
 
-        (let ((output (get-buffer-create " *pet parser output*")))
-          (unwind-protect
-              (let ((exit-code
-                     (when (or toml-p yaml-p)
-                       (condition-case err
-                           (apply #'process-file
-                                  (cond (toml-p pet-toml-to-json-program)
-                                        (yaml-p pet-yaml-to-json-program))
-                                  file-path
-                                  output
-                                  nil
-                                  (cond (toml-p pet-toml-to-json-program-arguments)
-                                        (yaml-p pet-yaml-to-json-program-arguments)))
-                         (error (error-message-string err))))))
+        (cond
+         (json-p
+          (with-temp-buffer
+            (insert-file-contents file-path)
+            (pet-parse-json (buffer-string))))
 
-                (cond ((and (integerp exit-code) (zerop exit-code))
-                       (with-current-buffer output
-                         (pet-parse-json (buffer-string))))
-                      (json-p
-                       (with-temp-buffer
-                         (insert-file-contents file-path)
-                         (pet-parse-json (buffer-string))))
-                      (t
-                       (error (if (stringp exit-code)
-                                  exit-code
-                                (with-current-buffer output
-                                  (buffer-string)))))))
-            (kill-buffer output))))
+         (toml-p
+          (pet-try-parser-with-fallback
+           file-path
+           #'pet-parse-toml-with-elisp
+           pet-toml-to-json-program
+           pet-toml-to-json-program-arguments
+           (format "No TOML parser available. Please install %s or tomlparse.el" pet-toml-to-json-program)))
+
+         (yaml-p
+          (pet-try-parser-with-fallback
+           file-path
+           #'pet-parse-yaml-with-elisp
+           pet-yaml-to-json-program
+           pet-yaml-to-json-program-arguments
+           (format "No YAML parser available. Please install %s or yaml.el" pet-yaml-to-json-program)))
+
+         (t (error "Unsupported configuration file type: %s" file-path))))
 
     (error (pet-report-error err))))
 
