@@ -359,6 +359,47 @@ of config parsing."
 
     (pet-cache-rem (list root :configs absolute-path))))
 
+(defun pet-cache--clear-project-internal (root)
+  "Clear cache for project at ROOT.
+
+Removes all cached virtualenv detection results, configuration file
+contents, and file discovery results for the project. Also cleans up
+file watchers before clearing cache data to prevent resource leaks."
+  (when root
+    (when-let* ((watchers-section (pet-cache-get (list root :file-watchers))))
+      (pcase-dolist (`(,_path . ,watcher) watchers-section)
+        (file-notify-rm-watch watcher)))
+    (pet-cache-rem (list root))))
+
+(defun pet-cache--clear-precommit-internal ()
+  "Clear pre-commit database cache and watcher.
+
+Removes the cached pre-commit database data and cleans up the associated
+file watcher to prevent resource leaks."
+  (setq pet-pre-commit-database-cache nil)
+  (when pet-pre-commit-database-watcher
+    (file-notify-rm-watch pet-pre-commit-database-watcher)
+    (setq pet-pre-commit-database-watcher nil)))
+
+(defun pet-cache-clear-project ()
+  "Clear pet's cache for the current project."
+  (interactive)
+  (when-let* ((root (pet-project-root)))
+    (pet-cache--clear-project-internal root)
+    (message "Cleared pet cache for project: %s" root)))
+
+(defun pet-cache-clear-all ()
+  "Clear all pet caches across all projects."
+  (interactive)
+  (when pet-cache
+    (pcase-dolist (`(,_root . ,project-data) pet-cache)
+      (when-let* ((watchers-section (alist-get :file-watchers project-data)))
+        (pcase-dolist (`(,_path . ,watcher) watchers-section)
+          (file-notify-rm-watch watcher)))))
+  (setq pet-cache nil)
+  (pet-cache--clear-precommit-internal)
+  (message "Cleared all pet caches"))
+
 
 
 (defun pet-project-root ()
@@ -1659,24 +1700,14 @@ Delete configuration file caches and watchers when all
                                (with-current-buffer buf
                                  (derived-mode-p 'python-base-mode 'python-mode)))
                        return buf)
-        ;; Remove file watchers first (before cache is gone)
-        (when-let* ((watchers-section (pet-cache-get (list root :file-watchers))))
-          (pcase-dolist (`(,_path . ,watcher) watchers-section)
-            (file-notify-rm-watch watcher)))
-
-        ;; Remove entire project cache
-        (pet-cache-rem (list root))))
+        (pet-cache--clear-project-internal root)))
 
     (unless (cl-loop for buf in (buffer-list)
                      if (and (not (equal buf (current-buffer)))
                              (with-current-buffer buf
                                (derived-mode-p 'python-base-mode 'python-mode)))
                      return buf)
-
-      (setq pet-pre-commit-database-cache nil)
-      (when pet-pre-commit-database-watcher
-        (file-notify-rm-watch pet-pre-commit-database-watcher)
-        (setq pet-pre-commit-database-watcher nil)))))
+      (pet-cache--clear-precommit-internal))))
 
 (provide 'pet)
 
