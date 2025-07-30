@@ -382,6 +382,219 @@
     (expect 'file-notify-rm-watch :not :to-have-been-called)
     (expect (pet-cache-get (list project-root :configs config-file)) :to-equal '((content . "test")))))
 
+(describe "pet-cache-clear-project"
+  :var ((project-root "/home/user/project/")
+        (other-project "/home/user/other/")
+        (mock-watcher-1 'mock-watcher-123)
+        (mock-watcher-2 'mock-watcher-456))
+
+  (before-each
+    (setq-local pet-cache nil)
+    (spy-on 'pet-project-root :and-return-value project-root)
+    (spy-on 'file-notify-rm-watch)
+    (spy-on 'message))
+
+  (after-each
+    (kill-local-variable 'pet-cache))
+
+  (it "should clear cache for current project only"
+    ;; Set up cache for multiple projects
+    (pet-cache-put (list project-root :virtualenv) "/venv1")
+    (pet-cache-put (list project-root :files "pyproject.toml") "/home/user/project/pyproject.toml")
+    (pet-cache-put (list other-project :virtualenv) "/venv2")
+    (pet-cache-put (list other-project :files "setup.py") "/home/user/other/setup.py")
+
+    (pet-cache-clear-project)
+
+    ;; Current project cache should be removed
+    (expect (pet-cache-get (list project-root)) :to-be nil)
+    ;; Other project cache should remain
+    (expect (pet-cache-get (list other-project :virtualenv)) :to-equal "/venv2")
+    (expect (pet-cache-get (list other-project :files "setup.py")) :to-equal "/home/user/other/setup.py"))
+
+  (it "should clean up file watchers before clearing cache"
+    ;; Set up cache with file watchers
+    (pet-cache-put (list project-root :virtualenv) "/venv")
+    (pet-cache-put (list project-root :file-watchers "/home/user/project/pyproject.toml") mock-watcher-1)
+    (pet-cache-put (list project-root :file-watchers "/home/user/project/setup.py") mock-watcher-2)
+    (pet-cache-put (list other-project :file-watchers "/home/user/other/config.yaml") 'other-watcher)
+
+    (pet-cache-clear-project)
+
+    ;; Should remove watchers for current project only
+    (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-1)
+    (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-2)
+    (expect 'file-notify-rm-watch :to-have-been-called-times 2)
+    ;; Cache should be cleared for current project
+    (expect (pet-cache-get (list project-root)) :to-be nil)
+    ;; Other project should remain untouched
+    (expect (pet-cache-get (list other-project :file-watchers "/home/user/other/config.yaml")) :to-equal 'other-watcher))
+
+  (it "should handle empty file watchers section gracefully"
+    ;; Set up cache without file watchers
+    (pet-cache-put (list project-root :virtualenv) "/venv")
+    (pet-cache-put (list project-root :files "setup.py") "/home/user/project/setup.py")
+
+    (pet-cache-clear-project)
+
+    ;; Should not try to remove non-existent watchers
+    (expect 'file-notify-rm-watch :not :to-have-been-called)
+    ;; Cache should still be cleared
+    (expect (pet-cache-get (list project-root)) :to-be nil))
+
+  (it "should handle no cache for current project gracefully"
+    ;; Set up cache for other project only
+    (pet-cache-put (list other-project :virtualenv) "/venv2")
+
+    (pet-cache-clear-project)
+
+    ;; Should not error and not try to remove anything
+    (expect 'file-notify-rm-watch :not :to-have-been-called)
+    ;; Other project should remain
+    (expect (pet-cache-get (list other-project :virtualenv)) :to-equal "/venv2"))
+
+  (it "should display success message with project path"
+    (pet-cache-put (list project-root :virtualenv) "/venv")
+
+    (pet-cache-clear-project)
+
+    (expect 'message :to-have-been-called-with "Cleared pet cache for project: %s" project-root))
+
+  (it "should do nothing when not in a project"
+    ;; Mock not being in a project
+    (spy-on 'pet-project-root :and-return-value nil)
+    (pet-cache-put (list project-root :virtualenv) "/venv")
+
+    (pet-cache-clear-project)
+
+    ;; Nothing should be removed
+    (expect 'file-notify-rm-watch :not :to-have-been-called)
+    (expect 'message :not :to-have-been-called)
+    ;; Cache should remain intact
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal "/venv")))
+
+(describe "pet-cache-clear-all"
+  :var ((project-root "/home/user/project/")
+        (other-project "/home/user/other/")
+        (mock-watcher-1 'mock-watcher-123)
+        (mock-watcher-2 'mock-watcher-456)
+        (pre-commit-watcher 'pre-commit-watcher-789))
+
+  (before-each
+    (setq-local pet-cache nil)
+    (setq pet-pre-commit-database-watcher nil)
+    (setq pet-pre-commit-database-cache nil)
+    (spy-on 'file-notify-rm-watch)
+    (spy-on 'message))
+
+  (after-each
+    (kill-local-variable 'pet-cache))
+
+  (it "should clear all project caches"
+    ;; Set up cache for multiple projects
+    (pet-cache-put (list project-root :virtualenv) "/venv1")
+    (pet-cache-put (list project-root :files "pyproject.toml") "/home/user/project/pyproject.toml")
+    (pet-cache-put (list other-project :virtualenv) "/venv2")
+    (pet-cache-put (list other-project :files "setup.py") "/home/user/other/setup.py")
+
+    (pet-cache-clear-all)
+
+    ;; All caches should be cleared
+    (expect pet-cache :to-be nil)
+    (expect (pet-cache-get (list project-root)) :to-be nil)
+    (expect (pet-cache-get (list other-project)) :to-be nil))
+
+  (it "should clean up all file watchers across all projects"
+    ;; Set up cache with file watchers for multiple projects
+    (pet-cache-put (list project-root :virtualenv) "/venv1")
+    (pet-cache-put (list project-root :file-watchers "/home/user/project/pyproject.toml") mock-watcher-1)
+    (pet-cache-put (list other-project :virtualenv) "/venv2")
+    (pet-cache-put (list other-project :file-watchers "/home/user/other/setup.py") mock-watcher-2)
+
+    (pet-cache-clear-all)
+
+    ;; Should remove all watchers
+    (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-1)
+    (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-2)
+    (expect 'file-notify-rm-watch :to-have-been-called-times 2)
+    ;; All caches should be cleared
+    (expect pet-cache :to-be nil))
+
+  (it "should clean up pre-commit database watcher"
+    ;; Set up pre-commit watcher
+    (setq pet-pre-commit-database-watcher pre-commit-watcher)
+    (setq pet-pre-commit-database-cache '((some . data)))
+
+    (pet-cache-clear-all)
+
+    ;; Should remove pre-commit watcher and clear its cache
+    (expect 'file-notify-rm-watch :to-have-been-called-with pre-commit-watcher)
+    (expect pet-pre-commit-database-watcher :to-be nil)
+    (expect pet-pre-commit-database-cache :to-be nil))
+
+  (it "should handle empty cache gracefully"
+    ;; No setup - all caches are empty
+    (pet-cache-clear-all)
+
+    ;; Should not error and not try to remove anything
+    (expect 'file-notify-rm-watch :not :to-have-been-called)
+    (expect pet-cache :to-be nil)
+    (expect pet-pre-commit-database-cache :to-be nil))
+
+  (it "should handle missing file watchers sections gracefully"
+    ;; Set up cache without file watchers
+    (pet-cache-put (list project-root :virtualenv) "/venv1")
+    (pet-cache-put (list other-project :virtualenv) "/venv2")
+
+    (pet-cache-clear-all)
+
+    ;; Should not try to remove non-existent watchers
+    (expect 'file-notify-rm-watch :not :to-have-been-called)
+    ;; All caches should still be cleared
+    (expect pet-cache :to-be nil))
+
+  (it "should handle no pre-commit watcher gracefully"
+    ;; Set up regular cache but no pre-commit watcher
+    (pet-cache-put (list project-root :virtualenv) "/venv")
+    (setq pet-pre-commit-database-cache '((some . data)))
+
+    (pet-cache-clear-all)
+
+    ;; Should clear cache and pre-commit data without trying to remove non-existent watcher
+    (expect pet-cache :to-be nil)
+    (expect pet-pre-commit-database-cache :to-be nil)
+    (expect 'file-notify-rm-watch :not :to-have-been-called))
+
+  (it "should display success message"
+    (pet-cache-put (list project-root :virtualenv) "/venv")
+
+    (pet-cache-clear-all)
+
+    (expect 'message :to-have-been-called-with "Cleared all pet caches"))
+
+  (it "should handle complex cache structure with multiple watchers per project"
+    ;; Set up complex cache structure
+    (pet-cache-put (list project-root :virtualenv) "/venv1")
+    (pet-cache-put (list project-root :file-watchers "/home/user/project/pyproject.toml") mock-watcher-1)
+    (pet-cache-put (list project-root :file-watchers "/home/user/project/setup.py") mock-watcher-2)
+    (pet-cache-put (list other-project :virtualenv) "/venv2")
+    (pet-cache-put (list other-project :file-watchers "/home/user/other/config.yaml") 'other-watcher)
+    (setq pet-pre-commit-database-watcher pre-commit-watcher)
+    (setq pet-pre-commit-database-cache '((repos . ())))
+
+    (pet-cache-clear-all)
+
+    ;; Should remove all watchers including pre-commit
+    (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-1)
+    (expect 'file-notify-rm-watch :to-have-been-called-with mock-watcher-2)
+    (expect 'file-notify-rm-watch :to-have-been-called-with 'other-watcher)
+    (expect 'file-notify-rm-watch :to-have-been-called-with pre-commit-watcher)
+    (expect 'file-notify-rm-watch :to-have-been-called-times 4)
+    ;; All data should be cleared
+    (expect pet-cache :to-be nil)
+    (expect pet-pre-commit-database-watcher :to-be nil)
+    (expect pet-pre-commit-database-cache :to-be nil)))
+
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)
 ;; End:
