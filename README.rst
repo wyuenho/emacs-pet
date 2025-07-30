@@ -327,11 +327,17 @@ project. Understanding this behavior helps optimizing performance:
 Caching Behavior
 ++++++++++++++++
 
-- Virtualenv paths are cached by project roots and persist until Emacs restarts
-  or when the last project buffer is killed.
-- Configuration files (``pyproject.toml``, ``environment.yml``, etc.) are cached
-  and watched so they are always kept up to date.
+``pet`` uses a unified cache system to optimize performance across multiple areas:
+
+- **Virtualenv paths** are cached by project roots and persist until Emacs restarts
+  or when the last project buffer is killed
+- **File discovery results** are cached to avoid repeated filesystem searches for
+  configuration files (``pyproject.toml``, ``environment.yml``, etc.)
+- **Configuration file contents** are cached and automatically invalidated when
+  files change via file system watchers
+- **File watchers** track configuration files to keep cached content up to date
 - First open: Full detection runs, subsequent opens: cached results used
+- Cache cleanup: Automatic cleanup when switching projects or killing buffers
 
 File Search Strategy
 ++++++++++++++++++++
