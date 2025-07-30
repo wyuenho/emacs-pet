@@ -14,3 +14,7 @@
                                                              (ref . "5.0.0")
                                                              (path . "/home/user/project/flake8"))))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

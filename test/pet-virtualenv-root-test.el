@@ -94,3 +94,7 @@
   (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
     (pet-cache-put (list project-root :virtualenv) "/home/user/.venvs/env/")
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/")))
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

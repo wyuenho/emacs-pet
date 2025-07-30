@@ -68,3 +68,7 @@
       (spy-on 'file-expand-wildcards :and-return-value '("/home/user/.cache/pre-commit/repo85no_p81/py_env-python3.9"))
       (expect (pet-pre-commit-virtualenv-path "black") :to-equal "/home/user/.cache/pre-commit/repo85no_p81/py_env-python3.9"))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

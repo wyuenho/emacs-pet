@@ -3,6 +3,7 @@
 (require 'pet)
 
 (setq python-indent-guess-indent-offset nil)
+
 (describe "pet-eglot--guess-contact-advice"
   (before-each
     (spy-on 'pet-executable-find :and-return-value "/home/user/project/.venv/bin/pylsp")
@@ -81,3 +82,7 @@
                (init-opts (and probe (cl-subseq contact probe))))
           (expect (plist-get init-opts :initializationOptions) :to-equal '(:existing-option t)))))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

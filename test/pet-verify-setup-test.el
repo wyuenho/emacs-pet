@@ -3,6 +3,7 @@
 (require 'pet)
 
 (setq python-indent-guess-indent-offset nil)
+
 (describe "pet-verify-setup"
   :var ((old-default-directory default-directory)
         (home (getenv "HOME"))
@@ -79,3 +80,7 @@
                      "," t split-string-default-separators)
        :to-have-same-items-as '("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg" "/home/user/.config/mypy/config" "/home/user/.mypy.ini")))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

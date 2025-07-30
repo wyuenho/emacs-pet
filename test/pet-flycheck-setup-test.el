@@ -28,3 +28,7 @@
      (advice-member-p 'pet-flycheck-python-find-project-root-advice 'flycheck-python-find-project-root)
      :to-be-truthy)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

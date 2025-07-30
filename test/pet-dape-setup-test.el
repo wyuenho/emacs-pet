@@ -27,3 +27,7 @@
     (expect (local-variable-p 'dape-cwd-function) :to-be-truthy)
     (expect dape-cwd-function :to-equal 'pet-project-root)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

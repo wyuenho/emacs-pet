@@ -46,3 +46,7 @@
     (it "should return nil"
       (expect (pet-pixi-environments) :to-be nil))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

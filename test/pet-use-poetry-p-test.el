@@ -37,3 +37,7 @@
       (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
       (expect (pet-use-poetry-p) :to-be nil))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

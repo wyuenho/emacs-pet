@@ -4,6 +4,7 @@
 (require 'pet)
 
 (setq python-indent-guess-indent-offset nil)
+
 (describe "pet-conda-switch-environment"
   :var ((project-root "/home/user/project/")
         (env-path "/home/user/miniforge3/envs/test/")
@@ -84,60 +85,64 @@
       (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path))
 
 
-  (describe "buffer isolation"
-    (it "should only refresh variables for buffers from the same project"
-      (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
+    (describe "buffer isolation"
+      (it "should only refresh variables for buffers from the same project"
+        (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
+        (spy-on 'pet-buffer-local-vars-teardown)
+        (spy-on 'pet-buffer-local-vars-setup)
 
-      (pet-conda-switch-environment env-path)
+        (pet-conda-switch-environment env-path)
 
-      ;; Should only call teardown/setup once per project buffer (buffer-a only)
-      ;; other-project-buffer should be ignored because it's from different project
-      (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 1)
-      (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 1)))
+        ;; Should only call teardown/setup once per project buffer (buffer-a only)
+        ;; other-project-buffer should be ignored because it's from different project
+        (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 1)
+        (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 1)))
 
-  (describe "interactive completion"
-    (it "should prompt with available environments"
-      (spy-on 'completing-read :and-return-value env-path)
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
+    (describe "interactive completion"
+      (it "should prompt with available environments"
+        (spy-on 'completing-read :and-return-value env-path)
+        (spy-on 'pet-buffer-local-vars-teardown)
+        (spy-on 'pet-buffer-local-vars-setup)
 
-      (call-interactively #'pet-conda-switch-environment)
+        (call-interactively #'pet-conda-switch-environment)
 
-      (expect 'completing-read :to-have-been-called-with
-              "Please select a conda environment: "
-              (list other-env-path env-path)
-              nil t))
+        (expect 'completing-read :to-have-been-called-with
+                "Please select a conda environment: "
+                (list other-env-path env-path)
+                nil t))
 
-    (it "should use the selected environment"
-      (spy-on 'completing-read :and-return-value other-env-path)
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
+      (it "should use the selected environment"
+        (spy-on 'completing-read :and-return-value other-env-path)
+        (spy-on 'pet-buffer-local-vars-teardown)
+        (spy-on 'pet-buffer-local-vars-setup)
 
-      (call-interactively #'pet-conda-switch-environment)
+        (call-interactively #'pet-conda-switch-environment)
 
-      (expect (pet-cache-get (list project-root :virtualenv))
-              :to-equal other-env-path)))
+        (expect (pet-cache-get (list project-root :virtualenv))
+                :to-equal other-env-path)))
 
-  (describe "error handling"
-    (it "should handle when no project root is found"
-      (spy-on 'pet-project-root )
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
+    (describe "error handling"
+      (it "should handle when no project root is found"
+        (spy-on 'pet-project-root )
+        (spy-on 'pet-buffer-local-vars-teardown)
+        (spy-on 'pet-buffer-local-vars-setup)
 
-      (pet-conda-switch-environment env-path)
+        (pet-conda-switch-environment env-path)
 
-      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)
-      (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
+        (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)
+        (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
-    (it "should handle when no Python buffers exist in project"
-      (spy-on 'buffer-list :and-return-value '())
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
+      (it "should handle when no Python buffers exist in project"
+        (spy-on 'buffer-list :and-return-value '())
+        (spy-on 'pet-buffer-local-vars-teardown)
+        (spy-on 'pet-buffer-local-vars-setup)
 
-      (pet-conda-switch-environment env-path)
+        (pet-conda-switch-environment env-path)
 
-      (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
-      (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)))))
+        (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
+        (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called)))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

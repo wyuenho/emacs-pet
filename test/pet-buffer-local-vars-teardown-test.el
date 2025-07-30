@@ -71,3 +71,7 @@
     (expect (local-variable-p 'format-all--executable-table) :not :to-be-truthy)
     (expect (local-variable-p 'apheleia-formatters) :not :to-be-truthy)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

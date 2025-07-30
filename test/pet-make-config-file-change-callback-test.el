@@ -53,3 +53,7 @@
       (expect 'parser :to-have-been-called-with file)
       (expect (pet-cache-get (list "/home/user/project/" :configs file)) :to-equal "content"))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

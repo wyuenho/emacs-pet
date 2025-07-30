@@ -11,3 +11,7 @@
      :to-equal
      '(:a (:b [1 2 3 4] :c 9 :d "hello" :f :json-null :e "world" :g :json-false)))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

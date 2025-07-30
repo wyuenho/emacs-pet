@@ -160,3 +160,7 @@
       (expect calls :to-equal 1)
       (remove-hook 'pet-after-buffer-local-vars-setup test-func))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

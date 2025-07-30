@@ -155,3 +155,7 @@
       (expect (pet-executable-find "black" nil) :to-equal nil)
       (expect 'pet--executable-find :to-have-been-called-times 0))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

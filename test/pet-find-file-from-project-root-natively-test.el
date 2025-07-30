@@ -60,3 +60,7 @@
     (spy-on 'pet-project-root )
     (expect (pet-find-file-from-project-root-natively "file.txt") :to-be nil)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

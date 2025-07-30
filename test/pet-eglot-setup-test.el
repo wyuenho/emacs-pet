@@ -15,3 +15,7 @@
     (expect (advice-member-p 'pet-eglot--executable-find-advice 'eglot--executable-find) :to-be-truthy)
     (expect (advice-member-p 'pet-eglot--guess-contact-advice 'eglot--guess-contact) :to-be-truthy)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

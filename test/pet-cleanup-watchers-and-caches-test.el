@@ -3,6 +3,7 @@
 (require 'pet)
 
 (setq python-indent-guess-indent-offset nil)
+
 (describe "pet-cleanup-watchers-and-caches"
   :var ((project-root "/home/user/project/")
         (pyproject-file "/home/user/project/pyproject.toml")
@@ -197,9 +198,9 @@
       (with-current-buffer buffer-a
         ;; Set up cache for both projects INSIDE the buffer context
         (setq pet-cache `((,project-a-root . ((:file-watchers . ((,pyproject-a . ,mock-watcher-a)))
-                                             (:configs . ((,pyproject-a . ((tool . ((poetry . t)))))))))
-                         (,project-b-root . ((:file-watchers . ((,pyproject-b . ,mock-watcher-b)))
-                                            (:configs . ((,pyproject-b . ((tool . ((setuptools . t)))))))))))
+                                              (:configs . ((,pyproject-a . ((tool . ((poetry . t)))))))))
+                          (,project-b-root . ((:file-watchers . ((,pyproject-b . ,mock-watcher-b)))
+                                              (:configs . ((,pyproject-b . ((tool . ((setuptools . t)))))))))))
 
         (spy-on 'pet-project-root :and-return-value project-a-root)
         ;; Mock buffer-list to return buffer-a (current) and buffer-b (different project)
@@ -220,7 +221,7 @@
       (with-current-buffer buffer-a
         ;; Set up cache for project A INSIDE the buffer context
         (setq pet-cache `((,project-a-root . ((:file-watchers . ((,pyproject-a . ,mock-watcher-a)))
-                                             (:configs . ((,pyproject-a . ((tool . ((poetry . t)))))))))))
+                                              (:configs . ((,pyproject-a . ((tool . ((poetry . t)))))))))))
 
         (spy-on 'pet-project-root :and-return-value project-a-root)
         ;; Mock buffer-list to include both buffer-a and buffer-a2 (same project)
@@ -242,9 +243,9 @@
         (with-current-buffer buffer-a
           ;; Set up project with multiple config files and watchers INSIDE the buffer context
           (setq pet-cache `((,project-a-root . ((:file-watchers . ((,pyproject-a . ,mock-watcher-a)
-                                                                  (,setup-py . ,mock-watcher-setup)))
-                                               (:configs . ((,pyproject-a . ((tool . ((poetry . t)))))
-                                                          (,setup-py . ((name . "test-project")))))))))
+                                                                   (,setup-py . ,mock-watcher-setup)))
+                                                (:configs . ((,pyproject-a . ((tool . ((poetry . t)))))
+                                                             (,setup-py . ((name . "test-project")))))))))
 
           (spy-on 'pet-project-root :and-return-value project-a-root)
           (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b))

@@ -71,3 +71,7 @@
 
     (kill-local-variable 'flycheck-mode)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

@@ -59,3 +59,7 @@
     (spy-on 'file-exists-p )
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/etc/pylintrc")))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

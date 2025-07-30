@@ -74,3 +74,7 @@
       (spy-on 'directory-files-recursively :and-return-value '("setup.py"))
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

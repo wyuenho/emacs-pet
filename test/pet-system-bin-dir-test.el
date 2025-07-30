@@ -27,3 +27,7 @@
     (it "should return bin"
       (expect (pet-system-bin-dir) :to-equal "bin"))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

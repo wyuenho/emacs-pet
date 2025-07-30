@@ -17,3 +17,7 @@
     (spy-on 'project-current)
     (expect (pet-project-root) :to-be nil)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

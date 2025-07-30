@@ -175,3 +175,7 @@
         (expect (pet-parse-config-file toml-file) :to-be nil)
         (expect 'pet--executable-find :not :to-have-been-called)))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

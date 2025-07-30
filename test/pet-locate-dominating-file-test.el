@@ -45,3 +45,7 @@
                 (list "~/"))))
     (expect (pet-locate-dominating-file ".pylintrc") :to-be nil)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

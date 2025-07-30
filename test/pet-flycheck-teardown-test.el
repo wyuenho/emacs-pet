@@ -29,3 +29,7 @@
     (expect (local-variable-p 'flycheck-python-pycompile-executable) :not :to-be-truthy)
     (expect (local-variable-p 'flycheck-python-ruff-executable) :not :to-be-truthy)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

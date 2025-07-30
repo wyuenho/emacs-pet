@@ -38,3 +38,7 @@
     (expect (pet-eglot--executable-find-advice 'eglot--executable-find "sh" "-c") :to-equal "sh -c")
     (expect 'eglot--executable-find :to-have-been-called-with "sh" "-c")))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

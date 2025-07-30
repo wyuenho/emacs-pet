@@ -121,3 +121,7 @@
   (it "should handle empty command list"
     (expect (pet-lookup-eglot-server-initialization-options '()) :to-be nil)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

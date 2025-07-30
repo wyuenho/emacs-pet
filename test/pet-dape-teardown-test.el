@@ -11,3 +11,7 @@
     (expect (local-variable-p 'dape-command) :not :to-be-truthy)
     (expect (local-variable-p 'dape-cwd-function) :not :to-be-truthy)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

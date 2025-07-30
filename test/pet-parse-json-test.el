@@ -6,3 +6,7 @@
   (it "should parse a JSON string to an alist"
     (expect (pet-parse-json "{\"foo\":\"bar\",\"baz\":[\"buz\",1]}") :to-equal '((foo . "bar") (baz "buz" 1)))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

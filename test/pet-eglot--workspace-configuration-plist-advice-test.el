@@ -107,3 +107,7 @@
 
     (expect 'mock-eglot--workspace-configuration-plist :to-have-been-called)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

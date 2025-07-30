@@ -58,3 +58,7 @@
       (expect 'pet-buffer-local-vars-teardown :to-have-been-called)
       (expect 'remove-hook :to-have-been-called-with 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

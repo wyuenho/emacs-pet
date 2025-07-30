@@ -16,3 +16,7 @@
   (it "should return nil if `.pre-commit-config.yaml' does not have hook declared"
     (expect (pet-pre-commit-config-has-hook-p "isort") :not :to-be-truthy)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

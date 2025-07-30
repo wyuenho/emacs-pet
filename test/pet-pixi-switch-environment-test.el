@@ -141,3 +141,7 @@
       (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
       (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

@@ -20,3 +20,7 @@
     (pet-report-error '(error . ("error")))
     (expect 'minibuffer-message :not :to-have-been-called)))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

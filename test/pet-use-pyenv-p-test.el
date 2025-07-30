@@ -27,3 +27,7 @@
       (spy-on 'executable-find)
       (expect (pet-use-pyenv-p) :to-be nil))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:

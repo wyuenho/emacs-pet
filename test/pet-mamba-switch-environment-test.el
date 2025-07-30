@@ -3,6 +3,7 @@
 (require 'pet)
 
 (setq python-indent-guess-indent-offset nil)
+
 (describe "pet-mamba-switch-environment"
   :var ((project-root "/home/user/project/")
         (env-path "/home/user/micromamba/envs/test/")
@@ -139,3 +140,7 @@
       (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)
       (expect 'pet-buffer-local-vars-teardown :not :to-have-been-called))))
 
+
+;; Local Variables:
+;; eval: (buttercup-minor-mode 1)
+;; End:
