@@ -104,19 +104,52 @@ Supported Emacs Packages
 System Requirements
 -------------------
 
-Currently ``pet`` requires a program to convert TOML to JSON, a program to
-convert YAML to JSON, and if you are using Emacs < 29, the ``sqlite3`` command
-to be installed on your system.
+``pet`` has minimal system requirements and can work with Emacs 26.1+.
 
-By default, both the TOML to JSON and YAML to JSON converters are configured to
-use `dasel <https://github.com/TomWright/dasel>`_.  If you are on Linux, it may
-be more convenient to use `tomljson
-<https://github.com/pelletier/go-toml#tools>`_ and `yq
-<https://github.com/mikefarah/yq>`_ since both of which are likely to be
-available from the system package management system.
+For TOML and YAML configuration file parsing, ``pet`` supports multiple options:
 
-When a suitable Emacs Lisp YAML and TOML parser becomes available, ``dasel``
-will be made optional.
+External Programs (Optional)
+++++++++++++++++++++++++++++
+
+- `dasel <https://github.com/TomWright/dasel>`_ (default for both TOML and YAML)
+- `tomljson <https://github.com/pelletier/go-toml#tools>`_ and `yq
+  <https://github.com/mikefarah/yq>`_ for Linux users
+
+Emacs Lisp Parsers (Optional)
++++++++++++++++++++++++++++++
+
+- `tomlparse.el <https://github.com/johannes-mueller/tomlparse.el>`_ for TOML
+  (requires Emacs 29+)
+- `yaml.el <https://github.com/zkry/yaml.el>`_ for YAML (works with Emacs 26.1+)
+
+``pet`` will automatically detect and use the first available parser for each
+format, preferring external programs for performance, then falling back to pure
+Emacs Lisp implementations.
+
+Additional Requirements
++++++++++++++++++++++++
+
+If you are using Emacs < 29, the ``sqlite3`` command for pre-commit database
+parsing
+
+
+Installation Tips
++++++++++++++++++
+
+.. code-block:: bash
+
+   # Install dasel (cross-platform)
+   # macOS
+   brew install dasel
+   # Linux (various package managers)
+   sudo apt install dasel        # Ubuntu/Debian
+   sudo dnf install dasel        # Fedora
+   sudo pacman -S dasel          # Arch Linux
+
+Alternatively, install tomlparse.el and yaml.el via MELPA::
+
+  M-x package-install RET tomlparse RET
+  M-x package-install RET yaml RET
 
 
 Usage
@@ -173,9 +206,9 @@ Environment Switching
 For projects using conda, mamba, or pixi, ``pet`` now provides interactive
 environment switching::
 
-   M-x pet-conda-switch-environment
-   M-x pet-mamba-switch-environment
-   M-x pet-pixi-switch-environment
+  M-x pet-conda-switch-environment
+  M-x pet-mamba-switch-environment
+  M-x pet-pixi-switch-environment
 
 When you enable ``pet-mode`` on a fresh project using these tools, ``pet`` will
 automatically prompt you to select an environment if none is currently active.
@@ -245,7 +278,9 @@ Complete Example
    (use-package ruff-format)
 
    (use-package pet
-     :ensure-system-package (dasel sqlite3)
+     ;; Optional: ensure external tools are installed
+     ;; :ensure-system-package ((dasel . "dasel")
+     ;;                         (sqlite3 . "sqlite3"))
      :config
      (add-hook 'python-mode-hook
                (lambda ()
@@ -358,7 +393,7 @@ Debug Slow Performance
    (benchmark-run 1 (pet-mode))
 
    ;; Profile pet-mode
-   M-x eval-expression RET (progn (profiler-start 'cpu) (pet-mode) (profiler-stop) (profiler-report)) RET
+   ;; M-x eval-expression RET (progn (profiler-start 'cpu) (pet-mode) (profiler-stop) (profiler-report)) RET
 
 Project-specific Tuning
 +++++++++++++++++++++++
@@ -405,6 +440,16 @@ External Tool Configuration
    ;; fd command configuration for fast file searches
    (setq pet-fd-command "fd")
    (setq pet-fd-command-args '("-tf" "-cnever" "-H" "-a" "-g"))
+
+Parser Selection
+++++++++++++++++
+
+.. code-block:: elisp
+
+   ;; Prefer Emacs Lisp parsers over external programs
+   ;; When t, pet will use tomlparse.el and yaml.el first,
+   ;; falling back to external programs only if needed
+   (setq pet-prefer-elisp-parsers t)
 
 Search Behavior
 +++++++++++++++

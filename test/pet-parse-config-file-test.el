@@ -19,8 +19,8 @@
     (delete-file toml-file)
     (delete-file json-file)
     (delete-file toml-file-sans-ext)
-    (delete-file yaml-file-san-ext)
-    (delete-file json-file-san-ext))
+    (delete-file yaml-file-sans-ext)
+    (delete-file json-file-sans-ext))
 
   (before-each
     (setq-local pet-toml-to-json-program "tomljson")
@@ -38,6 +38,7 @@
     (kill-local-variable 'pet-toml-to-json-program-arguments)
     (kill-local-variable 'pet-yaml-to-json-program)
     (kill-local-variable 'pet-yaml-to-json-program-arguments)
+    (kill-local-variable 'pet-prefer-elisp-parsers)
     (kill-local-variable 'auto-mode-alist))
 
   (it "should parse a YAML file content to alist"
@@ -66,5 +67,111 @@
 
   (it "should parse a JSON file content to alist if the file name matches a key in `auto-mode-alist' and the value is `jsonian-mode'"
     (expect (pet-parse-config-file jsonian-file-sans-ext) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))
-    (expect (get-buffer " *pet parser output*") :to-be nil)))
+    (expect (get-buffer " *pet parser output*") :to-be nil))
+
+  ;; Tests for new fallback parser functionality
+  (describe "with parser fallbacks"
+    (before-each
+      (setq-local pet-prefer-elisp-parsers nil))
+
+    (describe "when pet-prefer-elisp-parsers is nil (default behavior)"
+      (it "should use external program when it succeeds"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 0)
+        (spy-on 'buffer-string :and-return-value "{\"foo\":\"bar\"}")
+        (spy-on 'pet-parse-toml-with-elisp)
+        (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar")))
+        (expect 'pet-parse-toml-with-elisp :not :to-have-been-called))
+
+      (it "should fallback to elisp parser when external program fails"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 1)
+        (spy-on 'pet-parse-toml-with-elisp :and-return-value '((foo . "bar")))
+        (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar"))))
+
+      (it "should return nil when external program fails and elisp parser is not available"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 1)
+        (spy-on 'pet-parse-toml-with-elisp :and-return-value :parser-not-available)
+        (expect (pet-parse-config-file toml-file) :to-be nil))
+
+      (it "should return nil when external program fails and elisp parser fails"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 1)
+        (spy-on 'pet-parse-toml-with-elisp :and-call-fake
+                (lambda (file) (signal 'user-error '("Parse error"))))
+        (expect (pet-parse-config-file toml-file) :to-be nil)))
+
+    (describe "when pet-prefer-elisp-parsers is t"
+      (before-each
+        (setq-local pet-prefer-elisp-parsers t))
+
+      (it "should use elisp parser when it succeeds"
+        (spy-on 'pet-parse-toml-with-elisp :and-return-value '((foo . "bar")))
+        (spy-on 'pet--executable-find)
+        (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar")))
+        (expect 'pet--executable-find :not :to-have-been-called))
+
+      (it "should fallback to external program when elisp parser is not available"
+        (spy-on 'pet-parse-toml-with-elisp :and-return-value :parser-not-available)
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 0)
+        (spy-on 'buffer-string :and-return-value "{\"foo\":\"bar\"}")
+        (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar"))))
+
+      (it "should return nil when elisp parser is not available and external program fails"
+        (spy-on 'pet-parse-toml-with-elisp :and-return-value :parser-not-available)
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 1)
+        (expect (pet-parse-config-file toml-file) :to-be nil))
+
+      (it "should fallback to external program when elisp parser fails"
+        (spy-on 'pet-parse-toml-with-elisp :and-call-fake
+                (lambda (file) (signal 'user-error '("Parse error"))))
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 0)
+        (spy-on 'buffer-string :and-return-value "{\"foo\":\"bar\"}")
+        (expect (pet-parse-config-file toml-file) :to-have-same-items-as '((foo . "bar"))))
+
+      (it "should return nil when elisp parser fails and external program fails"
+        (spy-on 'pet-parse-toml-with-elisp :and-call-fake
+                (lambda (file) (signal 'user-error '("Parse error"))))
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 1)
+        (expect (pet-parse-config-file toml-file) :to-be nil)))
+
+    (describe "empty file handling"
+      (it "should not fallback when external program returns empty object"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 0)
+        (spy-on 'buffer-string :and-return-value "{}")
+        (spy-on 'pet-parse-json :and-return-value nil)
+        (spy-on 'pet-parse-toml-with-elisp)
+        (expect (pet-parse-config-file toml-file) :to-be nil)
+        (expect 'pet-parse-toml-with-elisp :not :to-have-been-called))
+
+      (it "should not fallback when external program returns null"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/tomljson")
+        (spy-on 'process-file :and-return-value 0)
+        (spy-on 'buffer-string :and-return-value "null")
+        (spy-on 'pet-parse-json :and-return-value nil)
+        (spy-on 'pet-parse-toml-with-elisp)
+        (expect (pet-parse-config-file toml-file) :to-be nil)
+        (expect 'pet-parse-toml-with-elisp :not :to-have-been-called))
+
+      (it "should normalize :null to nil and not fallback"
+        (spy-on 'pet--executable-find :and-return-value "/usr/bin/yq")
+        (spy-on 'process-file :and-return-value 0)
+        (spy-on 'buffer-string :and-return-value "null")
+        (spy-on 'pet-parse-json :and-return-value :null)
+        (spy-on 'pet--parse-yaml-with-elisp)
+        (expect (pet-parse-config-file yaml-file) :to-be nil)
+        (expect 'pet--parse-yaml-with-elisp :not :to-have-been-called))
+
+      (it "should not fallback when elisp parser returns nil for empty file"
+        (setq-local pet-prefer-elisp-parsers t)
+        (spy-on 'pet-parse-toml-with-elisp :and-return-value nil)
+        (spy-on 'pet--executable-find)
+        (expect (pet-parse-config-file toml-file) :to-be nil)
+        (expect 'pet--executable-find :not :to-have-been-called)))))
 
