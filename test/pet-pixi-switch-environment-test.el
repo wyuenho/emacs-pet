@@ -74,43 +74,28 @@
       (expect 'message :to-have-been-called-with
               "Switched to %s environment: %s" "pixi" env-path)))
 
-  (describe "environment variable handling"
-    (it "should set CONDA_PREFIX environment variable in project buffers"
+  (describe "cache handling"
+    (it "should cache the selected environment for the project"
       (spy-on 'pet-buffer-local-vars-teardown)
       (spy-on 'pet-buffer-local-vars-setup)
       (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b))
 
       (pet-pixi-switch-environment env-path)
 
-      (with-current-buffer buffer-a
-        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
-      (with-current-buffer buffer-b
-        (expect (getenv "CONDA_PREFIX") :to-equal env-path)))
-
-    (it "should preserve other environment variables while updating CONDA_PREFIX"
-      (spy-on 'buffer-list :and-return-value (list buffer-a))
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
-
-      (pet-pixi-switch-environment env-path)
-
-      (with-current-buffer buffer-a
-        (expect (getenv "PATH") :to-equal "/usr/bin")
-        (expect (getenv "HOME") :to-equal "/home/user")
-        (expect (getenv "CONDA_PREFIX") :to-equal env-path))))
+      (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path)))
 
   (describe "buffer isolation"
-    (it "should not affect buffers from other projects"
+    (it "should only refresh variables for buffers from the same project"
       (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
       (spy-on 'pet-buffer-local-vars-teardown)
       (spy-on 'pet-buffer-local-vars-setup)
 
       (pet-pixi-switch-environment env-path)
 
-      (with-current-buffer buffer-a
-        (expect (getenv "CONDA_PREFIX") :to-equal env-path))
-      (with-current-buffer other-project-buffer
-        (expect (getenv "CONDA_PREFIX") :to-equal "/other/old/env"))))
+      ;; Should only call teardown/setup once per project buffer (buffer-a only)
+      ;; other-project-buffer should be ignored because it's from different project
+      (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 1)
+      (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 1)))
 
   (describe "interactive completion"
     (it "should prompt with available environments"

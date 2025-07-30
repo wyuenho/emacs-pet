@@ -190,6 +190,16 @@ Only reports to the minibuffer if `pet-debug' is non-nil."
     (minibuffer-message (error-message-string err)))
   nil)
 
+(defun pet-conda-venv-p (venv-path)
+  "Return non-nil if VENV-PATH is a conda-style environment.
+
+This includes conda, mamba, micromamba, and pixi environments.
+All conda-style environments have a `conda-meta' directory containing
+package metadata."
+  (when venv-path
+    (let ((venv-dir (file-name-as-directory venv-path)))
+      (file-exists-p (concat venv-dir "conda-meta")))))
+
 
 
 ;;; Unified Cache Infrastructure
@@ -876,7 +886,7 @@ continues to look in `pyenv', then finally from the variable
           ((when-let* ((venv (pet-virtualenv-root))
                        (path (list (concat (file-name-as-directory venv)
                                            (unless (and (string-prefix-p "python" executable)
-                                                        (pet-use-conda-p)
+                                                        (pet-conda-venv-p venv)
                                                         (eq system-type 'windows-nt))
                                              (pet-system-bin-dir)))))
                        (exec-path path)
@@ -899,24 +909,18 @@ continues to look in `pyenv', then finally from the variable
 (defun pet-virtualenv-root ()
   "Find the path to the virtualenv for the current Python project.
 
-Selects a virtualenv in the follow order:
+Selects a virtualenv in the following order:
 
-1. The value of the environment variable `VIRTUAL_ENV' if defined.
-2. If the current project is using any `conda' variant, return the absolute path
-   to the virtualenv directory for the current project.
-3. Ditta for `poetry'.
-4. Ditto for `pipenv'.
+1. Cached virtualenv path (from previous detection or manual switching).
+2. The value of the environment variable `VIRTUAL_ENV' if defined.
+3. Poetry virtualenv from `pyproject.toml'.
+4. Pipenv virtualenv from `Pipfile'.
 5. A directory in `pet-venv-dir-names' in the project root if found.
-6. If the current project is using `pyenv', return the path to the virtualenv
-   directory by looking up the prefix from `.python-version'."
+6. Pyenv virtualenv from `.python-version'."
   (let ((root (pet-project-root)))
     (or (pet-cache-get (list root :virtualenv))
         (let ((venv-path
-               (cond ((when-let* ((ev (or (getenv "VIRTUAL_ENV")
-                                          (and (or (pet-use-pixi-p)
-                                                   (pet-use-conda-p)
-                                                   (pet-use-mamba-p))
-                                               (getenv "CONDA_PREFIX")))))
+               (cond ((when-let* ((ev (getenv "VIRTUAL_ENV")))
                         (expand-file-name ev)))
                      ((when-let*((program (pet-use-poetry-p))
                                  (default-directory (file-name-directory (pet-pyproject-path))))
@@ -1006,7 +1010,7 @@ environments.  This expression must return a list of strings."
   :parse-output
   (let-alist (pet-parse-json output) .envs))
 
-(cl-defmacro pet-def-env-switch (name &key env-list-fn prompt-text (env-var "CONDA_PREFIX"))
+(cl-defmacro pet-def-env-switch (name &key env-list-fn prompt-text)
   "Define a environment switching function.
 
 NAME is the environment manager name.
@@ -1014,8 +1018,7 @@ NAME is the environment manager name.
 The following are the keyword arguments:
 
 `ENV-LIST-FN' is the function name that returns available environments.
-`PROMPT-TEXT' is the text to display in the completion prompt.
-`ENV-VAR' is the environment variable to set."
+`PROMPT-TEXT' is the text to display in the completion prompt."
   (declare (indent defun))
   (let ((switch-fn (intern (format "pet-%s-switch-environment" name)))
         (name-str (symbol-name name))
@@ -1040,7 +1043,6 @@ returned by `%s'." name name env-list-fn)))
                                                collect buffer)))
            (dolist (buffer project-buffers)
              (with-current-buffer buffer
-               (setenv ,env-var env)
                (pet-buffer-local-vars-teardown)
                (pet-buffer-local-vars-setup)))
 

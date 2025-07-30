@@ -42,29 +42,6 @@
     (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "VIRTUAL_ENV") "/home/user/.venvs/project")))
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/project"))
 
-  (it "should return the absolute path of the virtualenv for a project using `conda'"
-    (spy-on 'pet-use-pixi-p )
-    (spy-on 'pet-use-conda-p :and-return-value conda-path)
-    (spy-on 'pet-use-mamba-p )
-    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") conda-virtualenv)))
-    (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
-    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal conda-virtualenv))
-
-  (it "should return the absolute path of the virtualenv for a project using `mamba'"
-    (spy-on 'pet-use-pixi-p )
-    (spy-on 'pet-use-conda-p )
-    (spy-on 'pet-use-mamba-p :and-return-value mamba-path)
-    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") mamba-virtualenv)))
-    (expect (pet-virtualenv-root) :to-equal mamba-virtualenv)
-    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal mamba-virtualenv))
-
-  (it "should return the absolute path of the virtualenv for a project using `pixi'"
-    (spy-on 'pet-use-pixi-p :and-return-value pixi-path)
-    (spy-on 'pet-use-conda-p )
-    (spy-on 'pet-use-mamba-p )
-    (spy-on 'getenv :and-call-fake (lambda (name) (when (equal name "CONDA_PREFIX") pixi-virtualenv)))
-    (expect (pet-virtualenv-root) :to-equal pixi-virtualenv)
-    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal pixi-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
     (spy-on 'pet-use-pixi-p )
