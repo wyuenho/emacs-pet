@@ -1368,28 +1368,48 @@ FN is `eglot--guess-contact', ARGS is the arguments to
 `eglot--guess-contact'."
   (let* ((result (apply fn args))
          (contact (nth 3 result))
-         (probe (seq-position contact :initializationOptions))
-         (program-with-args (seq-subseq contact 0 (or probe (length contact))))
-         (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions))
-         (pet-config (pet-lookup-eglot-server-initialization-options program-with-args)))
-    (if (or (and init-opts
-                 ;; Technically init opts can still be a function here (see
-                 ;; `eglot-initialization-options'), but I haven't seen any use
-                 ;; of this in the wild, so I'm not supporting it now until
-                 ;; someone complains.
-                 (not (functionp init-opts)))
-            pet-config)
-        (append (seq-subseq result 0 3)
-                (list
-                 (append
-                  program-with-args
-                  (list
-                   :initializationOptions
-                   (pet-merge-eglot-initialization-options
-                    init-opts
-                    pet-config))))
-                (seq-subseq result 4))
-      result)))
+         (contact (if (functionp contact) (funcall contact) contact)))
+    (pcase contact
+      ;; Skip processing for non-program contacts
+      (`(,(pred keywordp) . ,_)                    ; Process initargs: (:process ...)
+       result)
+      (`(,_host ,(pred integerp) . ,_)             ; TCP connection: ("host" port ...)
+       result)
+      (`(,_prog . ,(and rest (guard (cl-find-if   ; Autoport: ("prog" :autoport ...)
+                                     (lambda (x)
+                                       (or (eq x :autoport)
+                                           (eq (car-safe x) :autoport)))
+                                     rest))))
+       result)
+      ;; Empty contact - return unchanged
+      ('nil
+       result)
+      ;; Process program contacts
+      ((pred listp)
+       (let* ((probe (cl-position-if #'keywordp contact))
+              (program-with-args (seq-subseq contact 0 (or probe (length contact))))
+              (kwargs (copy-sequence (and probe (seq-subseq contact probe (length contact)))))
+              (init-opts (plist-get kwargs :initializationOptions))
+              (pet-config (pet-lookup-eglot-server-initialization-options program-with-args)))
+         (if (or init-opts pet-config)
+             (append (seq-subseq result 0 3)
+                     (list
+                      (append
+                       program-with-args
+                       (plist-put
+                        kwargs
+                        :initializationOptions
+                        (if (functionp init-opts)
+                            (lambda (server)
+                              (pet-merge-eglot-initialization-options
+                               (funcall init-opts server)
+                               pet-config))
+                          (pet-merge-eglot-initialization-options
+                           init-opts
+                           pet-config)))))
+                     (seq-subseq result 4))
+           result)))
+      (_ result))))
 
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."

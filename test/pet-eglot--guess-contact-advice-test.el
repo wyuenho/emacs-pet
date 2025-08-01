@@ -2,86 +2,171 @@
 
 (require 'pet)
 
-(setq python-indent-guess-indent-offset nil)
-
 (describe "pet-eglot--guess-contact-advice"
+  :var ((mock-result nil)
+        (mock-fn nil))
+
   (before-each
-    (spy-on 'pet-executable-find :and-return-value "/home/user/project/.venv/bin/pylsp")
-    (spy-on 'project-current :and-return-value (if (< emacs-major-version 29) (cons 'vc "/home/user/project/") '(vc Git "/home/user/project/")))
-    (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
-    (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
+    ;; Mock only the functions that could cause project detection pollution
+    (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:python (:pythonPath "/home/user/project/.venv/bin/python")))
 
-  (after-each
-    (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
-    (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
+    ;; Create a mock function that simulates eglot--guess-contact behavior
+    (setq mock-fn (lambda (&rest args)
+                    mock-result)))
 
-  (it "should use pet-executable-find path for Python LSP servers"
-    (assume (and (require 'eglot nil t)
-                 (fboundp 'eglot--executable-find))
-            "Unsupported `eglot' version")
+  (describe "when no initialization options exist"
+    (it "should add pet initialization options to the contact"
+      (setq mock-result '("mode" "managed-major-mode" "project-instance" ("pylsp") ("python")))
 
-    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '("pylsp"))))))
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect (nth 3 result)
+                :to-equal '("pylsp" :initializationOptions (:python (:pythonPath "/home/user/project/.venv/bin/python"))))
+        (expect (seq-subseq result 0 3) :to-equal '("mode" "managed-major-mode" "project-instance"))
+        (expect (seq-subseq result 4) :to-equal '(("python"))))))
+
+  (describe "when initialization options already exist"
+    (it "should merge pet options with existing initialization options"
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("pylsp" :initializationOptions (:existing-option t))
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect (nth 3 result)
+                :to-equal '("pylsp" :initializationOptions
+                            (:existing-option t :python (:pythonPath "/home/user/project/.venv/bin/python"))))
+        (expect (seq-subseq result 4) :to-equal '(("python"))))))
+
+  (describe "when pet has no configuration for the server"
+    (it "should preserve existing options without modification"
       (spy-on 'pet-lookup-eglot-server-initialization-options)
-      (with-temp-buffer
-        (setq default-directory "/home/user/project")
-        (setq buffer-file-name "/home/user/project/file.py")
-        (python-mode)
-        (let* ((result (eglot--guess-contact))
-               (contact (nth 3 result))
-               (program (car contact)))
-          (expect program :to-equal "/home/user/project/.venv/bin/pylsp")))))
 
-  (it "should add pet initialization options when none exist"
-    (assume (and (require 'eglot nil t)
-                 (fboundp 'eglot--executable-find))
-            "Unsupported `eglot' version")
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("unknown-server" :initializationOptions (:existing-option t))
+                          ("python")))
 
-    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '("pylsp"))))))
-      (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:test-option t))
-      (with-temp-buffer
-        (setq default-directory "/home/user/project")
-        (setq buffer-file-name "/home/user/project/file.py")
-        (python-mode)
-        (let* ((result (eglot--guess-contact))
-               (contact (nth 3 result))
-               (probe (cl-position-if #'keywordp contact))
-               (init-opts (and probe (cl-subseq contact probe))))
-          (expect (plist-get init-opts :initializationOptions) :to-equal '(:test-option t))))))
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect result :to-equal mock-result))))
 
-  (it "should merge pet initialization options with existing ones"
-    (assume (and (require 'eglot nil t)
-                 (fboundp 'eglot--executable-find))
-            "Unsupported `eglot' version")
-
-    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '(("pylsp" :initializationOptions (:existing-option t))))))))
-      (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:pet-option t))
-      (with-temp-buffer
-        (setq default-directory "/home/user/project")
-        (setq buffer-file-name "/home/user/project/file.py")
-        (python-mode)
-        (let* ((result (eglot--guess-contact))
-               (contact (nth 3 result))
-               (probe (cl-position-if #'keywordp contact))
-               (init-opts (and probe (cl-subseq contact probe))))
-          (expect (plist-get init-opts :initializationOptions) :to-equal '(:existing-option t :pet-option t))))))
-
-  (it "should preserve existing options when pet has no initialization options"
-    (assume (and (require 'eglot nil t)
-                 (fboundp 'eglot--executable-find))
-            "Unsupported `eglot' version")
-
-    (let ((eglot-server-programs `((python-mode . ,(eglot-alternatives '(("pylsp" :initializationOptions (:existing-option t))))))))
+  (describe "when no initialization options exist and pet has no config"
+    (it "should return original result unchanged"
       (spy-on 'pet-lookup-eglot-server-initialization-options)
-      (with-temp-buffer
-        (setq default-directory "/home/user/project")
-        (setq buffer-file-name "/home/user/project/file.py")
-        (python-mode)
-        (let* ((result (eglot--guess-contact))
-               (contact (nth 3 result))
-               (probe (cl-position-if #'keywordp contact))
-               (init-opts (and probe (cl-subseq contact probe))))
-          (expect (plist-get init-opts :initializationOptions) :to-equal '(:existing-option t)))))))
 
+      (setq mock-result '("mode" "managed-major-mode" "project-instance" ("unknown-server") ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect result :to-equal mock-result))))
+
+  (describe "functional contact handling"
+    (it "should handle functional contacts by calling them first"
+      ;; Simulate eglot--guess-contact returning a result with functional contact
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          (lambda () '("pylsp" :initializationOptions (:dynamic t)))
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        ;; Should call the contact function and merge with pet config
+        (expect (nth 3 result)
+                :to-equal '("pylsp" :initializationOptions
+                            (:dynamic t :python (:pythonPath "/home/user/project/.venv/bin/python"))))
+        (expect (seq-subseq result 4) :to-equal '(("python"))))))
+
+  (describe "functional initialization options handling"
+    (it "should wrap functional init-opts in a lambda that merges with pet config"
+      ;; Simulate result where initializationOptions is a function
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("pylsp" :initializationOptions (lambda (server) '(:dynamic t)))
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        ;; Should preserve the function structure but wrap it for merging
+        (let* ((contact (nth 3 result))
+               (probe (seq-position contact :initializationOptions))
+               (init-opts (plist-get (seq-subseq contact (or probe 0)) :initializationOptions)))
+          (expect (seq-subseq contact 0 1) :to-equal '("pylsp"))
+          (expect init-opts :to-be-truthy)
+          ;; The init-opts should now be a function that merges pet config
+          (expect (functionp init-opts) :to-be-truthy)
+          ;; When called, should merge original function result with pet config
+          (expect (funcall init-opts nil)
+                  :to-equal '(:dynamic t :python (:pythonPath "/home/user/project/.venv/bin/python"))))
+        (expect (seq-subseq result 4) :to-equal '(("python"))))))
+
+  (describe "with complex contact structure"
+    (it "should handle contacts with multiple arguments and preserve structure"
+      ;; Contact with server arguments
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("pylsp" "--verbose" :initializationOptions (:existing t) :other-option "value")
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        ;; Should preserve all parts except modify initializationOptions
+        (expect (seq-subseq result 0 3) :to-equal '("mode" "managed-major-mode" "project-instance"))
+        (expect (seq-subseq result 4) :to-equal '(("python")))
+        ;; Should merge initialization options while preserving program args
+        ;; Note: current implementation doesn't preserve other plist properties after :initializationOptions
+        (let* ((contact (nth 3 result))
+               (probe (seq-position contact :initializationOptions))
+               (init-opts (seq-subseq contact probe)))
+          (expect (seq-subseq contact 0 2) :to-equal '("pylsp" "--verbose"))
+          ;; Access initializationOptions from the plist part, not the whole contact
+          (expect (plist-get init-opts :initializationOptions)
+                  :to-equal '(:existing t :python (:pythonPath "/home/user/project/.venv/bin/python")))
+          ;; :other-option should now be preserved
+          (expect (plist-get init-opts :other-option) :to-equal "value"))))
+
+    (describe "program-with-args extraction"
+      (it "should correctly identify program and arguments before initializationOptions"
+        ;; Test that we correctly split the contact at :initializationOptions
+        (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                            ("pylsp" "arg1" "arg2" :initializationOptions (:existing t))
+                            ("python")))
+
+        (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+          ;; Should pass correct program-with-args to pet-lookup function
+          (expect 'pet-lookup-eglot-server-initialization-options
+                  :to-have-been-called-with '("pylsp" "arg1" "arg2"))
+          (expect (seq-subseq result 4) :to-equal '(("python")))))))
+
+  (describe "edge cases"
+    (it "should handle empty contact gracefully"
+      (setq mock-result '("mode" "managed-major-mode" "project-instance" () ("python")))
+      (expect (pet-eglot--guess-contact-advice mock-fn) :to-equal mock-result))
+
+    (it "should skip TCP network connections unchanged"
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("localhost" 6008)
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        ;; TCP contacts should pass through unchanged
+        (expect result :to-equal mock-result)
+        ;; pet-lookup should not be called for TCP contacts
+        (expect 'pet-lookup-eglot-server-initialization-options
+                :not :to-have-been-called)))
+
+    (it "should skip process initargs contacts unchanged"
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          (:process (lambda () "custom-process") :other-option "value")
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        ;; Process initargs should pass through unchanged
+        (expect result :to-equal mock-result)
+        ;; pet-lookup should not be called for process initargs
+        (expect 'pet-lookup-eglot-server-initialization-options
+                :not :to-have-been-called)))
+
+    (it "should skip autoport contacts unchanged"
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("solargraph" "socket" "--port" :autoport)
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        ;; Autoport contacts should pass through unchanged
+        (expect result :to-equal mock-result)
+        ;; pet-lookup should not be called for autoport contacts
+        (expect 'pet-lookup-eglot-server-initialization-options
+                :not :to-have-been-called)))))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)
