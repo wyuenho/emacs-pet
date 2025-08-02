@@ -4,33 +4,33 @@
 
 (describe "pet-buffer-local-vars-teardown"
   (before-each
+    (defvar format-all--executable-table
+      (let ((tab (make-hash-table)))
+        (puthash 'black "black" tab)
+        (puthash 'isort "isort" tab)
+        (puthash 'ruff "ruff" tab)
+        (puthash 'yapf "yapf" tab)
+        tab))
+    (defvar apheleia-formatters
+      '((black      . ("black"))
+        (isort      . ("isort"))
+        (ruff       . ("ruff"))
+        (ruff-isort . ("ruff"))
+        (yapf       . ("yapf"))))
+    (spy-on 'pet-executable-find)
+    (spy-on 'pet-virtualenv-root)
+    (spy-on 'pet-flycheck-setup)
+    (spy-on 'pet-eglot-setup)
+    (spy-on 'pet-dape-setup)
     (spy-on 'pet-flycheck-teardown)
     (spy-on 'pet-eglot-teardown)
     (spy-on 'pet-dape-teardown))
 
   (after-each
-    (kill-local-variable 'python-shell-interpreter)
-    (kill-local-variable 'python-shell-virtualenv-root)
-    (kill-local-variable 'lsp-jedi-executable-command)
-    (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
-    (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
-    (kill-local-variable 'lsp-pyright-langserver-command)
-    (kill-local-variable 'lsp-pyright-venv-path)
-    (kill-local-variable 'lsp-pyright-python-executable-cmd)
-    (kill-local-variable 'lsp-ruff-server-command)
-    (kill-local-variable 'lsp-ruff-python-path)
-    (kill-local-variable 'dap-python-executable)
-    (kill-local-variable 'dap-variables-project-root-function)
-    (kill-local-variable 'python-pytest-executable)
-    (kill-local-variable 'pytest-global-name)
-    (kill-local-variable 'python-black-command)
-    (kill-local-variable 'python-isort-command)
-    (kill-local-variable 'blacken-executable)
-    (kill-local-variable 'yapfify-executable)
-    (kill-local-variable 'ruff-format-command)
-    (kill-local-variable 'py-autopep8-command)
-    (kill-local-variable 'format-all--executable-table)
-    (kill-local-variable 'apheleia-formatters))
+    (makunbound 'format-all--executable-table)
+    (unintern 'format-all--executable-table obarray)
+    (makunbound 'apheleia-formatters)
+    (unintern 'apheleia-formatters obarray))
 
   (it "should run the hook `pet-before-buffer-local-vars-teardown'"
     (let* ((calls 0)
@@ -69,7 +69,8 @@
     (expect (local-variable-p 'ruff-format-command) :not :to-be-truthy)
     (expect (local-variable-p 'py-autopep8-command) :not :to-be-truthy)
     (expect (local-variable-p 'format-all--executable-table) :not :to-be-truthy)
-    (expect (local-variable-p 'apheleia-formatters) :not :to-be-truthy)))
+    (expect (local-variable-p 'apheleia-formatters) :not :to-be-truthy)
+    (expect (local-variable-p 'pytest-global-name) :not :to-be-truthy)))
 
 
 ;; Local Variables:

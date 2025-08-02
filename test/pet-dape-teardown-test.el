@@ -3,8 +3,8 @@
 (require 'pet)
 
 (describe "pet-dape-teardown"
-  (it "should tear down bufer local variables for dape"
-    (spy-on 'pet-find-file-from-project-root-recursively)
+  (it "should tear down buffer local variables for dape"
+    (spy-on 'pet-find-file-from-project)
     (spy-on 'pet-executable-find :and-return-value "/usr/bin/python")
     (pet-dape-setup)
     (pet-dape-teardown)

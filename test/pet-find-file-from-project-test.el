@@ -17,7 +17,8 @@
     (setq-local pet-cache nil))
 
   (after-each
-    (kill-local-variable 'pet-cache))
+    (kill-local-variable 'pet-cache)
+    (kill-local-variable 'pet-find-file-functions))
 
   (describe "Core Functionality"
     (it "should return cached result without calling find functions"

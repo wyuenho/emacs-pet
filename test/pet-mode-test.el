@@ -3,22 +3,30 @@
 (require 'pet)
 
 (describe "pet-mode"
+  :var ((project-root "/home/user/project/"))
+
   (before-each
-    (spy-on 'pet-project-root :and-return-value "/home/user/project/")
+    (setq-local pet-cache nil)
+    (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-buffer-local-vars-setup)
     (spy-on 'pet-buffer-local-vars-teardown)
     (spy-on 'add-hook)
     (spy-on 'remove-hook))
 
+  (after-each
+    (kill-local-variable 'pet-cache)
+    (when (bound-and-true-p pet-mode)
+      (pet-mode -1)))
+
   (describe "when enabling pet-mode"
     (it "should set up all buffer local variables for supported packages if `pet-mode' is t"
-      (spy-on 'assoc-default :and-return-value "/home/user/project/.venv/")
+      (spy-on 'pet-cache-get :and-return-value "/home/user/project/.venv/")
       (pet-mode 1)
       (expect 'pet-buffer-local-vars-setup :to-have-been-called)
       (expect 'add-hook :to-have-been-called-with 'kill-buffer-hook #'pet-cleanup-watchers-and-caches t))
 
     (it "should call pixi environment switch when pixi is detected and no cached virtualenv"
-      (spy-on 'assoc-default )
+      (spy-on 'pet-cache-get)
       (spy-on 'pet-use-pixi-p :and-return-value "/usr/bin/pixi")
       (spy-on 'call-interactively)
       (pet-mode 1)
@@ -26,8 +34,8 @@
       (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
     (it "should call conda environment switch when conda is detected and no cached virtualenv and pixi not available"
-      (spy-on 'assoc-default )
-      (spy-on 'pet-use-pixi-p )
+      (spy-on 'pet-cache-get)
+      (spy-on 'pet-use-pixi-p)
       (spy-on 'pet-use-conda-p :and-return-value "/usr/bin/conda")
       (spy-on 'call-interactively)
       (pet-mode 1)
@@ -35,9 +43,9 @@
       (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
     (it "should call mamba environment switch when mamba is detected and no cached virtualenv and pixi/conda not available"
-      (spy-on 'assoc-default )
-      (spy-on 'pet-use-pixi-p )
-      (spy-on 'pet-use-conda-p )
+      (spy-on 'pet-cache-get)
+      (spy-on 'pet-use-pixi-p)
+      (spy-on 'pet-use-conda-p)
       (spy-on 'pet-use-mamba-p :and-return-value "/usr/bin/mamba")
       (spy-on 'call-interactively)
       (pet-mode 1)
@@ -45,10 +53,10 @@
       (expect 'pet-buffer-local-vars-setup :not :to-have-been-called))
 
     (it "should set up buffer local vars when no environment managers are detected"
-      (spy-on 'assoc-default )
-      (spy-on 'pet-use-pixi-p )
-      (spy-on 'pet-use-conda-p )
-      (spy-on 'pet-use-mamba-p )
+      (spy-on 'pet-cache-get)
+      (spy-on 'pet-use-pixi-p)
+      (spy-on 'pet-use-conda-p)
+      (spy-on 'pet-use-mamba-p)
       (pet-mode 1)
       (expect 'pet-buffer-local-vars-setup :to-have-been-called)))
 
