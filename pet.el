@@ -713,7 +713,7 @@ Return nil if the file is not found." file-name)))
 (add-to-list 'auto-mode-alist '("/Pipfile\\'" . conf-toml-mode))
 
 (pet-def-config-accessor environment
-  :file-name "environment*.y*ml"
+  :file-name "environment*.y?ml"
   :parser pet-parse-config-file)
 
 (pet-def-config-accessor pixi
