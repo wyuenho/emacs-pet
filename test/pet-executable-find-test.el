@@ -120,12 +120,18 @@
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
-      (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
+      (spy-on 'process-file :and-call-fake
+              (lambda (program infile buffer display &rest args)
+                (when (and (equal program "pyenv")
+                           (equal (car args) "which")
+                           (equal (cadr args) "python"))
+                  (insert "/home/user/.pyenv/versions/3.10.5/bin/python\n")
+                  0)))
       (expect (pet-executable-find "python" t) :to-equal "/home/user/.pyenv/versions/3.10.5/bin/python")
-      (expect 'process-lines :to-have-been-called-with "pyenv" "which" "python")
+      (expect 'process-file :to-have-been-called-with "pyenv" nil t nil "which" "python")
       (expect 'pet--executable-find :to-have-been-called-times 1))
 
-    (it "should return the absolute path the executable for a project from `exec-path'"
+    (it "should return the absolute path of the executable for a project from `exec-path'"
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
@@ -142,26 +148,64 @@
       (kill-local-variable 'pet-search-globally))
 
     (it "should not return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
-      (spy-on 'process-lines :and-return-value '("/home/user/.pyenv/versions/3.10.5/bin/python"))
+      (spy-on 'process-file :and-call-fake
+              (lambda (program infile buffer display &rest args)
+                (when (and (equal program "pyenv")
+                           (equal (car args) "which")
+                           (equal (cadr args) "python"))
+                  (insert "/home/user/.pyenv/versions/3.10.5/bin/python\n")
+                  0)))
 
       (expect (pet-executable-find "python" nil) :to-equal nil)
-      (expect 'process-lines :not :to-have-been-called-with "pyenv" "which" "python")
+      (expect 'process-file :not :to-have-been-called-with "pyenv" nil t nil "which" "python")
       (expect 'pet--executable-find :to-have-been-called-times 0))
 
-    (it "should not return the absolute path the executable for a project from `exec-path'"
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
+    (it "should not return the absolute path of the executable for a project from `exec-path'"
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "black")
                                                        "/home/user/project/.venv/bin/black")))
 
       (expect (pet-executable-find "black" nil) :to-equal nil)
-      (expect 'pet--executable-find :to-have-been-called-times 0))))
+      (expect 'pet--executable-find :to-have-been-called-times 0)))
+
+  (describe "when in a remote directory via TRAMP"
+    (it "should find executables in remote virtualenv without modifying global TRAMP state"
+      ;; Set up remote environment
+      (let ((default-directory "/ssh:user@host:/home/user/project/")
+            (tramp-remote-path '("/usr/bin" "/bin"))
+            (tramp-cache-data (make-hash-table :test 'equal)))
+
+        ;; Mock virtualenv detection
+        (spy-on 'pet-virtualenv-root :and-return-value "/ssh:user@host:/home/user/project/.venv/")
+        (spy-on 'pet-use-pre-commit-p)
+        (spy-on 'pet-conda-venv-p)
+        (spy-on 'pet-system-bin-dir :and-return-value "bin")
+
+        ;; Mock network operations only
+        (spy-on 'executable-find :and-call-fake
+                (lambda (command &optional remote)
+                  ;; Key test: tramp-remote-path should contain LOCAL path during execution
+                  (when (and remote
+                             (equal command "black")
+                             (member "/home/user/project/.venv/bin" tramp-remote-path))
+                    "/ssh:user@host:/home/user/project/.venv/bin/black")))
+
+        ;; Test: your changes should make this work
+        (expect (pet-executable-find "black") :to-equal "/ssh:user@host:/home/user/project/.venv/bin/black")
+
+        ;; Critical assertions: global TRAMP state should remain unchanged
+        (expect tramp-remote-path :to-equal '("/usr/bin" "/bin"))
+        (expect (hash-table-count tramp-cache-data) :to-equal 0)
+
+        ;; Verify network call happened
+        (expect 'executable-find :to-have-been-called-with "black" t)))))
 
 
 ;; Local Variables:
