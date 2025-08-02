@@ -117,13 +117,15 @@ program by adjusting `pet-yaml-to-json-program-arguments'"
 
 Each function should take a file name as its sole argument and
 return an absolute path to the file found in the current project
-and nil otherwise."
+and nil otherwise.
+
+NOTE: this variable is not a hook."
   :group 'pet
   :options '(pet-find-file-from-project-root
              pet-locate-dominating-file
              pet-find-file-from-project-root-natively
              pet-find-file-from-project-root-recursively)
-  :type 'hook)
+  :type '(repeat function))
 
 (defcustom pet-venv-dir-names '(".venv" "venv" "env")
   "Directory names to search for when looking for a virtualenv at the project root."
@@ -491,7 +493,11 @@ return the absolute path found by the first function, nil
 otherwise."
   (when-let* ((root (pet-project-root)))
     (or (pet-cache-get (list root :files file))
-        (when-let* ((result (run-hook-with-args-until-success 'pet-find-file-functions file)))
+        ;; we don't really want to call `pet-find-file-functions' as real hook
+        ;; because then both the buffer local and global values will be run, but
+        ;; we just want to run the effective find file functions currently in
+        ;; scope
+        (when-let* ((result (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions)))
           (pet-cache-put (list root :files file) result)
           result))))
 
