@@ -69,7 +69,6 @@
     (expect (pet-parse-config-file jsonian-file-sans-ext) :to-have-same-items-as '((foo . "bar") (baz "buz" 1)))
     (expect (get-buffer " *pet parser output*") :to-be nil))
 
-  ;; Tests for new fallback parser functionality
   (describe "with parser fallbacks"
     (before-each
       (setq-local pet-prefer-elisp-parsers nil))

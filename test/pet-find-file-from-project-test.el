@@ -9,7 +9,6 @@
         (test-file-path "/home/user/project-a/pyproject.toml")
         (another-file "setup.cfg")
         (another-file-path "/home/user/project-a/setup.cfg")
-        ;; Variables to save/restore global state
         (saved-pet-cache nil)
         (saved-pet-find-file-functions nil))
 
@@ -34,7 +33,6 @@
 
       (expect (pet-find-file-from-project test-file) :to-equal test-file-path)
 
-      ;; Verify no find functions were called
       (expect 'pet-find-file-from-project-root :not :to-have-been-called)
       (expect 'pet-locate-dominating-file :not :to-have-been-called))
 
@@ -57,7 +55,6 @@
       (expect 'pet-locate-dominating-file :to-have-been-called-with test-file)
       (expect 'pet-find-file-from-project-root-natively :not :to-have-been-called)
 
-      ;; Verify result is cached
       (expect (pet-cache-get (list project-a-root :files test-file)) :to-equal test-file-path))
 
     (it "should return nil when not in a project"
@@ -69,7 +66,6 @@
 
       (expect (pet-find-file-from-project test-file) :to-be nil)
 
-      ;; Verify function was not called since we're not in a project
       (expect 'pet-find-file-from-project-root :not :to-have-been-called)))
 
   (describe "Function Chain Behavior"
@@ -90,7 +86,6 @@
       (expect 'pet-locate-dominating-file :to-have-been-called-with "nonexistent.txt")
       (expect 'pet-find-file-from-project-root-natively :to-have-been-called-with "nonexistent.txt")
 
-      ;; Verify nil result is not cached
       (expect (pet-cache-get (list project-a-root :files "nonexistent.txt")) :to-be nil)))
 
   (describe "Cache Isolation"
@@ -108,7 +103,6 @@
       (expect (pet-find-file-from-project test-file) :to-equal test-file-path)
       (expect (pet-find-file-from-project another-file) :to-equal another-file-path)
 
-      ;; Verify both are cached independently
       (expect (pet-cache-get (list project-a-root :files test-file)) :to-equal test-file-path)
       (expect (pet-cache-get (list project-a-root :files another-file)) :to-equal another-file-path))
 
@@ -132,7 +126,6 @@
       (expect (pet-find-file-from-project test-file) :to-equal "/home/user/project-b/pyproject.toml")
       (expect 'pet-find-file-from-project-root :to-have-been-called-with test-file)
 
-      ;; Verify both projects have separate cache entries
       (expect (pet-cache-get (list project-a-root :files test-file)) :to-equal test-file-path)
       (expect (pet-cache-get (list project-b-root :files test-file)) :to-equal "/home/user/project-b/pyproject.toml"))))
 

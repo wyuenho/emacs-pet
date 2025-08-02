@@ -177,34 +177,28 @@
 
   (describe "when in a remote directory via TRAMP"
     (it "should find executables in remote virtualenv without modifying global TRAMP state"
-      ;; Set up remote environment
       (let ((default-directory "/ssh:user@host:/home/user/project/")
             (tramp-remote-path '("/usr/bin" "/bin"))
             (tramp-cache-data (make-hash-table :test 'equal)))
 
-        ;; Mock virtualenv detection
         (spy-on 'pet-virtualenv-root :and-return-value "/ssh:user@host:/home/user/project/.venv/")
         (spy-on 'pet-use-pre-commit-p)
         (spy-on 'pet-conda-venv-p)
         (spy-on 'pet-system-bin-dir :and-return-value "bin")
 
-        ;; Mock network operations only
         (spy-on 'executable-find :and-call-fake
                 (lambda (command &optional remote)
-                  ;; Key test: tramp-remote-path should contain LOCAL path during execution
                   (when (and remote
                              (equal command "black")
                              (member "/home/user/project/.venv/bin" tramp-remote-path))
                     "/home/user/project/.venv/bin/black")))
 
-        ;; Test: your changes should make this work
         (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black")
 
         ;; Critical assertions: global TRAMP state should remain unchanged
         (expect tramp-remote-path :to-equal '("/usr/bin" "/bin"))
         (expect (hash-table-count tramp-cache-data) :to-equal 0)
 
-        ;; Verify network call happened
         (expect 'executable-find :to-have-been-called-with "black" t)))))
 
 

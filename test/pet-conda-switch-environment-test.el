@@ -18,7 +18,6 @@
     (spy-on 'pet-conda-environments :and-return-value
             (list other-env-path env-path))
 
-    ;; Create test buffers in the project
     (setq buffer-a (get-buffer-create "test-a.py"))
     (setq buffer-b (get-buffer-create "test-b.py"))
     (with-current-buffer buffer-a
@@ -30,7 +29,6 @@
       (python-mode)
       (setq-local process-environment '("PATH=/usr/bin" "CONDA_PREFIX=/old/env" "HOME=/home/user")))
 
-    ;; Create buffer from different project
     (setq other-project-buffer (get-buffer-create "other.py"))
     (with-current-buffer other-project-buffer
       (setq buffer-file-name "/home/user/other-project/main.py")
@@ -83,7 +81,6 @@
 
       (expect (pet-cache-get (list project-root :virtualenv)) :to-equal env-path))
 
-
     (describe "buffer isolation"
       (it "should only refresh variables for buffers from the same project"
         (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
@@ -92,8 +89,6 @@
 
         (pet-conda-switch-environment env-path)
 
-        ;; Should only call teardown/setup once per project buffer (buffer-a only)
-        ;; other-project-buffer should be ignored because it's from different project
         (expect 'pet-buffer-local-vars-teardown :to-have-been-called-times 1)
         (expect 'pet-buffer-local-vars-setup :to-have-been-called-times 1)))
 

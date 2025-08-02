@@ -16,24 +16,20 @@
     (setq-local pet-cache nil)
     (setq call-count 0)
 
-    ;; Define a named parser function so the macro can reference it
     (defun test-parser (file)
       (setq call-count (1+ call-count))
       (cond ((string= file pyproject-file-a) pyproject-content-a)
             ((string= file pyproject-file-b) pyproject-content-b)
             (t "default-content")))
 
-    ;; Define test accessor
     (pet-def-config-accessor test-pyproject
       :file-name "pyproject.toml"
       :parser test-parser)
 
-    ;; Mock file system and watchers
     (spy-on 'file-notify-add-watch :and-return-value 'mock-watcher)
     (spy-on 'file-notify-rm-watch))
 
   (after-each
-    ;; Cleanup generated functions
     (when (fboundp 'pet-test-pyproject)
       (fmakunbound 'pet-test-pyproject)
       (unintern 'pet-test-pyproject obarray))
@@ -72,7 +68,6 @@
 
       (expect call-count :to-equal 1)
 
-      ;; File watcher should only be set up once
       (expect 'file-notify-add-watch :to-have-been-called-times 1)))
 
   (describe "3. Missing Files - Graceful Degradation"
@@ -111,7 +106,6 @@
       (spy-on 'pet-find-file-from-project :and-return-value pyproject-file-a)
       (expect (pet-test-pyproject) :to-equal pyproject-content-a)
 
-      ;; Verify both projects have their own cache entries
       (expect (pet-cache-get (list project-a-root :configs pyproject-file-a))
               :to-equal pyproject-content-a)
       (expect (pet-cache-get (list project-b-root :configs pyproject-file-b))
@@ -133,7 +127,6 @@
       (let ((watchers (pet-cache-get (list project-a-root :file-watchers))))
         (expect (length watchers) :to-equal 1))
 
-      ;; File watcher should only be set up once
       (expect 'file-notify-add-watch :to-have-been-called-times 1)))
 
   (describe "6. Duplicate Watcher Prevention"
@@ -147,7 +140,6 @@
 
       (expect 'file-notify-add-watch :to-have-been-called-times 1)
 
-      ;; Cache should have exactly one watcher entry
       (let ((watchers (pet-cache-get (list project-a-root :file-watchers))))
         (expect (length watchers) :to-equal 1)
         (expect (alist-get pyproject-file-a watchers nil nil 'equal) :to-equal 'mock-watcher))))
@@ -164,7 +156,6 @@
       (expect (pet-cache-get (list project-a-root :file-watchers pyproject-file-a))
               :to-be-truthy)
 
-      ;; The invariant: if config exists, watcher must exist
       (let ((configs (pet-cache-get (list project-a-root :configs)))
             (watchers (pet-cache-get (list project-a-root :file-watchers))))
         (dolist (config-entry configs)
