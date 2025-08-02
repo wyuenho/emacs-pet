@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 3.4.1
-;; Package-Requires: ((emacs "26.1") (f "0.6.0") (map "3.3.1") (seq "2.24"))
+;; Package-Requires: ((emacs "27.1") (f "0.6.0") (map "3.3.1") (seq "2.24"))
 ;; Homepage: https://github.com/wyuenho/emacs-pet/
 ;; Keywords: tools
 
@@ -48,9 +48,6 @@
 ;; optional dependencies
 (require 'tomlparse nil t)
 (require 'yaml nil t)
-
-(when (< emacs-major-version 27)
-  (require 'json))
 
 (defgroup pet nil
   "Customization group for `pet'."
@@ -165,14 +162,6 @@ the project directory."
 
 
 
-(defun pet--executable-find (command &optional remote)
-  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26.
-
-See `executable-find' for the meaning of COMMAND and REMOTE."
-  (if (>= emacs-major-version 27)
-      (executable-find command remote)
-    (executable-find command)))
-
 (defun pet-system-bin-dir ()
   "Determine the correct script directory based on `system-type'."
   (if (eq (if (file-remote-p default-directory)
@@ -201,6 +190,68 @@ package metadata."
   (when venv-path
     (let ((venv-dir (file-name-as-directory venv-path)))
       (file-exists-p (concat venv-dir "conda-meta")))))
+
+
+
+;; Remote-aware process running helpers
+
+(defmacro pet-run-process (program args &rest body)
+  "Run PROGRAM with ARGS in a temp buffer and execute BODY.
+
+BODY has access to `exit-code' variable and the current buffer with
+output.  Works with both local and remote paths via `process-file'."
+  (declare (indent 2))
+  `(with-temp-buffer
+     (condition-case err
+         (let ((exit-code (apply #'process-file ,program nil t nil ,args)))
+           ,@body)
+       (error (pet-report-error err)))))
+
+(defun pet-run-process-get-output (program &rest args)
+  "Run PROGRAM with ARGS and return the entire OUTPUT if exit code is 0.
+
+OUTPUT is the full stdout/stderr as a string, trimmed.
+
+If exit-code is non-zero and output is non-empty, reports error to user
+and return nil."
+  (pet-run-process program args
+    (let ((output (string-trim (buffer-string))))
+      (if (zerop exit-code)
+          output
+        (when (not (string-empty-p output))
+          (pet-report-error (list 'user-error output)))))))
+
+(defun pet-run-process-get-line (program &rest args)
+  "Run PROGRAM with ARGS and return the FIRST-LINE if exit code is 0.
+
+FIRST-LINE is the first line of output, or empty string if no output.
+
+If exit-code is non-zero and output is non-empty, reports error to user
+and return nil."
+  (pet-run-process program args
+    (if (zerop exit-code)
+        (progn
+          (goto-char (point-min))
+          (unless (eobp)
+            (string-trim (buffer-substring (point-min) (line-end-position)))))
+      (let ((output (string-trim (buffer-string))))
+        (when (not (string-empty-p output))
+          (pet-report-error (list 'user-error output)))))))
+
+(defun pet-run-process-get-lines (program &rest args)
+  "Run PROGRAM with ARGS and return LINES if exit code is 0.
+
+LINES is a list of output lines, or empty list if no output.
+
+If exit-code is non-zero and output is non-empty, reports error to user
+and return nil."
+  (pet-run-process program args
+    (let ((output (string-trim (buffer-string))))
+      (if (zerop exit-code)
+          (unless (string-empty-p output)
+            (split-string output "\n" t))
+        (when (not (string-empty-p output))
+          (pet-report-error (list 'user-error output)))))))
 
 
 
@@ -457,11 +508,10 @@ The actual search is done via calling native programs in a subprocess.
 
 Currently only `fd' is supported.  See `pet-fd-command' and
 `pet-fd-command-args'."
-  (condition-case err
-      (when-let*((root (pet-project-root))
-                 (fd (executable-find pet-fd-command)))
-        (car (process-lines fd `(,@pet-fd-command-args ,file ,root))))
-    (error (pet-report-error err))))
+  (when-let* ((root (pet-project-root))
+              (fd (executable-find pet-fd-command t)))
+    (let ((default-directory root))
+      (apply #'pet-run-process-get-line fd `(,@pet-fd-command-args ,file ,root)))))
 
 (defun pet-find-file-from-project-root-recursively (file)
   "Find FILE by recursively searching down from the current project's root.
@@ -474,11 +524,7 @@ Return absolute path to FILE if found, nil otherwise."
                  (cond ((functionp 'projectile-dir-files)
                         (mapcar (apply-partially #'concat root)
                                 (projectile-dir-files (pet-project-root))))
-                       ((functionp 'project-files)
-                        (project-files (project-current)))
-                       (t (directory-files-recursively
-                           (pet-project-root)
-                           (wildcard-to-regexp file))))))
+                       (t (project-files (project-current))))))
       (seq-find (lambda (f)
                   (string-match-p
                    (wildcard-to-regexp file)
@@ -503,10 +549,7 @@ otherwise."
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
-  (if (functionp 'json-parse-string)
-      (json-parse-string str :object-type 'alist :array-type 'list)
-    (let ((json-array-type 'list))
-      (json-read-from-string str))))
+  (json-parse-string str :object-type 'alist :array-type 'list))
 
 (defun pet-parse-toml-with-elisp (file-path)
   "Parse TOML file at FILE-PATH with an Elisp parser.
@@ -547,7 +590,7 @@ parsed data."
 Returns (success . result) where success is t/nil and result is the
 parsed data.  Normalizes :null to nil for consistent empty file
 handling."
-  (if (pet--executable-find program)
+  (if (executable-find program)
       (let ((output (get-buffer-create " *pet parser output*")))
         (unwind-protect
             (let ((exit-code
@@ -725,27 +768,27 @@ Return nil if the file is not found." file-name)))
 
 Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
-       (or (pet--executable-find "pre-commit" t)
+       (or (executable-find "pre-commit" t)
            (and (when-let* ((venv (pet-virtualenv-root))
                             (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
                             (process-environment (copy-sequence process-environment)))
                   (setenv "PATH" (string-join exec-path path-separator))
-                  (pet--executable-find "pre-commit" t))))))
+                  (executable-find "pre-commit" t))))))
 
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
 Returns the path to the `conda' executable found."
   (and (pet-environment)
-       (pet--executable-find "conda" t)))
+       (executable-find "conda" t)))
 
 (defun pet-use-mamba-p ()
   "Whether the current project is using `mamba' or `micromamba'.
 
 Returns the path to the `mamba' executable variant found."
   (and (pet-environment)
-       (or (pet--executable-find "mamba" t)
-           (pet--executable-find "micromamba" t))))
+       (or (executable-find "mamba" t)
+           (executable-find "micromamba" t))))
 
 (defun pet-use-pixi-p ()
   "Whether the current project is using `pixi'.
@@ -754,7 +797,7 @@ Returns the path to the `pixi' executable."
   (and (or (pet-pixi)
            (let-alist (pet-pyproject)
              .tool.pixi))
-       (pet--executable-find "pixi" t)))
+       (executable-find "pixi" t)))
 
 (defun pet-use-poetry-p ()
   "Whether the current project is using `poetry'.
@@ -765,21 +808,21 @@ Returns the path to the `poetry' executable."
         (or (let-alist (pet-pyproject)
               .build-system.build-backend)
             ""))
-       (pet--executable-find "poetry" t)))
+       (executable-find "poetry" t)))
 
 (defun pet-use-pyenv-p ()
   "Whether the current project is using `pyenv'.
 
 Returns the path to the `pyenv' executable."
   (and (pet-python-version)
-       (pet--executable-find "pyenv" t)))
+       (executable-find "pyenv" t)))
 
 (defun pet-use-pipenv-p ()
   "Whether the current project is using `pipenv'.
 
 Returns the path to the `pipenv' executable."
   (and (pet-pipfile)
-       (pet--executable-find "pipenv" t)))
+       (executable-find "pipenv" t)))
 
 (defun pet-pre-commit-config-has-hook-p (id)
   "Determine if the `pre-commit' configuration has a hook.
@@ -794,27 +837,24 @@ project has hook ID set up."
   "Parse `pre-commit' database.
 
 Read the pre-commit SQLite database located at DB-FILE into an alist."
-  (if (and (functionp 'sqlite-available-p)
-           (sqlite-available-p))
-      (let ((db (sqlite-open db-file)))
-        (unwind-protect
-            (let* ((result-set (sqlite-select db "select * from repos" nil 'set))
-                   result
-                   row)
-              (while (setq row (sqlite-next result-set))
-                (setq result (cons (seq-mapn (lambda (a b) (cons (intern a) b))
-                                             (sqlite-columns result-set)
-                                             row)
-                                   result)))
-              (sqlite-finalize result-set)
-              result)
-          (sqlite-close db)))
-
-    (condition-case err
-        (with-temp-buffer
-          (process-file "sqlite3" nil t nil "-json" db-file "select * from repos")
-          (pet-parse-json (buffer-string)))
-      (error (pet-report-error err)))))
+  (or (and (functionp 'sqlite-available-p)
+           (sqlite-available-p)
+           (when-let* ((db (sqlite-open db-file)))
+             (unwind-protect
+                 (let* ((result-set (sqlite-select db "select * from repos" nil 'set))
+                        result
+                        row)
+                   (while (setq row (sqlite-next result-set))
+                     (setq result (cons (seq-mapn (lambda (a b) (cons (intern a) b))
+                                                  (sqlite-columns result-set)
+                                                  row)
+                                        result)))
+                   (sqlite-finalize result-set)
+                   result)
+               (sqlite-close db))))
+      (when-let* ((sqlite3 (executable-find "sqlite3" t))
+                  (json (pet-run-process-get-output sqlite3 "-json" db-file "select * from repos")))
+        (pet-parse-json json))))
 
 (defvar pet-pre-commit-database-cache nil
   "Cached pre-commit database content (system-wide).")
@@ -916,7 +956,7 @@ continues to look in `pyenv', then finally from the variable
   (catch 'done
     (cond ((and (not (file-remote-p executable))
                 (file-name-absolute-p executable)
-                (pet--executable-find executable))
+                (executable-find executable))
            executable)
           ((and (pet-use-pre-commit-p)
                 (not (string-prefix-p "python" executable))
@@ -931,25 +971,27 @@ continues to look in `pyenv', then finally from the variable
                    (user-error "`pre-commit' is configured but `%s' is not found in %s" executable bin-dir)))
              (error (pet-report-error err))))
           ((when-let* ((venv (pet-virtualenv-root))
-                       (path (list (concat (file-name-as-directory venv)
-                                           (unless (and (string-prefix-p "python" executable)
-                                                        (pet-conda-venv-p venv)
-                                                        (eq system-type 'windows-nt))
-                                             (pet-system-bin-dir)))))
-                       (exec-path path)
-                       (tramp-remote-path path)
-                       (process-environment (copy-sequence process-environment)))
-             (setenv "PATH" (string-join exec-path path-separator))
-             (pet--executable-find executable t)))
+                       (venv-bin (tramp-file-local-name
+                                  (concat (file-name-as-directory venv)
+                                          (unless (and (string-prefix-p "python" executable)
+                                                       (pet-conda-venv-p venv)
+                                                       (eq system-type 'windows-nt))
+                                            (pet-system-bin-dir)))))
+                       (exec-path (list venv-bin))
+                       (process-environment (copy-sequence process-environment))
+                       (tramp-cache-data (copy-hash-table tramp-cache-data))
+                       (tramp-remote-path (cons venv-bin (copy-sequence tramp-remote-path))))
+             (if (file-remote-p default-directory)
+                 (tramp-flush-connection-property (tramp-dissect-file-name default-directory) "remote-path")
+               (setenv "PATH" (string-join exec-path path-separator)))
+             (executable-find executable t)))
           ((if (or search-globally pet-search-globally)
                nil
              (throw 'done nil)))
-          ((pet--executable-find "pyenv" t)
-           (condition-case err
-               (car (process-lines "pyenv" "which" executable))
-             (error (pet-report-error err))))
-          (t (or (pet--executable-find executable t)
-                 (pet--executable-find (concat executable "3") t))))))
+          ((executable-find "pyenv" t)
+           (pet-run-process-get-line "pyenv" "which" executable))
+          (t (or (executable-find executable t)
+                 (executable-find (concat executable "3") t))))))
 
 
 ;;;###autoload
@@ -969,41 +1011,20 @@ Selects a virtualenv in the following order:
         (let ((venv-path
                (cond ((when-let* ((ev (getenv "VIRTUAL_ENV")))
                         (expand-file-name ev)))
-                     ((when-let*((program (pet-use-poetry-p))
-                                 (default-directory (file-name-directory (pet-pyproject-path))))
-                        (condition-case err
-                            (with-temp-buffer
-                              (let ((exit-code (process-file program nil t nil "env" "info" "--no-ansi" "--path"))
-                                    (output (string-trim (buffer-string))))
-                                (if (zerop exit-code)
-                                    output
-                                  (user-error (buffer-string)))))
-                          (error (pet-report-error err)))))
-                     ((when-let*((program (pet-use-pipenv-p))
-                                 (default-directory (file-name-directory (pet-pipfile-path))))
-                        (condition-case err
-                            (with-temp-buffer
-                              (let ((exit-code (process-file program nil '(t nil) nil "--quiet" "--venv"))
-                                    (output (string-trim (buffer-string))))
-                                (if (zerop exit-code)
-                                    output
-                                  (user-error (buffer-string)))))
-                          (error (pet-report-error err)))))
-                     ((when-let*((dir (cl-loop for name in pet-venv-dir-names
-                                               with dir = nil
-                                               if (setq dir (locate-dominating-file default-directory name))
-                                               return (file-name-as-directory (concat dir name)))))
+                     ((when-let* ((program (pet-use-poetry-p))
+                                  (default-directory (file-name-directory (pet-pyproject-path))))
+                        (pet-run-process-get-output program "env" "info" "--no-ansi" "--path")))
+                     ((when-let* ((program (pet-use-pipenv-p))
+                                  (default-directory (file-name-directory (pet-pipfile-path))))
+                        (pet-run-process-get-output program "--quiet" "--venv")))
+                     ((when-let* ((dir (cl-loop for name in pet-venv-dir-names
+                                                with dir = nil
+                                                if (setq dir (locate-dominating-file default-directory name))
+                                                return (file-name-as-directory (concat dir name)))))
                         (expand-file-name dir)))
-                     ((when-let*((program (pet-use-pyenv-p))
-                                 (default-directory (file-name-directory (pet-python-version-path))))
-                        (condition-case err
-                            (with-temp-buffer
-                              (let ((exit-code (process-file program nil t nil "prefix"))
-                                    (output (string-trim (buffer-string))))
-                                (if (zerop exit-code)
-                                    (file-truename output)
-                                  (user-error (buffer-string)))))
-                          (error (pet-report-error err))))))))
+                     ((when-let* ((program (pet-use-pyenv-p))
+                                  (default-directory (file-name-directory (pet-python-version-path))))
+                        (file-truename (pet-run-process-get-output program "prefix")))))))
           ;; root maybe nil when not in a project, this avoids caching a nil
           (when root
             (pet-cache-put (list root :virtualenv) venv-path))
@@ -1031,14 +1052,10 @@ environments.  This expression must return a list of strings."
         (docstring (format "The list of environments managed by `%s'." name)))
     `(defun ,env-list-fn ()
        ,docstring
-       (when-let* ((program (,use-prog-fn)))
+       (when-let* ((program (,use-prog-fn))
+                   (output (pet-run-process-get-output program ,@args)))
          (condition-case err
-             (with-temp-buffer
-               (let ((exit-code (process-file program nil t nil ,@args))
-                     (output (string-trim (buffer-string))))
-                 (if (zerop exit-code)
-                     ,parse-output
-                   (user-error (buffer-string)))))
+             ,parse-output
            (error (pet-report-error err)))))))
 
 (pet-def-env-list pixi
@@ -1321,17 +1338,9 @@ searched for a supported LSP server command."
        (t 'nil)))
     (pet--ensure-list command))))
 
-(defalias 'pet--proper-list-p 'proper-list-p)
-(eval-when-compile
-  (when (and (not (functionp 'proper-list-p))
-             (functionp 'format-proper-list-p))
-    (defun pet--proper-list-p (l)
-      (and (format-proper-list-p l)
-           (length l)))))
-
 (defun pet--plistp (object)
   "Non-nil if and only if OBJECT is a valid plist."
-  (let ((len (pet--proper-list-p object)))
+  (let ((len (proper-list-p object)))
     (and len
          (zerop (% len 2))
          (seq-every-p
