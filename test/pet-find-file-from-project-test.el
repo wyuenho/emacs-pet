@@ -9,8 +9,8 @@
         (test-file-path "/home/user/project-a/pyproject.toml")
         (another-file "setup.cfg")
         (another-file-path "/home/user/project-a/setup.cfg")
-        (saved-pet-cache nil)
-        (saved-pet-find-file-functions nil))
+        saved-pet-cache
+        saved-pet-find-file-functions)
 
   (before-each
     (setq-local pet-cache nil))

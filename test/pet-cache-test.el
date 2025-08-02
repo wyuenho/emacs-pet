@@ -170,7 +170,7 @@
   :var ((project-root "/home/user/project/")
         (config-file "/home/user/project/pyproject.toml")
         (parsed-content '((tool . ((poetry . t)))))
-        (mock-parser nil)
+        mock-parser
         (mock-watcher 'mock-watcher-123))
 
   (before-each
@@ -414,7 +414,7 @@
     (expect 'message :to-have-been-called-with "Cleared pet cache for project: %s" project-root))
 
   (it "should do nothing when not in a project"
-    (spy-on 'pet-project-root :and-return-value nil)
+    (spy-on 'pet-project-root)
     (pet-cache-put (list project-root :virtualenv) "/venv")
 
     (pet-cache-clear-project)

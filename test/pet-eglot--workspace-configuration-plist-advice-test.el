@@ -6,7 +6,7 @@
   (it "should merge user config and pet config correctly"
     (spy-on 'jsonrpc--process :and-return-value 'mock-process)
     (spy-on 'process-command :and-return-value '("/usr/bin/pyright"))
-    (spy-on 'file-directory-p :and-return-value nil)
+    (spy-on 'file-directory-p)
     (spy-on 'pet-lookup-eglot-server-initialization-options
             :and-return-value '(:python (:pythonPath "/usr/bin/python")))
     (spy-on 'mock-fn :and-return-value '(:python (:venvPath "/home/user/.venv")))
@@ -41,7 +41,7 @@
   (it "should extract command from server and pass to pet lookup"
     (spy-on 'jsonrpc--process :and-return-value 'mock-process)
     (spy-on 'process-command :and-return-value '("/usr/bin/pyright" "--stdio"))
-    (spy-on 'file-directory-p :and-return-value nil)
+    (spy-on 'file-directory-p)
     (spy-on 'pet-lookup-eglot-server-initialization-options)
     (spy-on 'mock-fn)
 

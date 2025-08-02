@@ -25,7 +25,7 @@
     (expect (pet-conda-venv-p "/home/user/project/.pixi/envs/default") :to-be-truthy))
 
   (it "should return nil for traditional virtualenvs without conda-meta directory"
-    (spy-on 'file-exists-p :and-return-value nil)
+    (spy-on 'file-exists-p)
 
     (expect (pet-conda-venv-p "/home/user/project/.venv") :to-be nil))
 

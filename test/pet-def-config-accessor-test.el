@@ -9,7 +9,7 @@
         (pyproject-file-b "/home/user/project-b/pyproject.toml")
         (pyproject-content-a '((tool . ((poetry . ((name . "project-a")))))))
         (pyproject-content-b '((tool . ((poetry . ((name . "project-b")))))))
-        (test-parser nil)
+        test-parser
         (call-count 0))
 
   (before-each
@@ -121,11 +121,9 @@
 
       (expect call-count :to-equal 1)
 
-      (let ((configs (pet-cache-get (list project-a-root :configs))))
-        (expect (length configs) :to-equal 1))
+      (expect (length (pet-cache-get (list project-a-root :configs))) :to-equal 1)
 
-      (let ((watchers (pet-cache-get (list project-a-root :file-watchers))))
-        (expect (length watchers) :to-equal 1))
+      (expect (length (pet-cache-get (list project-a-root :file-watchers))) :to-equal 1)
 
       (expect 'file-notify-add-watch :to-have-been-called-times 1)))
 
@@ -159,8 +157,7 @@
       (let ((configs (pet-cache-get (list project-a-root :configs)))
             (watchers (pet-cache-get (list project-a-root :file-watchers))))
         (dolist (config-entry configs)
-          (let ((config-path (car config-entry)))
-            (expect (alist-get config-path watchers nil nil 'equal) :to-be-truthy)))))))
+          (expect (alist-get (car config-entry) watchers nil nil 'equal) :to-be-truthy))))))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)

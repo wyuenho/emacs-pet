@@ -8,15 +8,17 @@
   :var ((project-root "/home/user/project/")
         (env-path "/home/user/miniforge3/envs/test/")
         (other-env-path "/home/user/miniforge3/envs/default/")
-        (buffer-a nil)
-        (buffer-b nil)
-        (other-project-buffer nil))
+        buffer-a
+        buffer-b
+        other-project-buffer)
 
   (before-each
     (setq-local pet-cache nil)
     (spy-on 'pet-project-root :and-return-value project-root)
     (spy-on 'pet-conda-environments :and-return-value
             (list other-env-path env-path))
+    (spy-on 'pet-buffer-local-vars-teardown)
+    (spy-on 'pet-buffer-local-vars-setup)
 
     (setq buffer-a (get-buffer-create "test-a.py"))
     (setq buffer-b (get-buffer-create "test-b.py"))
@@ -43,8 +45,6 @@
 
   (describe "basic functionality"
     (it "should update virtualenv cache with selected environment"
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
 
       (pet-conda-switch-environment env-path)
 
@@ -52,8 +52,6 @@
               :to-equal env-path))
 
     (it "should call teardown and setup for all project Python buffers"
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
       (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b other-project-buffer))
 
       (pet-conda-switch-environment env-path)
@@ -63,8 +61,6 @@
 
     (it "should display success message"
       (spy-on 'message)
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
 
       (pet-conda-switch-environment env-path)
 
@@ -73,8 +69,6 @@
 
   (describe "cache handling"
     (it "should cache the selected environment for the project"
-      (spy-on 'pet-buffer-local-vars-teardown)
-      (spy-on 'pet-buffer-local-vars-setup)
       (spy-on 'buffer-list :and-return-value (list buffer-a buffer-b))
 
       (pet-conda-switch-environment env-path)
@@ -84,8 +78,6 @@
     (describe "buffer isolation"
       (it "should only refresh variables for buffers from the same project"
         (spy-on 'buffer-list :and-return-value (list buffer-a other-project-buffer))
-        (spy-on 'pet-buffer-local-vars-teardown)
-        (spy-on 'pet-buffer-local-vars-setup)
 
         (pet-conda-switch-environment env-path)
 
@@ -95,8 +87,6 @@
     (describe "interactive completion"
       (it "should prompt with available environments"
         (spy-on 'completing-read :and-return-value env-path)
-        (spy-on 'pet-buffer-local-vars-teardown)
-        (spy-on 'pet-buffer-local-vars-setup)
 
         (call-interactively #'pet-conda-switch-environment)
 
@@ -107,8 +97,6 @@
 
       (it "should use the selected environment"
         (spy-on 'completing-read :and-return-value other-env-path)
-        (spy-on 'pet-buffer-local-vars-teardown)
-        (spy-on 'pet-buffer-local-vars-setup)
 
         (call-interactively #'pet-conda-switch-environment)
 
@@ -118,8 +106,6 @@
     (describe "error handling"
       (it "should handle when no project root is found"
         (spy-on 'pet-project-root)
-        (spy-on 'pet-buffer-local-vars-teardown)
-        (spy-on 'pet-buffer-local-vars-setup)
 
         (pet-conda-switch-environment env-path)
 
@@ -128,8 +114,6 @@
 
       (it "should handle when no Python buffers exist in project"
         (spy-on 'buffer-list :and-return-value '())
-        (spy-on 'pet-buffer-local-vars-teardown)
-        (spy-on 'pet-buffer-local-vars-setup)
 
         (pet-conda-switch-environment env-path)
 

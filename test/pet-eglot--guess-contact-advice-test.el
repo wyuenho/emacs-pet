@@ -3,8 +3,8 @@
 (require 'pet)
 
 (describe "pet-eglot--guess-contact-advice"
-  :var ((mock-result nil)
-        (mock-fn nil))
+  :var (mock-result
+        mock-fn)
 
   (before-each
     (spy-on 'pet-lookup-eglot-server-initialization-options :and-return-value '(:python (:pythonPath "/home/user/project/.venv/bin/python")))

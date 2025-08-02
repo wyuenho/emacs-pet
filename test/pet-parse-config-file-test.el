@@ -144,7 +144,7 @@
         (spy-on 'executable-find :and-return-value "/usr/bin/tomljson")
         (spy-on 'process-file :and-return-value 0)
         (spy-on 'buffer-string :and-return-value "{}")
-        (spy-on 'pet-parse-json :and-return-value nil)
+        (spy-on 'pet-parse-json)
         (spy-on 'pet-parse-toml-with-elisp)
         (expect (pet-parse-config-file toml-file) :to-be nil)
         (expect 'pet-parse-toml-with-elisp :not :to-have-been-called))
@@ -153,7 +153,7 @@
         (spy-on 'executable-find :and-return-value "/usr/bin/tomljson")
         (spy-on 'process-file :and-return-value 0)
         (spy-on 'buffer-string :and-return-value "null")
-        (spy-on 'pet-parse-json :and-return-value nil)
+        (spy-on 'pet-parse-json)
         (spy-on 'pet-parse-toml-with-elisp)
         (expect (pet-parse-config-file toml-file) :to-be nil)
         (expect 'pet-parse-toml-with-elisp :not :to-have-been-called))
@@ -169,7 +169,7 @@
 
       (it "should not fallback when elisp parser returns nil for empty file"
         (setq-local pet-prefer-elisp-parsers t)
-        (spy-on 'pet-parse-toml-with-elisp :and-return-value nil)
+        (spy-on 'pet-parse-toml-with-elisp)
         (spy-on 'executable-find)
         (expect (pet-parse-config-file toml-file) :to-be nil)
         (expect 'executable-find :not :to-have-been-called)))))

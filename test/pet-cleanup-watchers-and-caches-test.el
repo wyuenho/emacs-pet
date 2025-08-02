@@ -9,10 +9,10 @@
         (pyproject-file "/home/user/project/pyproject.toml")
         (mock-watcher 'mock-watcher-123)
         (mock-precommit-watcher 'mock-precommit-watcher)
-        (test-buffer nil)
-        (saved-pet-cache nil)
-        (saved-pet-pre-commit-database-cache nil)
-        (saved-pet-pre-commit-database-watcher nil))
+        test-buffer
+        saved-pet-cache
+        saved-pet-pre-commit-database-cache
+        saved-pet-pre-commit-database-watcher)
 
   (before-each
     (setq saved-pet-cache pet-cache)
@@ -151,9 +151,9 @@
           (pyproject-b "/home/user/project-b/pyproject.toml")
           (mock-watcher-a 'watcher-a)
           (mock-watcher-b 'watcher-b)
-          (buffer-a nil)
-          (buffer-b nil)
-          (buffer-a2 nil))
+          buffer-a
+          buffer-b
+          buffer-a2)
 
     (before-each
       (setq buffer-a (get-buffer-create "project-a.py"))
