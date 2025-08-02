@@ -195,10 +195,10 @@
                   (when (and remote
                              (equal command "black")
                              (member "/home/user/project/.venv/bin" tramp-remote-path))
-                    "/ssh:user@host:/home/user/project/.venv/bin/black")))
+                    "/home/user/project/.venv/bin/black")))
 
         ;; Test: your changes should make this work
-        (expect (pet-executable-find "black") :to-equal "/ssh:user@host:/home/user/project/.venv/bin/black")
+        (expect (pet-executable-find "black") :to-equal "/home/user/project/.venv/bin/black")
 
         ;; Critical assertions: global TRAMP state should remain unchanged
         (expect tramp-remote-path :to-equal '("/usr/bin" "/bin"))
