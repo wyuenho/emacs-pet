@@ -122,7 +122,7 @@
 
     (describe "error handling"
       (it "should handle when no project root is found"
-        (spy-on 'pet-project-root )
+        (spy-on 'pet-project-root)
         (spy-on 'pet-buffer-local-vars-teardown)
         (spy-on 'pet-buffer-local-vars-setup)
 

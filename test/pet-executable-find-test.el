@@ -6,39 +6,39 @@
 
   (describe "when given an absolute path"
     (it "should return the absolute path if the file exists and is executable"
-      (spy-on 'file-remote-p )
+      (spy-on 'file-remote-p)
       (spy-on 'file-name-absolute-p :and-return-value t)
       (spy-on 'pet--executable-find :and-return-value "/usr/bin/python")
       (expect (pet-executable-find "/usr/bin/python") :to-equal "/usr/bin/python"))
 
     (it "should return nil if the absolute path file does not exist or is not executable"
-      (spy-on 'file-remote-p )
+      (spy-on 'file-remote-p)
       (spy-on 'file-name-absolute-p :and-return-value t)
-      (spy-on 'pet--executable-find )
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
+      (spy-on 'pet--executable-find)
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
       (expect (pet-executable-find "/nonexistent/path") :to-be nil))
 
     (it "should not use absolute path optimization for remote files"
       (spy-on 'file-remote-p :and-return-value "/ssh:user@host:")
       (spy-on 'file-name-absolute-p :and-return-value t)
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
-      (spy-on 'pet--executable-find )
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
+      (spy-on 'pet--executable-find)
       (expect (pet-executable-find "/ssh:user@host:/usr/bin/python") :to-be nil))
 
     (it "should not use absolute path optimization for relative paths"
-      (spy-on 'file-remote-p )
-      (spy-on 'file-name-absolute-p )
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
-      (spy-on 'pet--executable-find )
+      (spy-on 'file-remote-p)
+      (spy-on 'file-name-absolute-p)
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
+      (spy-on 'pet--executable-find)
       (expect (pet-executable-find "python") :to-be nil)))
 
   (describe "when using `pre-commit'"
     (before-each
       (spy-on 'pet-use-pre-commit-p :and-return-value "/usr/bin/pre-commit")
-      (spy-on 'pet--executable-find ))
+      (spy-on 'pet--executable-find))
 
     (it "should return the absolute path to the executable if hook and hook repo are found and the executable is found in hook repo"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
@@ -63,16 +63,16 @@
 
   (describe "when on *nix"
     (it "should return the absolute path to the python executable for a project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
-      (spy-on 'pet-use-conda-p )
+      (spy-on 'pet-use-conda-p)
       (spy-on 'pet-system-bin-dir)
       (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
       (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1))
 
     (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root :and-return-value "/home/user/anaconda/envs/project/")
       (spy-on 'pet-use-conda-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
@@ -88,16 +88,16 @@
       (kill-local-variable 'system-type))
 
     (it "should return the absolute path to the python executable for a project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/project/.venv/")
-      (spy-on 'pet-use-conda-p )
+      (spy-on 'pet-use-conda-p)
       (spy-on 'pet-system-bin-dir)
       (spy-on 'executable-find :and-return-value "C:/Users/user/project/.venv/bin/python")
       (expect (pet-executable-find "python") :to-equal "C:/Users/user/project/.venv/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1))
 
     (it "should return the absolute path to the python executable for a conda project if its virtualenv is found"
-      (spy-on 'pet-use-pre-commit-p )
+      (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/Anaconda3/envs/project/")
       (spy-on 'pet-conda-venv-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
@@ -107,8 +107,8 @@
 
   (describe "when `pet-search-globally' is t"
     (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "pyenv")
                                                        "/usr/bin/pyenv")))
@@ -118,8 +118,8 @@
       (expect 'pet--executable-find :to-have-been-called-times 1))
 
     (it "should return the absolute path the executable for a project from `exec-path'"
-      (spy-on 'pet-use-pre-commit-p )
-      (spy-on 'pet-virtualenv-root )
+      (spy-on 'pet-use-pre-commit-p)
+      (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                      (when (equal executable "black")
                                                        "/home/user/project/.venv/bin/black")))

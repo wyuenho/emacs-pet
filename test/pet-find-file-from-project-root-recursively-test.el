@@ -22,7 +22,7 @@
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
 
     (it "should return `nil' if the project is empty"
-      (spy-on 'projectile-dir-files )
+      (spy-on 'projectile-dir-files)
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
 
     (it "should return `nil' if no file in the project matches the file wildcard"
@@ -43,7 +43,7 @@
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
 
     (it "should return `nil' if the project is empty"
-      (spy-on 'project-files )
+      (spy-on 'project-files)
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
 
     (it "should return `nil' if no file in the project matches the file wildcard"
@@ -67,7 +67,7 @@
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
 
     (it "should return `nil' if the project is empty"
-      (spy-on 'directory-files-recursively )
+      (spy-on 'directory-files-recursively)
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
 
     (it "should return `nil' if no file in the project matches the file wildcard"
