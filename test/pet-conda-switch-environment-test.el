@@ -1,6 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-
 (require 'pet)
 
 (setq python-indent-guess-indent-offset nil)

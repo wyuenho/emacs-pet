@@ -41,7 +41,7 @@
 
   (describe "when pixi is not available"
     (before-each
-      (spy-on 'pet-use-pixi-p ))
+      (spy-on 'pet-use-pixi-p))
 
     (it "should return nil"
       (expect (pet-pixi-environments) :to-be nil))))

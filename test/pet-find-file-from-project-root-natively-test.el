@@ -57,7 +57,7 @@
     (expect 'pet-report-error :to-have-been-called))
 
   (it "should return nil when not in a project"
-    (spy-on 'pet-project-root )
+    (spy-on 'pet-project-root)
     (expect (pet-find-file-from-project-root-natively "file.txt") :to-be nil)))
 
 

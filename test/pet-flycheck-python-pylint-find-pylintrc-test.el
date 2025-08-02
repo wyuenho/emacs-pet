@@ -56,7 +56,7 @@
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/home/user/.pylintrc"))
 
   (it "should return the absolute path to `pylintrc' from `/etc'"
-    (spy-on 'file-exists-p )
+    (spy-on 'file-exists-p)
     (expect (pet-flycheck-python-pylint-find-pylintrc) :to-equal "/etc/pylintrc")))
 
 

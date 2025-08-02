@@ -41,7 +41,7 @@
 
   (describe "when conda is not available"
     (before-each
-      (spy-on 'pet-use-conda-p ))
+      (spy-on 'pet-use-conda-p))
 
     (it "should return nil"
       (expect (pet-conda-environments) :to-be nil))))

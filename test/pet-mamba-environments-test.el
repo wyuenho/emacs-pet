@@ -41,7 +41,7 @@
 
   (describe "when mamba is not available"
     (before-each
-      (spy-on 'pet-use-mamba-p ))
+      (spy-on 'pet-use-mamba-p))
 
     (it "should return nil"
       (expect (pet-mamba-environments) :to-be nil))))

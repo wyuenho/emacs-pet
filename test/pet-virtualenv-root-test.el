@@ -34,7 +34,7 @@
     (kill-local-variable 'pet-cache))
 
   (it "should not cache nil when not in a project"
-    (spy-on 'pet-project-root )
+    (spy-on 'pet-project-root)
     (expect (pet-virtualenv-root) :to-be nil)
     (expect pet-cache :to-be nil))
 
@@ -44,9 +44,9 @@
 
 
   (it "should return the absolute path of the virtualenv for a project using `poetry'"
-    (spy-on 'pet-use-pixi-p )
-    (spy-on 'pet-use-conda-p )
-    (spy-on 'pet-use-mamba-p )
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-mamba-p)
     (spy-on 'pet-use-poetry-p :and-return-value poetry-path)
     (spy-on 'pet-pyproject-path :and-return-value "/home/user/project/pyproject.toml")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert poetry-virtualenv) 0))
@@ -55,10 +55,10 @@
     (expect 'call-process :to-have-been-called-with poetry-path nil t nil "env" "info" "--no-ansi" "--path"))
 
   (it "should return the absolute path of the virtualenv for a project using `pipenv'"
-    (spy-on 'pet-use-pixi-p )
-    (spy-on 'pet-use-conda-p )
-    (spy-on 'pet-use-mamba-p )
-    (spy-on 'pet-use-poetry-p )
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-mamba-p)
+    (spy-on 'pet-use-poetry-p)
     (spy-on 'pet-use-pipenv-p :and-return-value pipenv-path)
     (spy-on 'pet-pipfile-path :and-return-value "/home/user/project/Pipfile")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pipenv-virtualenv) 0))
@@ -67,22 +67,22 @@
     (expect 'call-process :to-have-been-called-with pipenv-path nil '(t nil) nil "--quiet" "--venv"))
 
   (it "should return the absolute path of the `.venv' or `venv' directory in a project"
-    (spy-on 'pet-use-pixi-p )
-    (spy-on 'pet-use-conda-p )
-    (spy-on 'pet-use-mamba-p )
-    (spy-on 'pet-use-poetry-p )
-    (spy-on 'pet-use-pipenv-p )
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-mamba-p)
+    (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-pipenv-p)
     (spy-on 'locate-dominating-file :and-return-value project-root)
     (expect (pet-virtualenv-root) :to-equal venv-virtualenv)
     (expect (pet-cache-get (list project-root :virtualenv)) :to-equal venv-virtualenv))
 
   (it "should return the absolute path of the virtualenv for a project using `pyenv'"
-    (spy-on 'pet-use-pixi-p )
-    (spy-on 'pet-use-conda-p )
-    (spy-on 'pet-use-mamba-p )
-    (spy-on 'pet-use-poetry-p )
-    (spy-on 'pet-use-pipenv-p )
-    (spy-on 'locate-dominating-file )
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-mamba-p)
+    (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-pipenv-p)
+    (spy-on 'locate-dominating-file)
     (spy-on 'pet-use-pyenv-p :and-return-value pyenv-path)
     (spy-on 'pet-python-version-path :and-return-value "/home/user/project/.python-version")
     (spy-on 'call-process :and-call-fake (lambda (&rest _) (insert pyenv-virtualenv) 0))
