@@ -410,11 +410,11 @@ If `projectile' is available, the function
 Otherwise, `project-root' is used."
   (or (and (functionp 'projectile-project-root)
            (projectile-project-root))
-      (when-let*((project (project-current)))
+      (when-let* ((project (project-current)))
         (or (and (functionp 'project-root)
                  (expand-file-name (project-root project)))
             (and (functionp 'project-roots)
-                 (when-let*((root (car (project-roots project))))
+                 (when-let* ((root (car (project-roots project))))
                    (expand-file-name root)))))))
 
 (defun pet-find-file-from-project-root (file)
@@ -424,7 +424,7 @@ FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found in the project root, nil
 otherwise."
-  (when-let*((root (pet-project-root)))
+  (when-let* ((root (pet-project-root)))
     (car (file-expand-wildcards (concat (file-name-as-directory root) file) t))))
 
 (defun pet-locate-dominating-file (file)
@@ -467,16 +467,16 @@ Currently only `fd' is supported.  See `pet-fd-command' and
 FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
-  (when-let*((root (pet-project-root)))
-    (when-let*((fileset
-                (cond ((functionp 'projectile-dir-files)
-                       (mapcar (apply-partially #'concat root)
-                               (projectile-dir-files (pet-project-root))))
-                      ((functionp 'project-files)
-                       (project-files (project-current)))
-                      (t (directory-files-recursively
-                          (pet-project-root)
-                          (wildcard-to-regexp file))))))
+  (when-let* ((root (pet-project-root)))
+    (when-let* ((fileset
+                 (cond ((functionp 'projectile-dir-files)
+                        (mapcar (apply-partially #'concat root)
+                                (projectile-dir-files (pet-project-root))))
+                       ((functionp 'project-files)
+                        (project-files (project-current)))
+                       (t (directory-files-recursively
+                           (pet-project-root)
+                           (wildcard-to-regexp file))))))
       (seq-find (lambda (f)
                   (string-match-p
                    (wildcard-to-regexp file)
@@ -1127,11 +1127,11 @@ algorithm described at
                                     return (expand-file-name path)))
                           ((and (buffer-file-name)
                                 (file-exists-p (concat (file-name-directory (buffer-file-name)) "__init__.py")))
-                           (when-let*((path (cl-loop for f in pylintrc
-                                                     with dir = nil
-                                                     do (setq dir (locate-dominating-file default-directory f))
-                                                     if dir
-                                                     return (concat dir f))))
+                           (when-let* ((path (cl-loop for f in pylintrc
+                                                      with dir = nil
+                                                      do (setq dir (locate-dominating-file default-directory f))
+                                                      if dir
+                                                      return (concat dir f))))
                              (expand-file-name path))))))
     (if found
         found
@@ -1160,7 +1160,7 @@ default otherwise."
           (setq-local flycheck-python-mypy-config `("mypy.ini" ".mypy.ini" "pyproject.toml" "setup.cfg"
                                                     ,(expand-file-name
                                                       (concat
-                                                       (or (when-let*((xdg-config-home (getenv "XDG_CONFIG_HOME")))
+                                                       (or (when-let* ((xdg-config-home (getenv "XDG_CONFIG_HOME")))
                                                              (file-name-as-directory xdg-config-home))
                                                            "~/.config/")
                                                        "mypy/config"))
