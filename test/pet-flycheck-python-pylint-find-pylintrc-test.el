@@ -5,15 +5,15 @@
 (describe "pet-flycheck-python-pylint-find-pylintrc"
   :var ((old-default-directory default-directory)
         (home (getenv "HOME"))
-        (orig-getenv (symbol-function 'getenv))
-        (process-environment (copy-sequence process-environment)))
+        (orig-getenv (symbol-function 'getenv)))
 
   (before-each
+    (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "~/project/src/"))
 
   (after-each
-    (setenv "HOME" home)
+    (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory))
 
   (it "should not error when run inside a non-file buffer"

@@ -19,17 +19,17 @@
         (pyenv-virtualenv "/home/user/.pyenv/versions/project/")
         (pyenv-virtualenv-truename "/home/user/.pyenv/versions/3.8/envs/project/")
         (old-default-directory default-directory)
-        (home (getenv "HOME"))
-        (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME")))
 
   (before-each
+    (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/project")
     (spy-on 'pet-project-root :and-return-value project-root)
     (setq-local pet-cache nil))
 
   (after-each
-    (setenv "HOME" home)
+    (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory)
     (kill-local-variable 'pet-cache))
 

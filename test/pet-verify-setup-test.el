@@ -5,14 +5,8 @@
 (setq python-indent-guess-indent-offset nil)
 
 (describe "pet-verify-setup"
-  :var ((old-default-directory default-directory)
-        (home (getenv "HOME"))
-        (orig-getenv (symbol-function 'getenv))
-        (process-environment (copy-sequence process-environment)))
 
   (before-each
-    (setenv "HOME" "/home/user/")
-    (setq-local default-directory "~/project/")
     (spy-on 'pet-project-root :and-return-value "/home/user/project/")
     (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
     (spy-on 'eglot--guess-contact
@@ -29,17 +23,13 @@
                  "/home/user/project/.venv/")))
               ("python" "python"))))
 
-  (after-each
-    (setenv "HOME" home)
-    (setq-local default-directory old-default-directory))
-
   (it "should error when not in python mode"
     (expect (pet-verify-setup) :to-throw 'user-error))
 
   (it "should display unbound values"
     (with-temp-buffer
-      (setq buffer-file-name "test.py")
       (python-mode)
+      (setq buffer-file-name "test.py")
       (pet-verify-setup)
       (expect
        (with-current-buffer "*pet info*"
@@ -49,8 +39,8 @@
 
   (it "should display bound values"
     (with-temp-buffer
-      (setq buffer-file-name "test.py")
       (python-mode)
+      (setq buffer-file-name "test.py")
       (pet-verify-setup)
       (expect
        (with-current-buffer "*pet info*"
@@ -64,12 +54,13 @@
   (it "should display list as comma-separated values"
     (spy-on 'pet-flycheck-python-pylint-find-pylintrc)
     (spy-on 'pet-executable-find)
-    (spy-on 'getenv :and-call-fake (lambda (name)
-                                     (unless (equal name "XDG_CONFIG_HOME")
-                                       (funcall orig-getenv name))))
     (with-temp-buffer
-      (setq buffer-file-name "test.py")
       (python-mode)
+      (setq-local default-directory "/home/user/project/")
+      (setq-local process-environment (copy-sequence process-environment))
+      (setenv "XDG_CONFIG_HOME")
+      (setenv "HOME" "/home/user/")
+      (setq-local buffer-file-name "/home/user/project/test.py")
       (setq-local flycheck-mode t)
       (pet-flycheck-toggle-local-vars)
       (pet-verify-setup)

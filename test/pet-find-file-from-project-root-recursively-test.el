@@ -4,16 +4,16 @@
 
 (describe "pet-find-file-from-project-root-recursively"
   :var ((old-default-directory default-directory)
-        (home (getenv "HOME"))
-        (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME")))
 
   (before-each
+    (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "~/project/src/")
     (spy-on 'pet-project-root :and-return-value "/home/user/project/"))
 
   (after-each
-    (setenv "HOME" home)
+    (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory))
 
   (describe "when using projectile"

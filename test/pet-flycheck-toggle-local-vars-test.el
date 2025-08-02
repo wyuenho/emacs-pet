@@ -5,10 +5,10 @@
 (describe "pet-flycheck-toggle-local-vars"
   :var ((old-default-directory default-directory)
         (home (getenv "HOME"))
-        (orig-getenv (symbol-function 'getenv))
-        (process-environment (copy-sequence process-environment)))
+        (orig-getenv (symbol-function 'getenv)))
 
   (before-each
+    (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/")
     (defvar flycheck-mode t)
@@ -18,7 +18,7 @@
                 (funcall orig-getenv name)))))
 
   (after-each
-    (setenv "HOME" home)
+    (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory)
     (makunbound 'flycheck-mode)
     (unintern 'flycheck-mode obarray))

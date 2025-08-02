@@ -21,10 +21,10 @@
                                        (rev . "22.6.0")))))
         (old-default-directory default-directory)
         (home (getenv "HOME"))
-        (orig-getenv (symbol-function 'getenv))
-        (process-environment (copy-sequence process-environment)))
+        (orig-getenv (symbol-function 'getenv)))
 
   (before-each
+    (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "~/project/src/")
     (spy-on 'getenv :and-call-fake
@@ -34,7 +34,7 @@
     (spy-on 'pet-pre-commit-config :and-return-value pre-commit-config-content))
 
   (after-each
-    (setenv "HOME" home)
+    (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory))
 
   (describe "when `pre-commit' database content is not cached"

@@ -4,16 +4,16 @@
 
 (describe "pet-flycheck-setup"
   :var ((old-default-directory default-directory)
-        (home (getenv "HOME"))
-        (process-environment (copy-sequence process-environment)))
+        (home (getenv "HOME")))
 
   (before-each
+    (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "/home/user/")
     (defun flycheck-checker-get (checker property)))
 
   (after-each
-    (setenv "HOME" home)
+    (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory)
     (fmakunbound 'flycheck-checker-get)
     (unintern 'flycheck-checker-get obarray))
