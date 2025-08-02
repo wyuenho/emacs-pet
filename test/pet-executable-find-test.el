@@ -46,13 +46,13 @@
       (spy-on 'file-exists-p :and-call-fake (lambda (path) (equal path "/home/user/.cache/pre-commit/repoblack/bin/black")))
       (expect (pet-executable-find "black") :to-equal "/home/user/.cache/pre-commit/repoblack/bin/black"))
 
-    (it "should return nil if the hook is not found in config"
+    (it "should fall through if the hook is not found in config"
       (spy-on 'pet-pre-commit-config-has-hook-p)
       (spy-on 'pet-pre-commit-virtualenv-path)
-      (spy-on 'pet-virtualenv-root :and-call-through)
+      (spy-on 'pet-virtualenv-root)
       (expect (pet-executable-find "black") :to-be nil)
       (expect 'pet-pre-commit-virtualenv-path :not :to-have-been-called)
-      (expect 'pet-virtualenv-root :not :to-have-been-called))
+      (expect 'pet-virtualenv-root :to-have-been-called))
 
     (it "should return nil if the hook repo is not found"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
