@@ -48,30 +48,6 @@
 
     (it "should return `nil' if no file in the project matches the file wildcard"
       (spy-on 'project-files :and-return-value '("setup.py"))
-      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil)))
-
-  (describe "when using `directory-files-recursively'"
-    :var ((projectile-dir-files-def (symbol-function 'projectile-dir-files))
-          (project-files-def (symbol-function 'project-files)))
-
-    (before-each
-      (fset 'projectile-dir-files nil)
-      (fset 'project-files nil))
-
-    (after-each
-      (fset 'projectile-dir-files projectile-dir-files-def)
-      (fset 'project-files project-files-def))
-
-    (it "should return the absolute path of the first file in a project that matches the file wildcard"
-      (spy-on 'directory-files-recursively :and-return-value '("/home/user/project/environment-dev.yaml"))
-      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-equal "/home/user/project/environment-dev.yaml"))
-
-    (it "should return `nil' if the project is empty"
-      (spy-on 'directory-files-recursively)
-      (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))
-
-    (it "should return `nil' if no file in the project matches the file wildcard"
-      (spy-on 'directory-files-recursively :and-return-value '("setup.py"))
       (expect (pet-find-file-from-project-root-recursively "environment*.y*ml") :to-be nil))))
 
 

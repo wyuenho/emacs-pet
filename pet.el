@@ -49,9 +49,6 @@
 (require 'tomlparse nil t)
 (require 'yaml nil t)
 
-(when (< emacs-major-version 27)
-  (require 'json))
-
 (defgroup pet nil
   "Customization group for `pet'."
   :group 'python
@@ -527,11 +524,7 @@ Return absolute path to FILE if found, nil otherwise."
                  (cond ((functionp 'projectile-dir-files)
                         (mapcar (apply-partially #'concat root)
                                 (projectile-dir-files (pet-project-root))))
-                       ((functionp 'project-files)
-                        (project-files (project-current)))
-                       (t (directory-files-recursively
-                           (pet-project-root)
-                           (wildcard-to-regexp file))))))
+                       (t (project-files (project-current))))))
       (seq-find (lambda (f)
                   (string-match-p
                    (wildcard-to-regexp file)
@@ -556,10 +549,7 @@ otherwise."
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
-  (if (functionp 'json-parse-string)
-      (json-parse-string str :object-type 'alist :array-type 'list)
-    (let ((json-array-type 'list))
-      (json-read-from-string str))))
+  (json-parse-string str :object-type 'alist :array-type 'list))
 
 (defun pet-parse-toml-with-elisp (file-path)
   "Parse TOML file at FILE-PATH with an Elisp parser.
