@@ -14,6 +14,19 @@
       (spy-on 'sqlite-available-p :and-return-value t))
 
     (it "should parse `pre-commit' database to alist using builtin SQLite"
+      (spy-on 'sqlite-open :and-return-value 'mock-db)
+      (spy-on 'sqlite-select :and-return-value 'mock-result-set)
+      (spy-on 'sqlite-next :and-call-fake
+              (let ((call-count 0))
+                (lambda (result-set)
+                  (when (eq result-set 'mock-result-set)
+                    (setq call-count (1+ call-count))
+                    (when (= call-count 1)
+                      '("https://github.com/pycqa/flake8" "5.0.0" "/home/user/project/flake8"))))))
+      (spy-on 'sqlite-columns :and-return-value '("repo" "ref" "path"))
+      (spy-on 'sqlite-finalize)
+      (spy-on 'sqlite-close)
+      
       (expect (pet-parse-pre-commit-db "some.db") :to-equal '(((repo . "https://github.com/pycqa/flake8")
                                                                (ref . "5.0.0")
                                                                (path . "/home/user/project/flake8")))))
@@ -29,6 +42,8 @@
       (expect 'pet-run-process-get-output :to-have-been-called-with "/usr/bin/sqlite3" "-json" "some.db" "select * from repos"))
 
     (it "should return nil when database file doesn't exist"
+      (spy-on 'sqlite-open)
+      (spy-on 'pet--executable-find)
       (expect (pet-parse-pre-commit-db "/nonexistent/path/db.sqlite") :to-be nil)))
 
   (describe "when SQLite is not available"
