@@ -160,6 +160,12 @@ the project directory."
   :type 'hook
   :group 'pet)
 
+(defvar pet-pre-commit-database-cache nil
+  "Cached pre-commit database content (system-wide).")
+
+(defvar pet-pre-commit-database-watcher nil
+  "File watcher for pre-commit database file (system-wide).")
+
 
 
 (defun pet-system-bin-dir ()
@@ -855,12 +861,6 @@ Read the pre-commit SQLite database located at DB-FILE into an alist."
       (when-let* ((sqlite3 (executable-find "sqlite3" t))
                   (json (pet-run-process-get-output sqlite3 "-json" db-file "select * from repos")))
         (pet-parse-json json))))
-
-(defvar pet-pre-commit-database-cache nil
-  "Cached pre-commit database content (system-wide).")
-
-(defvar pet-pre-commit-database-watcher nil
-  "File watcher for pre-commit database file (system-wide).")
 
 (defun pet-pre-commit-virtualenv-path (hook-id)
   "Find the virtualenv location from the `pre-commit' database.
