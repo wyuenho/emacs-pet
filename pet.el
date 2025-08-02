@@ -204,6 +204,22 @@ package metadata."
 
 
 
+;; TRAMP compatibility
+
+(unless (fboundp 'tramp-file-local-name)
+  (defun tramp-file-local-name (name)
+    "Return the local name component of NAME.
+This function removes from NAME the specification of the remote host and
+the method of accessing the host, leaving only the part that identifies
+NAME locally on the remote system.  If NAME does not match
+`tramp-file-name-regexp', just `file-local-name' is called.  The
+returned file name can be used directly as argument of `make-process',
+`process-file', `start-file-process', or `shell-command'."
+    (or (and (tramp-tramp-file-p name)
+             (string-match (nth 0 tramp-file-name-structure) name)
+             (match-string (nth 4 tramp-file-name-structure) name))
+        (file-local-name name))))
+
 ;; Remote-aware process running helpers
 
 (defmacro pet-run-process (program args &rest body)
