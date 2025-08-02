@@ -3,7 +3,7 @@
 ;; Author: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Maintainer: Jimmy Yuen Ho Wong <wyuenho@gmail.com>
 ;; Version: 3.4.1
-;; Package-Requires: ((emacs "26.1") (f "0.6.0") (map "3.3.1") (seq "2.24"))
+;; Package-Requires: ((emacs "27.1") (f "0.6.0") (map "3.3.1") (seq "2.24"))
 ;; Homepage: https://github.com/wyuenho/emacs-pet/
 ;; Keywords: tools
 
@@ -165,14 +165,6 @@ the project directory."
 
 
 
-(defun pet--executable-find (command &optional remote)
-  "Like Emacs 27's `executable-find', ignore REMOTE on Emacs 26.
-
-See `executable-find' for the meaning of COMMAND and REMOTE."
-  (if (>= emacs-major-version 27)
-      (executable-find command remote)
-    (executable-find command)))
-
 (defun pet-system-bin-dir ()
   "Determine the correct script directory based on `system-type'."
   (if (eq (if (file-remote-p default-directory)
@@ -203,22 +195,6 @@ package metadata."
       (file-exists-p (concat venv-dir "conda-meta")))))
 
 
-
-;; TRAMP compatibility
-
-(unless (fboundp 'tramp-file-local-name)
-  (defun tramp-file-local-name (name)
-    "Return the local name component of NAME.
-This function removes from NAME the specification of the remote host and
-the method of accessing the host, leaving only the part that identifies
-NAME locally on the remote system.  If NAME does not match
-`tramp-file-name-regexp', just `file-local-name' is called.  The
-returned file name can be used directly as argument of `make-process',
-`process-file', `start-file-process', or `shell-command'."
-    (or (and (tramp-tramp-file-p name)
-             (string-match (nth 0 tramp-file-name-structure) name)
-             (match-string (nth 4 tramp-file-name-structure) name))
-        (file-local-name name))))
 
 ;; Remote-aware process running helpers
 
@@ -536,7 +512,7 @@ The actual search is done via calling native programs in a subprocess.
 Currently only `fd' is supported.  See `pet-fd-command' and
 `pet-fd-command-args'."
   (when-let* ((root (pet-project-root))
-              (fd (pet--executable-find pet-fd-command t)))
+              (fd (executable-find pet-fd-command t)))
     (let ((default-directory root))
       (apply #'pet-run-process-get-line fd `(,@pet-fd-command-args ,file ,root)))))
 
@@ -624,7 +600,7 @@ parsed data."
 Returns (success . result) where success is t/nil and result is the
 parsed data.  Normalizes :null to nil for consistent empty file
 handling."
-  (if (pet--executable-find program)
+  (if (executable-find program)
       (let ((output (get-buffer-create " *pet parser output*")))
         (unwind-protect
             (let ((exit-code
@@ -802,27 +778,27 @@ Return nil if the file is not found." file-name)))
 
 Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
-       (or (pet--executable-find "pre-commit" t)
+       (or (executable-find "pre-commit" t)
            (and (when-let* ((venv (pet-virtualenv-root))
                             (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
                             (process-environment (copy-sequence process-environment)))
                   (setenv "PATH" (string-join exec-path path-separator))
-                  (pet--executable-find "pre-commit" t))))))
+                  (executable-find "pre-commit" t))))))
 
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
 Returns the path to the `conda' executable found."
   (and (pet-environment)
-       (pet--executable-find "conda" t)))
+       (executable-find "conda" t)))
 
 (defun pet-use-mamba-p ()
   "Whether the current project is using `mamba' or `micromamba'.
 
 Returns the path to the `mamba' executable variant found."
   (and (pet-environment)
-       (or (pet--executable-find "mamba" t)
-           (pet--executable-find "micromamba" t))))
+       (or (executable-find "mamba" t)
+           (executable-find "micromamba" t))))
 
 (defun pet-use-pixi-p ()
   "Whether the current project is using `pixi'.
@@ -831,7 +807,7 @@ Returns the path to the `pixi' executable."
   (and (or (pet-pixi)
            (let-alist (pet-pyproject)
              .tool.pixi))
-       (pet--executable-find "pixi" t)))
+       (executable-find "pixi" t)))
 
 (defun pet-use-poetry-p ()
   "Whether the current project is using `poetry'.
@@ -842,21 +818,21 @@ Returns the path to the `poetry' executable."
         (or (let-alist (pet-pyproject)
               .build-system.build-backend)
             ""))
-       (pet--executable-find "poetry" t)))
+       (executable-find "poetry" t)))
 
 (defun pet-use-pyenv-p ()
   "Whether the current project is using `pyenv'.
 
 Returns the path to the `pyenv' executable."
   (and (pet-python-version)
-       (pet--executable-find "pyenv" t)))
+       (executable-find "pyenv" t)))
 
 (defun pet-use-pipenv-p ()
   "Whether the current project is using `pipenv'.
 
 Returns the path to the `pipenv' executable."
   (and (pet-pipfile)
-       (pet--executable-find "pipenv" t)))
+       (executable-find "pipenv" t)))
 
 (defun pet-pre-commit-config-has-hook-p (id)
   "Determine if the `pre-commit' configuration has a hook.
@@ -886,7 +862,7 @@ Read the pre-commit SQLite database located at DB-FILE into an alist."
                    (sqlite-finalize result-set)
                    result)
                (sqlite-close db))))
-      (when-let* ((sqlite3 (pet--executable-find "sqlite3" t))
+      (when-let* ((sqlite3 (executable-find "sqlite3" t))
                   (json (pet-run-process-get-output sqlite3 "-json" db-file "select * from repos")))
         (pet-parse-json json))))
 
@@ -990,7 +966,7 @@ continues to look in `pyenv', then finally from the variable
   (catch 'done
     (cond ((and (not (file-remote-p executable))
                 (file-name-absolute-p executable)
-                (pet--executable-find executable))
+                (executable-find executable))
            executable)
           ((and (pet-use-pre-commit-p)
                 (not (string-prefix-p "python" executable))
@@ -1016,19 +992,16 @@ continues to look in `pyenv', then finally from the variable
                        (tramp-cache-data (copy-hash-table tramp-cache-data))
                        (tramp-remote-path (cons venv-bin (copy-sequence tramp-remote-path))))
              (if (file-remote-p default-directory)
-                 (let ((tramp-cache-key (tramp-dissect-file-name default-directory)))
-                   (if (functionp 'tramp-flush-connection-properties)
-                       (tramp-flush-connection-property tramp-cache-key "remote-path")
-                     (tramp-flush-connection-property tramp-cache-key)))
+                 (tramp-flush-connection-property (tramp-dissect-file-name default-directory) "remote-path")
                (setenv "PATH" (string-join exec-path path-separator)))
-             (pet--executable-find executable t)))
+             (executable-find executable t)))
           ((if (or search-globally pet-search-globally)
                nil
              (throw 'done nil)))
-          ((pet--executable-find "pyenv" t)
+          ((executable-find "pyenv" t)
            (pet-run-process-get-line "pyenv" "which" executable))
-          (t (or (pet--executable-find executable t)
-                 (pet--executable-find (concat executable "3") t))))))
+          (t (or (executable-find executable t)
+                 (executable-find (concat executable "3") t))))))
 
 
 ;;;###autoload
@@ -1375,17 +1348,9 @@ searched for a supported LSP server command."
        (t 'nil)))
     (pet--ensure-list command))))
 
-(defalias 'pet--proper-list-p 'proper-list-p)
-(eval-when-compile
-  (when (and (not (functionp 'proper-list-p))
-             (functionp 'format-proper-list-p))
-    (defun pet--proper-list-p (l)
-      (and (format-proper-list-p l)
-           (length l)))))
-
 (defun pet--plistp (object)
   "Non-nil if and only if OBJECT is a valid plist."
-  (let ((len (pet--proper-list-p object)))
+  (let ((len (proper-list-p object)))
     (and len
          (zerop (% len 2))
          (seq-every-p
