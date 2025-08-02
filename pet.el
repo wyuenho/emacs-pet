@@ -416,7 +416,7 @@ of config parsing."
   "Clear cache for project at ROOT.
 
 Removes all cached virtualenv detection results, configuration file
-contents, and file discovery results for the project. Also cleans up
+contents, and file discovery results for the project.  Also cleans up
 file watchers before clearing cache data to prevent resource leaks."
   (when root
     (when-let* ((watchers-section (pet-cache-get (list root :file-watchers))))
