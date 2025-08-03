@@ -8,13 +8,13 @@
     (it "should return the absolute path if the file exists and is executable"
       (spy-on 'file-remote-p)
       (spy-on 'file-name-absolute-p :and-return-value t)
-      (spy-on 'executable-find :and-return-value "/usr/bin/python")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/python")
       (expect (pet-executable-find "/usr/bin/python") :to-equal "/usr/bin/python"))
 
     (it "should return nil if the absolute path file does not exist or is not executable"
       (spy-on 'file-remote-p)
       (spy-on 'file-name-absolute-p :and-return-value t)
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
       (expect (pet-executable-find "/nonexistent/path") :to-be nil))
@@ -24,7 +24,7 @@
       (spy-on 'file-name-absolute-p :and-return-value t)
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-executable-find "/ssh:user@host:/usr/bin/python") :to-be nil))
 
     (it "should not use absolute path optimization for relative paths"
@@ -32,13 +32,13 @@
       (spy-on 'file-name-absolute-p)
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-executable-find "python") :to-be nil)))
 
   (describe "when using `pre-commit'"
     (before-each
       (spy-on 'pet-use-pre-commit-p :and-return-value "/usr/bin/pre-commit")
-      (spy-on 'executable-find))
+      (spy-on 'pet--executable-find))
 
     (it "should return the absolute path to the executable if hook and hook repo are found and the executable is found in hook repo"
       (spy-on 'pet-pre-commit-config-has-hook-p :and-return-value t)
@@ -75,7 +75,7 @@
       (spy-on 'pet-virtualenv-root :and-return-value "/home/user/project/.venv/")
       (spy-on 'pet-use-conda-p)
       (spy-on 'pet-system-bin-dir)
-      (spy-on 'executable-find :and-return-value "/home/user/project/.venv/bin/python")
+      (spy-on 'pet--executable-find :and-return-value "/home/user/project/.venv/bin/python")
       (expect (pet-executable-find "python") :to-equal "/home/user/project/.venv/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1))
 
@@ -84,7 +84,7 @@
       (spy-on 'pet-virtualenv-root :and-return-value "/home/user/anaconda/envs/project/")
       (spy-on 'pet-use-conda-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
-      (spy-on 'executable-find :and-return-value "/home/user/anaconda/envs/project/bin/python")
+      (spy-on 'pet--executable-find :and-return-value "/home/user/anaconda/envs/project/bin/python")
       (expect (pet-executable-find "python") :to-equal "/home/user/anaconda/envs/project/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1)))
 
@@ -100,7 +100,7 @@
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/project/.venv/")
       (spy-on 'pet-use-conda-p)
       (spy-on 'pet-system-bin-dir)
-      (spy-on 'executable-find :and-return-value "C:/Users/user/project/.venv/bin/python")
+      (spy-on 'pet--executable-find :and-return-value "C:/Users/user/project/.venv/bin/python")
       (expect (pet-executable-find "python") :to-equal "C:/Users/user/project/.venv/bin/python")
       (expect 'pet-system-bin-dir :to-have-been-called-times 1))
 
@@ -109,7 +109,7 @@
       (spy-on 'pet-virtualenv-root :and-return-value "C:/Users/user/Anaconda3/envs/project/")
       (spy-on 'pet-conda-venv-p :and-return-value t)
       (spy-on 'pet-system-bin-dir)
-      (spy-on 'executable-find :and-return-value "C:/Users/user/Anaconda3/envs/project/python")
+      (spy-on 'pet--executable-find :and-return-value "C:/Users/user/Anaconda3/envs/project/python")
       (expect (pet-executable-find "python") :to-equal "C:/Users/user/Anaconda3/envs/project/python")
       (expect 'pet-system-bin-dir :not :to-have-been-called)))
 
@@ -117,7 +117,7 @@
     (it "should return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
-      (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                 (when (equal executable "pyenv")
                                                   "/usr/bin/pyenv")))
       (spy-on 'process-file :and-call-fake
@@ -129,16 +129,16 @@
                   0)))
       (expect (pet-executable-find "python" t) :to-equal "/home/user/.pyenv/versions/3.10.5/bin/python")
       (expect 'process-file :to-have-been-called-with "pyenv" nil t nil "which" "python")
-      (expect 'executable-find :to-have-been-called-times 1))
+      (expect 'pet--executable-find :to-have-been-called-times 1))
 
     (it "should return the absolute path of the executable for a project from `exec-path'"
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
-      (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                 (when (equal executable "black")
                                                   "/home/user/project/.venv/bin/black")))
       (expect (pet-executable-find "black" t) :to-equal "/home/user/project/.venv/bin/black")
-      (expect 'executable-find :to-have-been-called-times 2)))
+      (expect 'pet--executable-find :to-have-been-called-times 2)))
 
   (describe "when `pet-search-globally' is nil"
     (before-each
@@ -150,7 +150,7 @@
     (it "should not return the absolute path of the result of `pyenv which EXECUTABLE' if no virtualenv is found but `pyenv' is in `exec-path'"
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
-      (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                 (when (equal executable "pyenv")
                                                   "/usr/bin/pyenv")))
       (spy-on 'process-file :and-call-fake
@@ -163,17 +163,17 @@
 
       (expect (pet-executable-find "python" nil) :to-equal nil)
       (expect 'process-file :not :to-have-been-called-with "pyenv" nil t nil "which" "python")
-      (expect 'executable-find :to-have-been-called-times 0))
+      (expect 'pet--executable-find :to-have-been-called-times 0))
 
     (it "should not return the absolute path of the executable for a project from `exec-path'"
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
-      (spy-on 'executable-find :and-call-fake (lambda (executable &optional _)
+      (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
                                                 (when (equal executable "black")
                                                   "/home/user/project/.venv/bin/black")))
 
       (expect (pet-executable-find "black" nil) :to-equal nil)
-      (expect 'executable-find :to-have-been-called-times 0)))
+      (expect 'pet--executable-find :to-have-been-called-times 0)))
 
   (describe "when in a remote directory via TRAMP"
     (it "should find executables in remote virtualenv without modifying global TRAMP state"
@@ -186,7 +186,7 @@
         (spy-on 'pet-conda-venv-p)
         (spy-on 'pet-system-bin-dir :and-return-value "bin")
 
-        (spy-on 'executable-find :and-call-fake
+        (spy-on 'pet--executable-find :and-call-fake
                 (lambda (command &optional remote)
                   (when (and remote
                              (equal command "black")
@@ -199,7 +199,7 @@
         (expect tramp-remote-path :to-equal '("/usr/bin" "/bin"))
         (expect (hash-table-count tramp-cache-data) :to-equal 0)
 
-        (expect 'executable-find :to-have-been-called-with "black" t)))))
+        (expect 'pet--executable-find :to-have-been-called-with "black" t)))))
 
 
 ;; Local Variables:

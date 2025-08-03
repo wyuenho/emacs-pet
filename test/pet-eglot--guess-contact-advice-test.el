@@ -144,7 +144,90 @@
       (let ((result (pet-eglot--guess-contact-advice mock-fn)))
         (expect result :to-equal mock-result)
         (expect 'pet-lookup-eglot-server-initialization-options
-                :not :to-have-been-called)))))
+                :not :to-have-been-called))))
+
+  (describe "cl-letf behavior"
+    :var ((eglot-result '((python-mode) "/home/user/project/" eglot-lsp-server ("pylsp") ("python"))))
+
+    (it "should temporarily rebind executable-find during eglot--guess-contact execution"
+      (let ((original-executable-find (symbol-function #'executable-find))
+            captured-function)
+        (spy-on 'eglot--guess-contact :and-call-fake
+                (lambda (&rest args)
+                  (setq captured-function (symbol-function #'executable-find))
+                  eglot-result))
+
+        (pet-eglot--guess-contact-advice #'eglot--guess-contact)
+
+        (expect captured-function :to-equal (symbol-function #'pet-eglot--executable-find-advice))
+        (expect (symbol-function #'executable-find) :to-equal original-executable-find)))
+
+    (it "should restore executable-find even when eglot--guess-contact throws an error"
+      (let ((original-executable-find (symbol-function #'executable-find)))
+        (spy-on 'eglot--guess-contact :and-throw-error 'error)
+        (spy-on 'pet--process-guess-contact-result)
+
+        (expect (pet-eglot--guess-contact-advice #'eglot--guess-contact 'python-mode)
+                :to-throw 'error)
+
+        (expect (symbol-function #'executable-find) :to-equal original-executable-find)
+        (expect 'pet--process-guess-contact-result :not :to-have-been-called)))
+
+    (it "should delegate executable-find calls to pet-executable-find within cl-letf scope"
+      (let (executable-find-calls)
+        (spy-on 'eglot--guess-contact :and-call-fake
+                (lambda (&rest args)
+                  (push (executable-find "python") executable-find-calls)
+                  (push (executable-find "nonexistent") executable-find-calls)
+                  eglot-result))
+        (spy-on 'pet-executable-find :and-call-fake
+                (lambda (cmd) (when (equal cmd "python") "/venv/bin/python")))
+
+        (pet-eglot--guess-contact-advice #'eglot--guess-contact)
+
+        (expect executable-find-calls :to-equal '(nil "/venv/bin/python"))
+        (expect 'pet-executable-find :to-have-been-called-with "python")
+        (expect 'pet-executable-find :to-have-been-called-with "nonexistent")))
+
+    (it "should fall back to original executable-find when pet-executable-find returns nil"
+      (let (executable-find-result
+            (pet--orig-executable-find (lambda (cmd &optional remote)
+                                         (when (equal cmd "system-tool") "/usr/bin/tool"))))
+        (spy-on 'eglot--guess-contact :and-call-fake
+                (lambda (&rest args)
+                  (setq executable-find-result (executable-find "system-tool"))
+                  eglot-result))
+        (spy-on 'pet-executable-find)
+
+        (pet-eglot--guess-contact-advice #'eglot--guess-contact)
+
+        (expect executable-find-result :to-equal "/usr/bin/tool")))
+
+    (it "should handle remote parameter correctly in fallback scenarios"
+      (let (results
+            (pet--orig-executable-find (lambda (cmd &optional remote)
+                                         (if remote "remote-result" "local-result"))))
+        (spy-on 'eglot--guess-contact :and-call-fake
+                (lambda (&rest args)
+                  (push (executable-find "tool") results)
+                  (push (executable-find "tool" t) results)
+                  eglot-result))
+        (spy-on 'pet-executable-find)
+
+        (pet-eglot--guess-contact-advice #'eglot--guess-contact)
+
+        (expect results :to-equal '("remote-result" "local-result"))))
+
+    (it "should process results through pet--process-guess-contact-result"
+      (let ((processed-result (append eglot-result '(:processed t))))
+        (spy-on 'eglot--guess-contact :and-return-value eglot-result)
+        (spy-on 'pet--process-guess-contact-result :and-return-value processed-result)
+
+        (expect (pet-eglot--guess-contact-advice #'eglot--guess-contact t)
+                :to-equal processed-result)
+
+        (expect 'eglot--guess-contact :to-have-been-called-with t)
+        (expect 'pet--process-guess-contact-result :to-have-been-called-with eglot-result)))))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)

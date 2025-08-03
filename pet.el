@@ -166,7 +166,21 @@ the project directory."
 (defvar pet-pre-commit-database-watcher nil
   "File watcher for pre-commit database file (system-wide).")
 
+(defvar pet--orig-executable-find (advice--cd*r (symbol-function #'executable-find))
+  "Original `executable-find' function definition before any advice.")
+
 
+
+(defun pet--executable-find (command &optional remote)
+  "Internal wrapper for the original `executable-find' function.
+
+COMMAND is the executable to find, REMOTE indicates if searching
+on a remote system.
+
+This function provides access to the original `executable-find'
+implementation, bypassing any potential interference from PET's
+own executable finding logic."
+  (funcall pet--orig-executable-find command remote))
 
 (defun pet-system-bin-dir ()
   "Determine the correct script directory based on `system-type'."
@@ -515,7 +529,7 @@ The actual search is done via calling native programs in a subprocess.
 Currently only `fd' is supported.  See `pet-fd-command' and
 `pet-fd-command-args'."
   (when-let* ((root (pet-project-root))
-              (fd (executable-find pet-fd-command t)))
+              (fd (pet--executable-find pet-fd-command t)))
     (let ((default-directory root))
       (apply #'pet-run-process-get-line fd `(,@pet-fd-command-args ,file ,root)))))
 
@@ -596,7 +610,7 @@ parsed data."
 Returns (success . result) where success is t/nil and result is the
 parsed data.  Normalizes :null to nil for consistent empty file
 handling."
-  (if (executable-find program)
+  (if (pet--executable-find program)
       (let ((output (get-buffer-create " *pet parser output*")))
         (unwind-protect
             (let ((exit-code
@@ -774,27 +788,27 @@ Return nil if the file is not found." file-name)))
 
 Returns the path to the `pre-commit' executable."
   (and (pet-pre-commit-config)
-       (or (executable-find "pre-commit" t)
+       (or (pet--executable-find "pre-commit" t)
            (and (when-let* ((venv (pet-virtualenv-root))
                             (exec-path (list (concat (file-name-as-directory venv) (pet-system-bin-dir))))
                             (process-environment (copy-sequence process-environment)))
                   (setenv "PATH" (string-join exec-path path-separator))
-                  (executable-find "pre-commit" t))))))
+                  (pet--executable-find "pre-commit" t))))))
 
 (defun pet-use-conda-p ()
   "Whether the current project is using `conda'.
 
 Returns the path to the `conda' executable found."
   (and (pet-environment)
-       (executable-find "conda" t)))
+       (pet--executable-find "conda" t)))
 
 (defun pet-use-mamba-p ()
   "Whether the current project is using `mamba' or `micromamba'.
 
 Returns the path to the `mamba' executable variant found."
   (and (pet-environment)
-       (or (executable-find "mamba" t)
-           (executable-find "micromamba" t))))
+       (or (pet--executable-find "mamba" t)
+           (pet--executable-find "micromamba" t))))
 
 (defun pet-use-pixi-p ()
   "Whether the current project is using `pixi'.
@@ -803,7 +817,7 @@ Returns the path to the `pixi' executable."
   (and (or (pet-pixi)
            (let-alist (pet-pyproject)
              .tool.pixi))
-       (executable-find "pixi" t)))
+       (pet--executable-find "pixi" t)))
 
 (defun pet-use-poetry-p ()
   "Whether the current project is using `poetry'.
@@ -814,21 +828,21 @@ Returns the path to the `poetry' executable."
         (or (let-alist (pet-pyproject)
               .build-system.build-backend)
             ""))
-       (executable-find "poetry" t)))
+       (pet--executable-find "poetry" t)))
 
 (defun pet-use-pyenv-p ()
   "Whether the current project is using `pyenv'.
 
 Returns the path to the `pyenv' executable."
   (and (pet-python-version)
-       (executable-find "pyenv" t)))
+       (pet--executable-find "pyenv" t)))
 
 (defun pet-use-pipenv-p ()
   "Whether the current project is using `pipenv'.
 
 Returns the path to the `pipenv' executable."
   (and (pet-pipfile)
-       (executable-find "pipenv" t)))
+       (pet--executable-find "pipenv" t)))
 
 (defun pet-pre-commit-config-has-hook-p (id)
   "Determine if the `pre-commit' configuration has a hook.
@@ -858,7 +872,7 @@ Read the pre-commit SQLite database located at DB-FILE into an alist."
                    (sqlite-finalize result-set)
                    result)
                (sqlite-close db))))
-      (when-let* ((sqlite3 (executable-find "sqlite3" t))
+      (when-let* ((sqlite3 (pet--executable-find "sqlite3" t))
                   (json (pet-run-process-get-output sqlite3 "-json" db-file "select * from repos")))
         (pet-parse-json json))))
 
@@ -956,7 +970,7 @@ continues to look in `pyenv', then finally from the variable
   (catch 'done
     (cond ((and (not (file-remote-p executable))
                 (file-name-absolute-p executable)
-                (executable-find executable))
+                (pet--executable-find executable))
            executable)
           ((and (pet-use-pre-commit-p)
                 (not (string-prefix-p "python" executable))
@@ -984,14 +998,14 @@ continues to look in `pyenv', then finally from the variable
              (if (file-remote-p default-directory)
                  (tramp-flush-connection-property (tramp-dissect-file-name default-directory) "remote-path")
                (setenv "PATH" (string-join exec-path path-separator)))
-             (executable-find executable t)))
+             (pet--executable-find executable t)))
           ((if (or search-globally pet-search-globally)
                nil
              (throw 'done nil)))
-          ((executable-find "pyenv" t)
+          ((pet--executable-find "pyenv" t)
            (pet-run-process-get-line "pyenv" "which" executable))
-          (t (or (executable-find executable t)
-                 (executable-find (concat executable "3") t))))))
+          (t (or (pet--executable-find executable t)
+                 (pet--executable-find (concat executable "3") t))))))
 
 
 ;;;###autoload
@@ -1240,15 +1254,16 @@ default otherwise."
 (declare-function eglot--workspace-configuration-plist "ext:eglot")
 (declare-function eglot--guess-contact "ext:eglot")
 
-(defun pet-eglot--executable-find-advice (fn &rest args)
-  "Look up Python language servers using `pet-executable-find'.
+(defun pet-eglot--executable-find-advice (command &optional remote)
+  "Advice for `eglot--executable-find' in Eglot < 1.17.30 and > 1.18.
 
-FN is `eglot--executable-find', ARGS is the arguments to
-`eglot--executable-find'."
-  (pcase-let ((`(,command . ,_) args))
-    (if (member command '("pylsp" "pyls" "basedpyright-langserver" "pyright-langserver" "jedi-language-server" "ruff" "ruff-lsp"))
-        (pet-executable-find command)
-      (apply fn args))))
+COMMAND is the executable command to find, REMOTE is the optional
+remote flag.
+
+Delegates to `pet-executable-find' first for all executables, then
+falls back to the original `executable-find' implementation."
+  (or (pet-executable-find command)
+      (pet--executable-find command remote)))
 
 (defalias 'pet--ensure-list 'ensure-list)
 (eval-when-compile
@@ -1376,13 +1391,16 @@ arguments to `eglot--workspace-configuration-plist'."
          (user-config (apply fn server (and canonical-path (cons canonical-path (cddr args))))))
     (pet-merge-eglot-initialization-options user-config pet-config)))
 
-(defun pet-eglot--guess-contact-advice (fn &rest args)
-  "Enrich `eglot--guess-contact' with paths found by `pet'.
+(defun pet--process-guess-contact-result (result)
+  "Merge PET's initialization options to Eglot's contacts.
 
-FN is `eglot--guess-contact', ARGS is the arguments to
-`eglot--guess-contact'."
-  (let* ((result (apply fn args))
-         (contact (nth 3 result))
+RESULT is the result of `eglot--guess-contact'.
+
+Processes the contact information returned by `eglot--guess-contact'
+and merges PET's server initialization options for Python language
+servers. Handles various contact formats including program contacts,
+TCP connections, and autoport configurations."
+  (let* ((contact (nth 3 result))
          (contact (if (functionp contact) (funcall contact) contact)))
     (pcase contact
       ;; Skip processing for non-program contacts
@@ -1426,17 +1444,34 @@ FN is `eglot--guess-contact', ARGS is the arguments to
            result)))
       (_ result))))
 
+(defun pet-eglot--guess-contact-advice (fn &rest args)
+  "Advice for the `eglot--guess-contact' in Eglot.
+
+FN is `eglot--guess-contact', ARGS is the arguments to
+`eglot--guess-contact'.
+
+Re-routes `executable-find' to `pet-executable-find'.
+
+Returns the result of `eglot--guess-contact' with PET's server
+initialization options merged to the contacts."
+  (let ((result (cl-letf (((symbol-function #'executable-find)
+                           (symbol-function #'pet-eglot--executable-find-advice)))
+                  (apply fn args))))
+    (pet--process-guess-contact-result result)))
+
 (defun pet-eglot-setup ()
   "Set up Eglot to use server executables and virtualenvs found by PET."
-  (advice-add 'eglot--executable-find :around #'pet-eglot--executable-find-advice)
   (advice-add 'eglot--workspace-configuration-plist :around #'pet-eglot--workspace-configuration-plist-advice)
-  (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice))
+  (advice-add 'eglot--guess-contact :around #'pet-eglot--guess-contact-advice)
+  (when (fboundp 'eglot--executable-find)
+    (advice-add 'eglot--executable-find :override #'pet-eglot--executable-find-advice)))
 
 (defun pet-eglot-teardown ()
   "Tear down PET advices to Eglot."
-  (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)
   (advice-remove 'eglot--workspace-configuration-plist #'pet-eglot--workspace-configuration-plist-advice)
-  (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice))
+  (advice-remove 'eglot--guess-contact #'pet-eglot--guess-contact-advice)
+  (when (fboundp 'eglot--executable-find)
+    (advice-remove 'eglot--executable-find #'pet-eglot--executable-find-advice)))
 
 
 (defvar dape-command)

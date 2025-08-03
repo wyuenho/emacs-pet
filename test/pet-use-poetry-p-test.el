@@ -8,11 +8,11 @@
       (spy-on 'pet-pyproject :and-return-value '((build-system (build-backend . "poetry.core.masonry.api")))))
 
     (it "should return `poetry' path if `poetry' is found"
-      (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/poetry")
       (expect (pet-use-poetry-p) :to-equal "/usr/bin/poetry"))
 
     (it "should return nil if `poetry' is not found"
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-use-poetry-p) :to-be nil)))
 
   (describe "when the `pyproject.toml' file in the project does not declare `poetry' as the build system"
@@ -23,7 +23,7 @@
       (expect (pet-use-poetry-p) :to-be nil))
 
     (it "should return nil if `poetry' is not found"
-      (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/poetry")
       (expect (pet-use-poetry-p) :to-be nil)))
 
   (describe "when the project does not have a `pyproject.toml' file"
@@ -34,7 +34,7 @@
       (expect (pet-use-poetry-p) :to-be nil))
 
     (it "should return nil if `poetry' is not found"
-      (spy-on 'executable-find :and-return-value "/usr/bin/poetry")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/poetry")
       (expect (pet-use-poetry-p) :to-be nil))))
 
 
