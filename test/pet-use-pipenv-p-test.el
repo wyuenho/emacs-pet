@@ -8,11 +8,11 @@
       (spy-on 'pet-pipfile :and-return-value t))
 
     (it "should return `pipenv' path if `pipenv' is found"
-      (spy-on 'executable-find :and-return-value "/usr/bin/pipenv")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/pipenv")
       (expect (pet-use-pipenv-p) :to-equal "/usr/bin/pipenv"))
 
     (it "should return nil path if `pipenv' is not found"
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-use-pipenv-p) :to-be nil)))
 
   (describe "when the project does not have a `Pipfile' file"
@@ -20,11 +20,11 @@
       (spy-on 'pet-pipfile))
 
     (it "should return nil path if `pipenv' is found"
-      (spy-on 'executable-find :and-return-value "/usr/bin/pipenv")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/pipenv")
       (expect (pet-use-pipenv-p) :to-be nil))
 
     (it "should return nil path if `pipenv' is not found"
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-use-pipenv-p) :to-be nil))))
 
 

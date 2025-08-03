@@ -19,18 +19,18 @@
     (it "should return nil when sqlite-open fails and fallback to sqlite3 command"
       (assume (and (functionp 'sqlite-available-p) (sqlite-available-p)))
       (spy-on 'sqlite-open)
-      (spy-on 'executable-find :and-return-value "/usr/bin/sqlite3")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/sqlite3")
       (spy-on 'pet-run-process-get-output :and-return-value "[{\"repo\":\"https://github.com/pycqa/flake8\",\"ref\":\"5.0.0\",\"path\":\"/home/user/project/flake8\"}]")
 
       (expect (pet-parse-pre-commit-db "some.db") :to-equal '(((repo . "https://github.com/pycqa/flake8") (ref . "5.0.0") (path . "/home/user/project/flake8"))))
       (expect 'sqlite-open :to-have-been-called-with "some.db")
-      (expect 'executable-find :to-have-been-called-with "sqlite3" t)
+      (expect 'pet--executable-find :to-have-been-called-with "sqlite3" t)
       (expect 'pet-run-process-get-output :to-have-been-called-with "/usr/bin/sqlite3" "-json" "some.db" "select * from repos"))
 
     (it "should return nil when database file doesn't exist"
       (assume (and (functionp 'sqlite-available-p) (sqlite-available-p)))
       (spy-on 'sqlite-open)
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-parse-pre-commit-db "/nonexistent/path/db.sqlite") :to-be nil)))
 
   (describe "when SQLite is not available"
@@ -38,19 +38,19 @@
       (spy-on 'sqlite-available-p))
 
     (it "should fallback to sqlite3 command when available"
-      (spy-on 'executable-find :and-return-value "/usr/bin/sqlite3")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/sqlite3")
       (spy-on 'pet-run-process-get-output :and-return-value "[{\"repo\":\"https://github.com/pycqa/flake8\",\"ref\":\"5.0.0\",\"path\":\"/home/user/project/flake8\"}]")
 
       (expect (pet-parse-pre-commit-db "some.db") :to-equal '(((repo . "https://github.com/pycqa/flake8") (ref . "5.0.0") (path . "/home/user/project/flake8"))))
-      (expect 'executable-find :to-have-been-called-with "sqlite3" t)
+      (expect 'pet--executable-find :to-have-been-called-with "sqlite3" t)
       (expect 'pet-run-process-get-output :to-have-been-called-with "/usr/bin/sqlite3" "-json" "some.db" "select * from repos"))
 
     (it "should return nil when sqlite3 command is not available"
-      (spy-on 'executable-find)
+      (spy-on 'pet--executable-find)
       (expect (pet-parse-pre-commit-db "some.db") :to-be nil))
 
     (it "should return nil when sqlite3 command fails"
-      (spy-on 'executable-find :and-return-value "/usr/bin/sqlite3")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/sqlite3")
       (spy-on 'pet-run-process-get-output)
       (expect (pet-parse-pre-commit-db "some.db") :to-be nil)))
 
@@ -63,11 +63,11 @@
                        (funcall original-functionp symbol))))))
 
     (it "should fallback to external sqlite3 command"
-      (spy-on 'executable-find :and-return-value "/usr/bin/sqlite3")
+      (spy-on 'pet--executable-find :and-return-value "/usr/bin/sqlite3")
       (spy-on 'pet-run-process-get-output :and-return-value "[{\"repo\":\"test\",\"ref\":\"1.0\",\"path\":\"/test\"}]")
 
       (expect (pet-parse-pre-commit-db "some.db") :to-equal '(((repo . "test") (ref . "1.0") (path . "/test"))))
-      (expect 'executable-find :to-have-been-called-with "sqlite3" t))))
+      (expect 'pet--executable-find :to-have-been-called-with "sqlite3" t))))
 
 
 ;; Local Variables:

@@ -3,40 +3,38 @@
 (require 'pet)
 
 (describe "pet-eglot--executable-find-advice"
-  (it "should delegate to `pet-executable-find' for Python LSP servers"
-    (spy-on 'eglot--executable-find :and-call-fake (lambda (&rest args) (string-join args " ")))
+  (it "should delegate to `pet-executable-find' for all executables, then fall back to original"
     (spy-on 'pet-executable-find :and-call-fake 'identity)
+    (spy-on 'pet--orig-executable-find)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pylsp") :to-equal "pylsp")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pylsp")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "pylsp") :to-equal "pylsp")
+    (expect 'pet--orig-executable-find :not :to-have-been-called)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyls") :to-equal "pyls")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyls")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "pyls") :to-equal "pyls")
+    (expect 'pet--orig-executable-find :not :to-have-been-called)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "basedpyright-langserver") :to-equal "basedpyright-langserver")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "basedpyright-langserver")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "basedpyright-langserver") :to-equal "basedpyright-langserver")
+    (expect 'pet--orig-executable-find :not :to-have-been-called)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "pyright-langserver") :to-equal "pyright-langserver")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "pyright-langserver")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "pyright-langserver") :to-equal "pyright-langserver")
+    (expect 'pet--orig-executable-find :not :to-have-been-called)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "jedi-language-server") :to-equal "jedi-language-server")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "jedi-language-server")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "jedi-language-server") :to-equal "jedi-language-server")
+    (expect 'pet--orig-executable-find :not :to-have-been-called)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "ruff") :to-equal "ruff")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "ruff")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "ruff") :to-equal "ruff")
+    (expect 'pet--orig-executable-find :not :to-have-been-called)
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "ruff-lsp") :to-equal "ruff-lsp")
-    (expect (spy-context-return-value (spy-calls-most-recent 'pet-executable-find)) :to-equal "ruff-lsp")
-    (expect 'eglot--executable-find :not :to-have-been-called)
+    (expect (pet-eglot--executable-find-advice "ruff-lsp") :to-equal "ruff-lsp")
+    (expect 'pet--orig-executable-find :not :to-have-been-called))
 
-    (expect (pet-eglot--executable-find-advice 'eglot--executable-find "sh" "-c") :to-equal "sh -c")
-    (expect 'eglot--executable-find :to-have-been-called-with "sh" "-c")))
+  (it "should fall back to original executable-find when pet-executable-find returns nil"
+    (let ((pet--orig-executable-find (lambda (cmd &optional remote)
+                                       (if remote "remote-result" "local-result"))))
+      (spy-on 'pet-executable-find)
+
+      (expect (pet-eglot--executable-find-advice "nonexistent") :to-equal "local-result")
+      (expect (pet-eglot--executable-find-advice "nonexistent" t) :to-equal "remote-result"))))
 
 
 ;; Local Variables:
