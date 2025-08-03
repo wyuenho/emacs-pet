@@ -956,6 +956,27 @@ must both be installed into the current project first."
 
 
 
+(defun pet-deep-copy-hash-table (value)
+  "Recursively deep copy a hash table and any nested hash tables.
+
+VALUE can be any Lisp object. If VALUE is a hash table, returns a new
+hash table with the same keys and deeply copied values. If any values
+are themselves hash tables, they are also deep copied recursively.
+
+If VALUE is not a hash table, returns VALUE unchanged.
+
+This is needed because `copy-hash-table' only performs a shallow copy,
+sharing references to the original values."
+  (if (hash-table-p value)
+      (let ((copy (copy-hash-table value)))
+        (cl-loop for key in (hash-table-keys copy)
+                 with val
+                 do (setq val (gethash key copy))
+                 if (hash-table-p val)
+                 do (puthash key (pet-deep-copy-hash-table val) copy))
+        copy)
+    value))
+
 ;;;###autoload
 (defun pet-executable-find (executable &optional search-globally)
   "Find the correct EXECUTABLE for the current Python project.
@@ -993,7 +1014,7 @@ continues to look in `pyenv', then finally from the variable
                                             (pet-system-bin-dir)))))
                        (exec-path (list venv-bin))
                        (process-environment (copy-sequence process-environment))
-                       (tramp-cache-data (copy-hash-table tramp-cache-data))
+                       (tramp-cache-data (pet-deep-copy-hash-table tramp-cache-data))
                        (tramp-remote-path (cons venv-bin (copy-sequence tramp-remote-path))))
              (if (file-remote-p default-directory)
                  (tramp-flush-connection-property (tramp-dissect-file-name default-directory) "remote-path")
