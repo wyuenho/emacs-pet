@@ -60,6 +60,12 @@ Project Management
    <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_
 -  `projectile <https://docs.projectile.mx/projectile/index.html>`_
 
+Remote File Editing
+====================
+
+-  Built-in `TRAMP
+   <https://www.gnu.org/software/emacs/manual/html_node/tramp/>`_
+
 Environment Management
 ======================
 
