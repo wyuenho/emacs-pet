@@ -1416,10 +1416,10 @@ falling back to the original name if not found."
 
 RESULT is the result of `eglot--guess-contact'.
 
-Processes the contact information returned by `eglot--guess-contact'
-and merges PET's server initialization options for Python language
-servers. Handles various contact formats including program contacts,
-TCP connections, and autoport configurations."
+Processes the contact information returned by `eglot--guess-contact' and
+merges PET's server initialization options for Python language servers.
+Handles various contact formats including program contacts, TCP
+connections, and autoport configurations."
   (let* ((contact (nth 3 result))
          (contact (if (functionp contact) (funcall contact) contact)))
     (pcase contact
