@@ -118,8 +118,8 @@
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
-                                                (when (equal executable "pyenv")
-                                                  "/usr/bin/pyenv")))
+                                                     (when (equal executable "pyenv")
+                                                       "/usr/bin/pyenv")))
       (spy-on 'process-file :and-call-fake
               (lambda (program infile buffer display &rest args)
                 (when (and (equal program "pyenv")
@@ -135,8 +135,8 @@
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
-                                                (when (equal executable "black")
-                                                  "/home/user/project/.venv/bin/black")))
+                                                     (when (equal executable "black")
+                                                       "/home/user/project/.venv/bin/black")))
       (expect (pet-executable-find "black" t) :to-equal "/home/user/project/.venv/bin/black")
       (expect 'pet--executable-find :to-have-been-called-times 2)))
 
@@ -151,8 +151,8 @@
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
-                                                (when (equal executable "pyenv")
-                                                  "/usr/bin/pyenv")))
+                                                     (when (equal executable "pyenv")
+                                                       "/usr/bin/pyenv")))
       (spy-on 'process-file :and-call-fake
               (lambda (program infile buffer display &rest args)
                 (when (and (equal program "pyenv")
@@ -169,17 +169,24 @@
       (spy-on 'pet-use-pre-commit-p)
       (spy-on 'pet-virtualenv-root)
       (spy-on 'pet--executable-find :and-call-fake (lambda (executable &optional _)
-                                                (when (equal executable "black")
-                                                  "/home/user/project/.venv/bin/black")))
+                                                     (when (equal executable "black")
+                                                       "/home/user/project/.venv/bin/black")))
 
       (expect (pet-executable-find "black" nil) :to-equal nil)
       (expect 'pet--executable-find :to-have-been-called-times 0)))
 
   (describe "when in a remote directory via TRAMP"
     (it "should find executables in remote virtualenv without modifying global TRAMP state"
-      (let ((default-directory "/ssh:user@host:/home/user/project/")
-            (tramp-remote-path '("/usr/bin" "/bin"))
-            (tramp-cache-data (make-hash-table :test 'equal)))
+      (let* ((default-directory "/ssh:user@host:/home/user/project/")
+             (tramp-remote-path '("/usr/bin" "/bin"))
+             (tramp-cache-undefined (or (and (boundp 'tramp-cache-undefined)
+                                             tramp-cache-undefined)
+                                        'undef))
+             (orig-remote-path-cache (tramp-get-connection-property
+                                      (tramp-dissect-file-name default-directory)
+                                      "remote-path"
+                                      tramp-cache-undefined))
+             (tramp-cache-data (pet-deep-copy-hash-table tramp-cache-data)))
 
         (spy-on 'pet-virtualenv-root :and-return-value "/ssh:user@host:/home/user/project/.venv/")
         (spy-on 'pet-use-pre-commit-p)
@@ -197,7 +204,11 @@
 
         ;; Critical assertions: global TRAMP state should remain unchanged
         (expect tramp-remote-path :to-equal '("/usr/bin" "/bin"))
-        (expect (hash-table-count tramp-cache-data) :to-equal 0)
+        (expect (tramp-get-connection-property
+                 (tramp-dissect-file-name default-directory)
+                 "remote-path"
+                 tramp-cache-undefined)
+                :to-equal orig-remote-path-cache)
 
         (expect 'pet--executable-find :to-have-been-called-with "black" t)))))
 
