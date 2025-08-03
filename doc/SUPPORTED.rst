@@ -71,8 +71,7 @@ Language Servers and Debugging
 ==============================
 
 -  `lsp-mode <https://emacs-lsp.github.io/lsp-mode/>`_
--  `eglot <https://github.com/joaotavora/eglot>`_ (`eglot versions
-   supported`_)
+-  `eglot <https://github.com/joaotavora/eglot>`_
 -  `dape <https://github.com/svaante/dape>`_
 -  `lsp-jedi <https://github.com/fredcamps/lsp-jedi>`_
 -  `lsp-pyright <https://github.com/emacs-lsp/lsp-pyright>`_
@@ -138,32 +137,6 @@ requirement rules out ``direnv.el`` [1]_.
 
    Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
    no longer recommended due to this reason.
-
-.. _eglot versions supported:
-
-Which version of ``eglot`` is supported?
-========================================
-
-``eglot`` 1.17.30 and 1.18 don't work with ``pet``.  1.17.30 is unfortunately
-the version that comes with Emacs 30. There is no easy way to support them
-without massively complicating the already complex advices required. The easiest
-thing to do is to upgrade to > 1.18, which has reverted the breaking change that
-prevents ``pet`` from working.
-
-.. code:: elisp
-
-   ;; If you are using package.el, make sure GNU ELPA devel is in `package-archives`
-   (add-to-list package-archives (cons "gnu-devel" "https://elpa.gnu.org/devel/"))
-
-   ;; You must set this to have a newer version of a package shadow an older
-   ;; version
-   (setq load-prefer-newer t)
-
-   ;; M-x list-package, select eglot, install then restart emacs
-
-   ;; OTOH, using Straight is just as easy
-   ;; https://github.com/radian-software/straight.el
-   (straight-use-package eglot)
 
 .. _virtualenvwrapper caveats:
 

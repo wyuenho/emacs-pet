@@ -55,6 +55,11 @@ Set executable paths
    Emacs packages (flycheck, lsp-mode, formatters, etc.) use the correct
    executables from that virtualenv's ``bin`` directory
 
+Remote file support
+   For Python files accessed via TRAMP, pet detects remote virtualenvs
+   and configures executables with proper state isolation to prevent
+   cross-project interference
+
 This happens automatically with **zero Emacs configuration** necessary.
 The detection runs once per project and results are cached for
 performance.
@@ -107,6 +112,10 @@ See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for the complete list and integrati
    <https://www.gnu.org/software/emacs/manual/html_node/emacs/Projects.html>`_,
    `projectile <https://docs.projectile.mx/projectile/index.html>`_
 
+-  Built-in `TRAMP
+   <https://www.gnu.org/software/emacs/manual/html_node/tramp/>`_ for
+   remote file editing
+
 -  `envrc <https://github.com/purcell/envrc>`_, `apheleia
    <https://github.com/radian-software/apheleia>`_, `format-all
    <https://github.com/lassik/emacs-format-all-the-code>`_, and more
@@ -117,7 +126,7 @@ See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for the complete list and integrati
  System Requirements
 *********************
 
-``pet`` has minimal system requirements and can work with Emacs 26.1+.
+``pet`` has minimal system requirements and requires Emacs 27.1+.
 
 For TOML and YAML configuration file parsing, ``pet`` supports multiple
 options:
