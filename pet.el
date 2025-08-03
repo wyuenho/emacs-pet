@@ -1391,6 +1391,26 @@ arguments to `eglot--workspace-configuration-plist'."
          (user-config (apply fn server (and canonical-path (cons canonical-path (cddr args))))))
     (pet-merge-eglot-initialization-options user-config pet-config)))
 
+(defvar pet-known-python-language-servers '("pylsp" "pyls" "basedpyright-langserver"
+                                            "pyright-langserver" "jedi-language-server"
+                                            "ruff" "ruff-lsp" "ty" "pyrefly"))
+
+(defun pet-resolve-python-server-executables (program-with-args)
+  "Replace known Python language server names with their resolved paths.
+
+PROGRAM-WITH-ARGS is a list where the first element is typically the
+server executable name, followed by command-line arguments.
+
+Returns a new list where any known Python language server executable
+names are replaced with their resolved paths from `pet-executable-find',
+falling back to the original name if not found."
+  (mapcar (lambda (arg)
+            (or (and (stringp arg)
+                     (member arg pet-known-python-language-servers)
+                     (pet-executable-find arg))
+                arg))
+          program-with-args))
+
 (defun pet--process-guess-contact-result (result)
   "Merge PET's initialization options to Eglot's contacts.
 
@@ -1420,7 +1440,8 @@ TCP connections, and autoport configurations."
       ;; Process program contacts
       ((pred listp)
        (let* ((probe (cl-position-if #'keywordp contact))
-              (program-with-args (seq-subseq contact 0 (or probe (length contact))))
+              (raw-program-with-args (seq-subseq contact 0 (or probe (length contact))))
+              (program-with-args (pet-resolve-python-server-executables raw-program-with-args))
               (kwargs (copy-sequence (and probe (seq-subseq contact probe (length contact)))))
               (init-opts (plist-get kwargs :initializationOptions))
               (pet-config (pet-lookup-eglot-server-initialization-options program-with-args)))

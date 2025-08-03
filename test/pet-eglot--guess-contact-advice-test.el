@@ -50,9 +50,7 @@
       (spy-on 'pet-lookup-eglot-server-initialization-options)
 
       (setq mock-result '("mode" "managed-major-mode" "project-instance" ("unknown-server") ("python")))
-
-      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
-        (expect result :to-equal mock-result))))
+      (expect (pet-eglot--guess-contact-advice mock-fn) :to-equal mock-result)))
 
   (describe "functional contact handling"
     (it "should handle functional contacts by calling them first"
@@ -111,6 +109,44 @@
                   :to-have-been-called-with '("pylsp" "arg1" "arg2"))
           (expect (seq-subseq result 4) :to-equal '(("python")))))))
 
+  (describe "executable resolution"
+    (it "should resolve known Python server executables to their full paths"
+      (spy-on 'pet-executable-find :and-call-fake 
+              (lambda (cmd) 
+                (cond ((equal cmd "pylsp") "/venv/bin/pylsp")
+                      ((equal cmd "pyright-langserver") "/venv/bin/pyright-langserver")
+                      (t nil))))
+      
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("pylsp" "--verbose")
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect (seq-subseq (nth 3 result) 0 2) :to-equal '("/venv/bin/pylsp" "--verbose"))
+        (expect 'pet-executable-find :to-have-been-called-with "pylsp")))
+
+    (it "should leave unknown executables unchanged"
+      (spy-on 'pet-executable-find)
+      
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("unknown-server" "--flag")
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect (seq-subseq (nth 3 result) 0 2) :to-equal '("unknown-server" "--flag"))
+        (expect 'pet-executable-find :not :to-have-been-called)))
+
+    (it "should fall back to original name if pet-executable-find returns nil"
+      (spy-on 'pet-executable-find)
+      
+      (setq mock-result '("mode" "managed-major-mode" "project-instance"
+                          ("ruff" "server")
+                          ("python")))
+
+      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
+        (expect (seq-subseq (nth 3 result) 0 2) :to-equal '("ruff" "server"))
+        (expect 'pet-executable-find :to-have-been-called-with "ruff"))))
+
   (describe "edge cases"
     (it "should handle empty contact gracefully"
       (setq mock-result '("mode" "managed-major-mode" "project-instance" () ("python")))
@@ -121,30 +157,24 @@
                           ("localhost" 6008)
                           ("python")))
 
-      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
-        (expect result :to-equal mock-result)
-        (expect 'pet-lookup-eglot-server-initialization-options
-                :not :to-have-been-called)))
+      (expect (pet-eglot--guess-contact-advice mock-fn) :to-equal mock-result)
+      (expect 'pet-lookup-eglot-server-initialization-options :not :to-have-been-called))
 
     (it "should skip process initargs contacts unchanged"
       (setq mock-result '("mode" "managed-major-mode" "project-instance"
                           (:process (lambda () "custom-process") :other-option "value")
                           ("python")))
 
-      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
-        (expect result :to-equal mock-result)
-        (expect 'pet-lookup-eglot-server-initialization-options
-                :not :to-have-been-called)))
+      (expect (pet-eglot--guess-contact-advice mock-fn) :to-equal mock-result)
+      (expect 'pet-lookup-eglot-server-initialization-options :not :to-have-been-called))
 
     (it "should skip autoport contacts unchanged"
       (setq mock-result '("mode" "managed-major-mode" "project-instance"
                           ("solargraph" "socket" "--port" :autoport)
                           ("python")))
 
-      (let ((result (pet-eglot--guess-contact-advice mock-fn)))
-        (expect result :to-equal mock-result)
-        (expect 'pet-lookup-eglot-server-initialization-options
-                :not :to-have-been-called))))
+      (expect (pet-eglot--guess-contact-advice mock-fn) :to-equal mock-result)
+      (expect 'pet-lookup-eglot-server-initialization-options :not :to-have-been-called)))
 
   (describe "cl-letf behavior"
     :var ((eglot-result '((python-mode) "/home/user/project/" eglot-lsp-server ("pylsp") ("python"))))
