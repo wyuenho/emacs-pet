@@ -76,7 +76,7 @@ performance.
    <https://mamba.readthedocs.io>`_
 
 -  `uv <https://github.com/astral-sh/uv>`_, `pdm
-   <https://pdm-project.org>`_
+   <https://pdm-project.org>`_, `hatch <https://hatch.pypa.io>`_
 
 -  `venv <https://docs.python.org/3/library/venv.html>`_, `virtualenv
    <https://virtualenv.pypa.io>`_
@@ -204,12 +204,13 @@ This automatically configures all supported packages for both
 Environment Switching
 =====================
 
-For projects using conda, mamba, or pixi, you can now switch environments
+For projects using conda, mamba, pixi, or hatch, you can now switch environments
 interactively::
 
    M-x pet-conda-switch-environment
    M-x pet-mamba-switch-environment
    M-x pet-pixi-switch-environment
+   M-x pet-hatch-switch-environment
 
 When you enable ``pet-mode`` on a fresh project using these tools,
 ``pet`` will automatically prompt you to select an environment if none
