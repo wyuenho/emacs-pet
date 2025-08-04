@@ -45,7 +45,7 @@ fit your needs:
 .. code:: elisp
 
    ;; Prefer Emacs Lisp parsers over external programs
-   ;; When t, pet will use tomlparse.el and yaml.el first,
+   ;; When t, Pet will use tomlparse.el and yaml.el first,
    ;; falling back to external programs only if needed
    (setq pet-prefer-elisp-parsers t)
 
@@ -65,11 +65,11 @@ fit your needs:
 
 .. code:: elisp
 
-   ;; Functions to run after buffer local variables are set up
+   ;; Functions to run after buffer-local variables are set up
    (add-hook 'pet-after-buffer-local-vars-setup
-             (lambda () (message "pet setup complete")))
+             (lambda () (message "Pet setup complete")))
 
-   ;; Functions to run before buffer local variables are torn down
+   ;; Functions to run before buffer-local variables are torn down
    (add-hook 'pet-before-buffer-local-vars-teardown
              (lambda () (lsp-shutdown-workspace)))
 

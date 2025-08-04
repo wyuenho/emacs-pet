@@ -30,7 +30,7 @@ environment tools and Emacs packages that pet supports.
 
 -  `pipx <https://pipx.pypa.io>`_
 
--  `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained,
+-  `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained;
    don't use it unless you are using Homebrew on macOS)
 
 -  `docker <https://hub.docker.com/_/python>`_
@@ -133,16 +133,16 @@ Emacs. However, they all suffer from various problems such as changing
 the environment and ``exec-path`` for the entire Emacs process, unable
 to activate early enough or being too general to support direnv tightly.
 
-Because ``pet`` needs to configure the buffer local variables **before**
+Because ``pet`` needs to configure the buffer-local variables **before**
 the rest of the minor modes are activated, but **after** ``exec-path``
-has been set up by direnv, one must take care of choosing a minor mode
+has been set up by direnv, one must take care to choose a minor mode
 package that allows the user to customize when it takes effect. This
 requirement rules out ``direnv.el`` [1]_.
 
 .. [1]
 
-   Earlier versions of ``pet`` suggested ``direnv.el`` as a solution, it is
-   no longer recommended due to this reason.
+   Earlier versions of ``pet`` suggested ``direnv.el`` as a solution; it is
+   no longer recommended for this reason.
 
 .. _virtualenvwrapper caveats:
 
@@ -247,6 +247,6 @@ For users who want fine-grained control over specific packages:
 
 .. note::
 
-   Most of this configuration is handled automatically by ``pet-mode``.
-   This example is useful for understanding how pet works internally or
-   when you need to customize specific package integrations.
+   Most of this configuration is handled automatically by ``pet-mode``.  This
+   example is useful for understanding how ``pet`` works internally or when you
+   need to customize specific package integrations.

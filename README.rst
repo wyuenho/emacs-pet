@@ -154,8 +154,8 @@ back to pure Emacs Lisp implementations.
 Additional Requirements
 =======================
 
-If you are using Emacs < 29, the ``sqlite3`` command for pre-commit
-database parsing
+If you are using Emacs < 29, the ``sqlite3`` command is required for pre-commit
+database parsing.
 
 Installation Tips
 =================
@@ -170,11 +170,12 @@ Installation Tips
    sudo dnf install dasel        # Fedora
    sudo pacman -S dasel          # Arch Linux
 
-Alternatively, install tomlparse.el and yaml.el via MELPA:
-
-.. code::
+Alternatively, install tomlparse.el and yaml.el via MELPA::
 
    M-x package-install RET tomlparse RET
+
+Or::
+
    M-x package-install RET yaml RET
 
 *******
@@ -200,10 +201,8 @@ This automatically configures all supported packages for both
 Environment Switching
 =====================
 
-For projects using conda, mamba, or pixi, ``pet`` now provides
-interactive environment switching:
-
-.. code::
+For projects using conda, mamba, or pixi, you can now switch environments
+interactively::
 
    M-x pet-conda-switch-environment
    M-x pet-mamba-switch-environment
@@ -216,7 +215,7 @@ is currently active.
 Manual Configuration
 ====================
 
-For packages pet doesn't support, or when you need fine-grained control:
+For packages ``pet`` doesn't yet support, or when you need fine-grained control:
 
 .. code:: elisp
 
@@ -253,7 +252,7 @@ settings, parser selection, and project-specific settings, see
 Pet didn't detect my virtualenv
 ===============================
 
-``Pet`` doesn't create virtualenvs - create your virtualenv and install
+``pet`` doesn't create virtualenvs - create your virtualenv and install
 dependencies first, then pet will detect it automatically.
 
 Wrong Python version or missing executables
@@ -282,8 +281,8 @@ Direnv integration issues
 Use `envrc <https://github.com/purcell/envrc>`_ instead of other direnv
 packages. See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for detailed integration notes.
 
-Why doesn't pet use buffer-local exec-path?
-===========================================
+Why doesn't ``pet`` use buffer-local exec-path?
+===============================================
 
 Many Python projects use development tools in different virtualenvs
 (e.g., pre-commit hooks). Managing multiple virtualenv paths in
