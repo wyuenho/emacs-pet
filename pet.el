@@ -783,6 +783,10 @@ Return nil if the file is not found." file-name)))
   :file-name "pixi.toml"
   :parser pet-parse-config-file)
 
+(pet-def-config-accessor hatch
+  :file-name "hatch.toml"
+  :parser pet-parse-config-file)
+
 (defun pet-use-pre-commit-p ()
   "Whether the current project is using `pre-commit'.
 
@@ -843,6 +847,15 @@ Returns the path to the `pyenv' executable."
 Returns the path to the `pipenv' executable."
   (and (pet-pipfile)
        (pet--executable-find "pipenv" t)))
+
+(defun pet-use-hatch-p ()
+  "Whether the current project is using `hatch'.
+
+Returns the path to the `hatch' executable."
+  (and (or (pet-hatch)
+           (let-alist (pet-pyproject)
+             .tool.hatch.envs))
+       (pet--executable-find "hatch" t)))
 
 (defun pet-pre-commit-config-has-hook-p (id)
   "Determine if the `pre-commit' configuration has a hook.
@@ -1038,9 +1051,10 @@ Selects a virtualenv in the following order:
 1. Cached virtualenv path (from previous detection or manual switching).
 2. The value of the environment variable `VIRTUAL_ENV' if defined.
 3. Poetry virtualenv from `pyproject.toml'.
-4. Pipenv virtualenv from `Pipfile'.
-5. A directory in `pet-venv-dir-names' in the project root if found.
-6. Pyenv virtualenv from `.python-version'."
+4. Hatch virtualenv from `hatch.toml' or `pyproject.toml'.
+5. Pipenv virtualenv from `Pipfile'.
+6. A directory in `pet-venv-dir-names' in the project root if found.
+7. Pyenv virtualenv from `.python-version'."
   (let ((root (pet-project-root)))
     (or (pet-cache-get (list root :virtualenv))
         (let ((venv-path
@@ -1049,6 +1063,10 @@ Selects a virtualenv in the following order:
                      ((when-let* ((program (pet-use-poetry-p))
                                   (default-directory (file-name-directory (pet-pyproject-path))))
                         (pet-run-process-get-output program "env" "info" "--no-ansi" "--path")))
+                     ((when-let* ((program (pet-use-hatch-p))
+                                  (config-file (or (pet-hatch-path) (pet-pyproject-path)))
+                                  (default-directory (file-name-directory config-file)))
+                        (pet-run-process-get-output program "env" "find" "default")))
                      ((when-let* ((program (pet-use-pipenv-p))
                                   (default-directory (file-name-directory (pet-pipfile-path))))
                         (pet-run-process-get-output program "--quiet" "--venv")))
@@ -1109,6 +1127,13 @@ environments.  This expression must return a list of strings."
   :parse-output
   (let-alist (pet-parse-json output) .envs))
 
+(pet-def-env-list hatch
+  :args ("env" "show" "--json")
+  :parse-output
+  (mapcar (lambda (env-name)
+            (pet-run-process-get-output program "env" "find" env-name))
+          (mapcar #'symbol-name (mapcar #'car (pet-parse-json output)))))
+
 (cl-defmacro pet-def-env-switch (name &key env-list-fn prompt-text)
   "Define a environment switching function.
 
@@ -1158,6 +1183,10 @@ returned by `%s'." name name env-list-fn)))
 (pet-def-env-switch mamba
   :env-list-fn pet-mamba-environments
   :prompt-text "Please select a mamba environment: ")
+
+(pet-def-env-switch hatch
+  :env-list-fn pet-hatch-environments
+  :prompt-text "Please select a hatch environment: ")
 
 
 
