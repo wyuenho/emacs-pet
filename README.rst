@@ -83,7 +83,10 @@ performance.
 
 -  `direnv <https://direnv.net>`_, `pixi <https://pixi.sh>`_
 
--  pre-commit, pipx, pyenv, docker, maturin, virtualenvwrapper, and more
+- `pre-commit <https://pre-commit.com>`_, `pipx <https://pipx.pypa.io>`_, `pyenv
+  <https://github.com/pyenv/pyenv>`_, `docker <https://docs.docker.com/>`_,
+  `maturin <https://www.maturin.rs>`_, `virtualenvwrapper
+  <https://virtualenvwrapper.readthedocs.io>`_, and more
 
 See `doc/SUPPORTED.rst <doc/SUPPORTED.rst>`_ for the complete list and integration notes.
 
