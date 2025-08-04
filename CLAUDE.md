@@ -11,6 +11,10 @@
 - Don't change working code
 - **Verify each fix immediately**: Change → Test → Verify → Repeat for each individual failing test. Don't batch multiple fixes together.
 
+**Git operations - FOLLOW STRICTLY:**
+- CANNOT use interactive rebase (git rebase -i) - no interactive editor available
+- Use git reset --soft HEAD~N then git commit for squashing commits
+
 **Test generation rules - FOLLOW STRICTLY:**
 - NO unnecessary let-binds - call functions directly in expect statements UNLESS you need to examine multiple aspects of the same result OR the expression is complex/nested
 - NO explicit :and-return-value nil - spies return nil by default
