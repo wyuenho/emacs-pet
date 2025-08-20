@@ -91,6 +91,46 @@
     (expect (pet-cache-get (list project-root :virtualenv)) :to-equal pyenv-virtualenv-truename)
     (expect 'process-file :to-have-been-called-with pyenv-path nil t nil "prefix"))
 
+  (it "should return the absolute path of the virtualenv for a project using `pixi'"
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-mamba-p)
+    (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-pipenv-p)
+    (spy-on 'locate-dominating-file)
+    (spy-on 'pet-use-pyenv-p)
+    (spy-on 'pet-use-pixi-p :and-return-value pixi-path)
+    (spy-on 'pet-run-process-get-output :and-call-fake
+            (lambda (program &rest args)
+              (when (and (equal program pixi-path)
+                         (equal args '("info" "--json")))
+                (format "{\"environments_info\":{\"default\":{\"prefix\":\"%s\"}}}" pixi-virtualenv))))
+    (expect (pet-virtualenv-root) :to-equal pixi-virtualenv)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal pixi-virtualenv))
+
+  (it "should return the absolute path of the virtualenv for a project using `conda'"
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-mamba-p)
+    (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-pipenv-p)
+    (spy-on 'locate-dominating-file)
+    (spy-on 'pet-use-pyenv-p)
+    (spy-on 'pet-use-conda-p :and-return-value conda-path)
+    (spy-on 'pet-environment :and-return-value `((prefix . ,conda-virtualenv)))
+    (expect (pet-virtualenv-root) :to-equal conda-virtualenv)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal conda-virtualenv))
+
+  (it "should return the absolute path of the virtualenv for a project using `mamba'"
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-pipenv-p)
+    (spy-on 'locate-dominating-file)
+    (spy-on 'pet-use-pyenv-p)
+    (spy-on 'pet-use-mamba-p :and-return-value mamba-path)
+    (spy-on 'pet-environment :and-return-value `((prefix . ,mamba-virtualenv)))
+    (expect (pet-virtualenv-root) :to-equal mamba-virtualenv)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal mamba-virtualenv))
+
   (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
     (pet-cache-put (list project-root :virtualenv) "/home/user/.venvs/env/")
     (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/")))
