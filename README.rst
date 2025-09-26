@@ -252,14 +252,22 @@ settings, parser selection, and project-specific settings, see
  Troubleshooting & FAQ
 ***********************
 
-Pet doesn't work in eshell/shell/comint
-=======================================
+Pet doesn't activate an environment in Eshell/shell/comint
+==========================================================
 
 ``pet`` is not a terminal emulator or a shell or a shell environment manager
 like ``direnv`` or ``asdf``. If you want to activate your Python virtual
-environment automatically when you enter a shell, configure your shell. For
-details, please consult the documentation of your shell and these environment
-managers.
+environment automatically when you direction in a shell, configure your
+shell. For details, please consult the documentation of your shell and these
+environment managers.
+
+If you have already configured your environment manager in the shell, you may
+want to look at how the shell was launched from Emacs, i.e. whether it was
+launched as a login shell or interactively. If you've only configured your
+environment manager to activate in non-login interactive sessions or only in
+login sessions, you may want to check your shell's startup files or the shell
+launch arguments in Emacs.
+
 
 Pet didn't detect my virtualenv
 ===============================
