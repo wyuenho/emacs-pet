@@ -252,6 +252,15 @@ settings, parser selection, and project-specific settings, see
  Troubleshooting & FAQ
 ***********************
 
+Pet doesn't work in eshell/shell/comint
+=======================================
+
+``pet`` is not a terminal emulator or a shell or a shell environment manager
+like ``direnv`` or ``asdf``. If you want to activate your Python virtual
+environment automatically when you enter a shell, configure your shell. For
+details, please consult the documentation of your shell and these environment
+managers.
+
 Pet didn't detect my virtualenv
 ===============================
 
