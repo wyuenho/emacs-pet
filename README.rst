@@ -248,9 +248,9 @@ For configuration options including file search methods, external tool
 settings, parser selection, and project-specific settings, see
 `doc/CUSTOMIZATION.rst <doc/CUSTOMIZATION.rst>`_.
 
-*****************
- Troubleshooting
-*****************
+***********************
+ Troubleshooting & FAQ
+***********************
 
 Pet didn't detect my virtualenv
 ===============================
