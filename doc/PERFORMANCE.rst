@@ -4,10 +4,25 @@ Performance Optimization Guide
 This document provides detailed guidance on optimizing pet's performance for different
 project sizes and configurations.
 
-How Pet Performance Works
--------------------------
+How Pet Works And How It Impacts Performance
+--------------------------------------------
 
-``pet`` performs most of the work when opening the first Python file in a project.
+``pet`` performs most of the work when opening the first Python file in a
+project.
+
+If your Python project uses any supported virtual environment tools, and that
+you have installed these virtual environments, it should only take a couple of
+seconds for ``pet`` to set up all your Python-related Emacs packages when you
+open the first Python file of the project in Emacs.
+
+What ``pet`` does is it searches your project directory for config files in
+order to detect what virtual environment tools the project is using. It then
+searches your project's virtual environments to discover the absolute paths of
+these executables. Once this is done, the discovered paths will be cached quite
+aggressively for the entire project, so minimal repeated work is done to
+discover these executables when you open a separate Python file in the same
+project.
+
 Understanding this behavior helps optimize performance:
 
 Caching Behavior
