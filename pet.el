@@ -1037,15 +1037,28 @@ Selects a virtualenv in the following order:
 
 1. Cached virtualenv path (from previous detection or manual switching).
 2. The value of the environment variable `VIRTUAL_ENV' if defined.
-3. Poetry virtualenv from `pyproject.toml'.
-4. Pipenv virtualenv from `Pipfile'.
-5. A directory in `pet-venv-dir-names' in the project root if found.
-6. Pyenv virtualenv from `.python-version'."
+3. Pixi default environment from `pixi.toml' or `pyproject.toml'.
+4. Conda/Mamba environment from `environment*.yml'.
+5. Poetry virtualenv from `pyproject.toml'.
+6. Pipenv virtualenv from `Pipfile'.
+7. A directory in `pet-venv-dir-names' in the project root if found.
+8. Pyenv virtualenv from `.python-version'."
   (let ((root (pet-project-root)))
     (or (pet-cache-get (list root :virtualenv))
         (let ((venv-path
                (cond ((when-let* ((ev (getenv "VIRTUAL_ENV")))
                         (expand-file-name ev)))
+                     ((when-let* ((program (pet-use-pixi-p)))
+                        (let* ((result (pet-run-process-get-output program "info" "--json"))
+                               (info (pet-parse-json result)))
+                          (let-alist info
+                            (when .environments_info
+                              (let-alist (alist-get 'default .environments_info)
+                                .prefix))))))
+                     ((when-let* ((program (or (pet-use-conda-p) (pet-use-mamba-p)))
+                                  (env-config (pet-environment)))
+                        (let-alist env-config
+                          .prefix)))
                      ((when-let* ((program (pet-use-poetry-p))
                                   (default-directory (file-name-directory (pet-pyproject-path))))
                         (pet-run-process-get-output program "env" "info" "--no-ansi" "--path")))
