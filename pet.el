@@ -558,14 +558,17 @@ Try each function in `pet-find-file-functions' in order and
 return the absolute path found by the first function, nil
 otherwise."
   (when-let* ((root (pet-project-root)))
-    (or (pet-cache-get (list root :files file))
-        ;; we don't really want to call `pet-find-file-functions' as real hook
-        ;; because then both the buffer local and global values will be run, but
-        ;; we just want to run the effective find file functions currently in
-        ;; scope
-        (when-let* ((result (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions)))
-          (pet-cache-put (list root :files file) result)
-          result))))
+    ;; Check if the cache key exists (not just if the value is truthy)
+    ;; This is needed because nil is a valid cached value (file not found)
+    (if (assoc file (pet-cache-get (list root :files)))
+        (pet-cache-get (list root :files file))
+      ;; we don't really want to call `pet-find-file-functions' as real hook
+      ;; because then both the buffer local and global values will be run, but
+      ;; we just want to run the effective find file functions currently in
+      ;; scope
+      (let ((result (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions)))
+        (pet-cache-put (list root :files file) result)
+        result))))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
