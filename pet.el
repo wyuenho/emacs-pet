@@ -1064,8 +1064,8 @@ Selects a virtualenv in the following order:
                         (pet-run-process-get-output program "--quiet" "--venv")))
                      ((when-let* ((dir (cl-loop for name in pet-venv-dir-names
                                                 with dir = nil
-                                                if (setq dir (locate-dominating-file default-directory name))
-                                                return (file-name-as-directory (concat dir name)))))
+                                                if (setq dir (pet-locate-dominating-file name))
+                                                return (file-name-as-directory dir))))
                         (expand-file-name dir)))
                      ((when-let* ((program (pet-use-pyenv-p))
                                   (default-directory (file-name-directory (pet-python-version-path))))

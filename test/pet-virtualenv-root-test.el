@@ -73,6 +73,13 @@
     (spy-on 'pet-use-poetry-p)
     (spy-on 'pet-use-pipenv-p)
     (spy-on 'locate-dominating-file :and-return-value project-root)
+    (spy-on 'file-expand-wildcards :and-call-fake
+            (lambda (pattern &optional full)
+              (cond
+               ((and full (equal pattern "/home/user/project/.venv"))
+                (list (expand-file-name pattern)))
+               ((and (not full) (equal pattern "/home/user/project/.venv"))
+                (list pattern)))))
     (expect (pet-virtualenv-root) :to-equal venv-virtualenv)
     (expect (pet-cache-get (list project-root :virtualenv)) :to-equal venv-virtualenv))
 
