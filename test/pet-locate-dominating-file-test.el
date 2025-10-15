@@ -7,12 +7,14 @@
         (home (getenv "HOME")))
 
   (before-each
+    (setq-local pet-cache nil)
     (setq-local process-environment (copy-sequence process-environment))
     (setenv "HOME" "/home/user/")
     (setq-local default-directory "~/project/src/")
     (spy-on 'pet-project-root :and-return-value "/home/user/project/"))
 
   (after-each
+    (kill-local-variable 'pet-cache)
     (kill-local-variable 'process-environment)
     (setq-local default-directory old-default-directory))
 
