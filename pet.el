@@ -1663,6 +1663,19 @@ buffer local values."
   (pet-eglot-teardown)
   (pet-dape-teardown))
 
+(defun pet--print-executables (buffer)
+  "Print paths of the relevant binaries into the BUFFER.
+
+It is a helper function for `pet-verify-setup'."
+  (dolist (name '("poetry" "pyenv" "dasel"))
+    (insert (propertize
+             (format "%-40s" (concat "(pet--executable-find \"" name "\"):"))
+             'face
+             'font-lock-variable-name-face))
+    (apply 'insert
+           (with-current-buffer buffer
+             (list (pp-to-string (pet--executable-find name t)))))))
+
 (defun pet-verify-setup ()
   "Verify the values of buffer local variables visually.
 
@@ -1760,6 +1773,8 @@ has assigned to."
                (if (fboundp 'eglot--guess-contact)
                    (list "\n" (pp-to-string (eglot--guess-contact)))
                  (list (format "%s\n" 'unbound)))))
+
+      (pet--print-executables buf)
 
       (insert (propertize (format "%-40s"
                                   (concat (symbol-name (if (file-remote-p default-directory)
