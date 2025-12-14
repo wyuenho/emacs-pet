@@ -506,16 +506,23 @@ otherwise."
 FILE is a file name or a wildcard.
 
 Return absolute path to FILE if found, nil otherwise."
-  (when-let* ((root (pet-project-root))
-              (dir (locate-dominating-file
-                    default-directory
-                    (lambda (dir)
-                      (car
-                       (file-expand-wildcards
-                        (concat (file-name-as-directory dir) file))))))
-              (dir (expand-file-name dir)))
-    (when (string-prefix-p root dir)
-      (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t)))))
+  (when-let* ((root (pet-project-root)))
+    ;; Check if the cache key exists (not just if the value is truthy)
+    ;; This is needed because nil is a valid cached value (file not found)
+    (if (assoc file (pet-cache-get (list root :files)))
+        (pet-cache-get (list root :files file))
+      (let ((result
+             (when-let* ((dir (locate-dominating-file
+                               default-directory
+                               (lambda (dir)
+                                 (car
+                                  (file-expand-wildcards
+                                   (concat (file-name-as-directory dir) file))))))
+                         (dir (expand-file-name dir)))
+               (when (string-prefix-p root dir)
+                 (car (file-expand-wildcards (concat (file-name-as-directory dir) file) t))))))
+        (pet-cache-put (list root :files file) result)
+        result))))
 
 (defun pet-find-file-from-project-root-natively (file)
   "Find FILE natively by searching down from the current project's root.
@@ -558,14 +565,17 @@ Try each function in `pet-find-file-functions' in order and
 return the absolute path found by the first function, nil
 otherwise."
   (when-let* ((root (pet-project-root)))
-    (or (pet-cache-get (list root :files file))
-        ;; we don't really want to call `pet-find-file-functions' as real hook
-        ;; because then both the buffer local and global values will be run, but
-        ;; we just want to run the effective find file functions currently in
-        ;; scope
-        (when-let* ((result (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions)))
-          (pet-cache-put (list root :files file) result)
-          result))))
+    ;; Check if the cache key exists (not just if the value is truthy)
+    ;; This is needed because nil is a valid cached value (file not found)
+    (if (assoc file (pet-cache-get (list root :files)))
+        (pet-cache-get (list root :files file))
+      ;; we don't really want to call `pet-find-file-functions' as real hook
+      ;; because then both the buffer local and global values will be run, but
+      ;; we just want to run the effective find file functions currently in
+      ;; scope
+      (let ((result (seq-some (lambda (fn) (funcall fn file)) pet-find-file-functions)))
+        (pet-cache-put (list root :files file) result)
+        result))))
 
 (defun pet-parse-json (str)
   "Parse JSON STR to an alist.  Arrays are converted to lists."
@@ -1054,8 +1064,8 @@ Selects a virtualenv in the following order:
                         (pet-run-process-get-output program "--quiet" "--venv")))
                      ((when-let* ((dir (cl-loop for name in pet-venv-dir-names
                                                 with dir = nil
-                                                if (setq dir (locate-dominating-file default-directory name))
-                                                return (file-name-as-directory (concat dir name)))))
+                                                if (setq dir (pet-locate-dominating-file name))
+                                                return (file-name-as-directory dir))))
                         (expand-file-name dir)))
                      ((when-let* ((program (pet-use-pyenv-p))
                                   (default-directory (file-name-directory (pet-python-version-path))))
