@@ -1584,6 +1584,7 @@ buffer local values."
 
     (setq-local lsp-jedi-executable-command
                 (pet-executable-find "jedi-language-server"))
+    (setq-local lsp-jedi-workspace-environment-path python)
     (setq-local lsp-pyls-plugins-jedi-environment python-shell-virtualenv-root)
     (setq-local lsp-pyls-server-command (list (pet-executable-find "pyls")))
     (setq-local lsp-pylsp-plugins-jedi-environment python-shell-virtualenv-root)
@@ -1637,6 +1638,7 @@ buffer local values."
   (pet-flycheck-teardown)
 
   (kill-local-variable 'lsp-jedi-executable-command)
+  (kill-local-variable 'lsp-jedi-workspace-environment-path)
   (kill-local-variable 'lsp-pyls-plugins-jedi-environment)
   (kill-local-variable 'lsp-pyls-server-command)
   (kill-local-variable 'lsp-pylsp-plugins-jedi-environment)
@@ -1696,6 +1698,7 @@ has assigned to."
                        flycheck-python-pycompile-executable
                        flycheck-python-ruff-executable
                        lsp-jedi-executable-command
+                       lsp-jedi-workspace-environment-path
                        lsp-pyls-plugins-jedi-environment
                        lsp-pyls-server-command
                        lsp-pylsp-plugins-jedi-environment
