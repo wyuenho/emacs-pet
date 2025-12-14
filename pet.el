@@ -1043,40 +1043,51 @@ Selects a virtualenv in the following order:
 6. Pipenv virtualenv from `Pipfile'.
 7. A directory in `pet-venv-dir-names' in the project root if found.
 8. Pyenv virtualenv from `.python-version'."
-  (let ((root (pet-project-root)))
-    (or (pet-cache-get (list root :virtualenv))
-        (let ((venv-path
-               (cond ((when-let* ((ev (getenv "VIRTUAL_ENV")))
-                        (expand-file-name ev)))
-                     ((when-let* ((program (pet-use-pixi-p)))
-                        (let* ((result (pet-run-process-get-output program "info" "--json"))
-                               (info (pet-parse-json result)))
-                          (let-alist info
-                            (when .environments_info
-                              (let-alist (alist-get 'default .environments_info)
-                                .prefix))))))
-                     ((when-let* ((program (or (pet-use-conda-p) (pet-use-mamba-p)))
-                                  (env-config (pet-environment)))
-                        (let-alist env-config
-                          .prefix)))
-                     ((when-let* ((program (pet-use-poetry-p))
-                                  (default-directory (file-name-directory (pet-pyproject-path))))
-                        (pet-run-process-get-output program "env" "info" "--no-ansi" "--path")))
-                     ((when-let* ((program (pet-use-pipenv-p))
-                                  (default-directory (file-name-directory (pet-pipfile-path))))
-                        (pet-run-process-get-output program "--quiet" "--venv")))
-                     ((when-let* ((dir (cl-loop for name in pet-venv-dir-names
-                                                with dir = nil
-                                                if (setq dir (locate-dominating-file default-directory name))
-                                                return (file-name-as-directory (concat dir name)))))
-                        (expand-file-name dir)))
-                     ((when-let* ((program (pet-use-pyenv-p))
-                                  (default-directory (file-name-directory (pet-python-version-path))))
-                        (file-truename (pet-run-process-get-output program "prefix")))))))
-          ;; root maybe nil when not in a project, this avoids caching a nil
-          (when root
-            (pet-cache-put (list root :virtualenv) venv-path))
-          venv-path))))
+  (let* ((root (pet-project-root))
+         (cached (pet-cache-get (list root :virtualenv))))
+    (cond
+     ;; Cache hit with 'none - no virtualenv exists, return nil
+     ((eq cached 'none) nil)
+     ;; Cache hit with actual virtualenv path
+     (cached cached)
+     ;; Cache miss - run detection
+     (t
+      (let ((venv-path
+             (cond ((when-let* ((ev (getenv "VIRTUAL_ENV")))
+                      (expand-file-name ev)))
+                   ((when-let* ((program (pet-use-pixi-p)))
+                      (let* ((result (pet-run-process-get-output program "info" "--json"))
+                             (info (pet-parse-json result)))
+                        (let-alist info
+                          (when .environments_info
+                            (let-alist (alist-get 'default .environments_info)
+                              .prefix))))))
+                   ((when-let* ((program (or (pet-use-conda-p) (pet-use-mamba-p)))
+                                (env-config (pet-environment)))
+                      (let-alist env-config
+                        .prefix)))
+                   ((when-let* ((program (pet-use-poetry-p))
+                                (default-directory (file-name-directory (pet-pyproject-path))))
+                      (pet-run-process-get-output program "env" "info" "--no-ansi" "--path")))
+                   ((when-let* ((program (pet-use-pipenv-p))
+                                (default-directory (file-name-directory (pet-pipfile-path))))
+                      (pet-run-process-get-output program "--quiet" "--venv")))
+                   ((when-let* ((dir (cl-loop for name in pet-venv-dir-names
+                                              with dir = nil
+                                              if (setq dir (locate-dominating-file default-directory name))
+                                              return (file-name-as-directory (concat dir name)))))
+                      (expand-file-name dir)))
+                   ((when-let* ((program (pet-use-pyenv-p))
+                                (default-directory (file-name-directory (pet-python-version-path))))
+                      (file-truename (pet-run-process-get-output program "prefix")))))))
+        ;; FIXME: when no virtualenv is found, pet-mode should confirm with the
+        ;; user whether he would like to install his virtualenvs first, ignore
+        ;; for now, or ignore and don't ask again for this project.
+
+        ;; root maybe nil when not in a project, this avoids caching a nil key
+        (when root
+          (pet-cache-put (list root :virtualenv) (or venv-path 'none)))
+        venv-path)))))
 
 (cl-defmacro pet-def-env-list (name &key args parse-output)
   "Define an environment listing function.
