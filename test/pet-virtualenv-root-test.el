@@ -133,7 +133,20 @@
 
   (it "should return the absolute path of the virtualenv for a project if the root is found in cache"
     (pet-cache-put (list project-root :virtualenv) "/home/user/.venvs/env/")
-    (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/")))
+    (expect (pet-virtualenv-root) :to-equal "/home/user/.venvs/env/"))
+
+  (it "should cache 'none and skip detection on subsequent calls when no virtualenv found"
+    (spy-on 'pet-use-pixi-p)
+    (spy-on 'pet-use-conda-p)
+    (spy-on 'pet-use-mamba-p)
+    (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-pipenv-p)
+    (spy-on 'locate-dominating-file)
+    (spy-on 'pet-use-pyenv-p)
+    (expect (pet-virtualenv-root) :to-be nil)
+    (expect (pet-cache-get (list project-root :virtualenv)) :to-equal 'none)
+    (expect (pet-virtualenv-root) :to-be nil)
+    (expect 'pet-use-poetry-p :to-have-been-called-times 1)))
 
 ;; Local Variables:
 ;; eval: (buttercup-minor-mode 1)
