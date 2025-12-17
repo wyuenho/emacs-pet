@@ -28,6 +28,8 @@ environment tools and Emacs packages that pet supports.
 
 -  `pdm <https://pdm-project.org>`_
 
+-  `hatch <https://hatch.pypa.io>`_
+
 -  `pipx <https://pipx.pypa.io>`_
 
 -  `pyenv <https://github.com/pyenv/pyenv>`_ (very poorly maintained;
