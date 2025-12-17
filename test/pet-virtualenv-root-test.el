@@ -173,6 +173,7 @@
     (spy-on 'pet-use-conda-p)
     (spy-on 'pet-use-mamba-p)
     (spy-on 'pet-use-poetry-p)
+    (spy-on 'pet-use-hatch-p)
     (spy-on 'pet-use-pipenv-p)
     (spy-on 'locate-dominating-file)
     (spy-on 'pet-use-pyenv-p)
