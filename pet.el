@@ -1055,13 +1055,11 @@ Selects a virtualenv in the following order:
       (let ((venv-path
              (cond ((when-let* ((ev (getenv "VIRTUAL_ENV")))
                       (expand-file-name ev)))
-                   ((when-let* ((program (pet-use-pixi-p)))
-                      (let* ((result (pet-run-process-get-output program "info" "--json"))
-                             (info (pet-parse-json result)))
-                        (let-alist info
-                          (when .environments_info
-                            (let-alist (alist-get 'default .environments_info)
-                              .prefix))))))
+                   ((when-let* ((program (pet-use-pixi-p))
+                                (result (pet-run-process-get-output program "info" "--json"))
+                                (info (pet-parse-json result)))
+                      (let-alist info
+                        .environments_info.default.prefix)))
                    ((when-let* ((program (or (pet-use-conda-p) (pet-use-mamba-p)))
                                 (env-config (pet-environment)))
                       (let-alist env-config
