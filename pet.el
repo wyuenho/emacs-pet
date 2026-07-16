@@ -83,7 +83,7 @@ program by adjusting `pet-toml-to-json-program-arguments'"
                  (const "tomljson")
                  (string :tag "Other")))
 
-(defcustom pet-toml-to-json-program-arguments '("-f" "-" "-r" "toml" "-w" "json")
+(defcustom pet-toml-to-json-program-arguments '("-i" "toml" "-o" "json")
   "Arguments for `pet-toml-to-json-program'."
   :group 'pet
   :type '(repeat string))
@@ -101,7 +101,7 @@ program by adjusting `pet-yaml-to-json-program-arguments'"
                  (const "yq")
                  (string :tag "Other")))
 
-(defcustom pet-yaml-to-json-program-arguments '("-f" "-" "-r" "yaml" "-w" "json")
+(defcustom pet-yaml-to-json-program-arguments '("-i" "yaml" "-o" "json")
   "Arguments for `pet-yaml-to-json-program'."
   :group 'pet
   :type '(repeat string))
