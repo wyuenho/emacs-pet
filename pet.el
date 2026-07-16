@@ -1804,7 +1804,7 @@ has assigned to."
                (if (boundp 'format-all--executable-table)
                    (list "\n"
                          (pp-to-string
-                          (mapcar (lambda (key) (alist-get key format-all--executable-table))
+                          (mapcar (lambda (key) (gethash key format-all--executable-table))
                                   '(black isort ruff yapf))))
                  (list (format "%s\n" 'unbound)))))
 
